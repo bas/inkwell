@@ -2,6 +2,13 @@
  * Global layout mechanics only. All values come from Primer design tokens —
  * never hardcode colors, spacing, or fonts here.
  */
+:root {
+  /* Horizontal inset that clears the macOS traffic-light buttons in the
+   * `hiddenInset` title bar. Kept as a variable so the value is explicit and
+   * overridable rather than scattered as a magic number in component code. */
+  --ink-titlebar-inset: 86px;
+}
+
 html,
 body,
 #root {
@@ -10,6 +17,7 @@ body,
 
 body {
   margin: 0;
+  overflow: hidden;
   background-color: var(--bgColor-default);
   color: var(--fgColor-default);
 }
