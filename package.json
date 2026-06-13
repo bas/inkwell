@@ -25,6 +25,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "package": "npm run build && electron-builder --mac --arm64",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -37,7 +38,9 @@
     ]
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
     "@eslint/js": "^9.39.4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
@@ -63,6 +66,8 @@
     "@primer/octicons-react": "^19.28.1",
     "@primer/primitives": "^10.7.0",
     "@primer/react": "^37.31.0",
+    "better-sqlite3": "^11.10.0",
+    "gray-matter": "^4.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "styled-components": "^5.3.11"
