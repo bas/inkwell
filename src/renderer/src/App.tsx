@@ -20,20 +20,24 @@ export function App(): JSX.Element {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              px: 3,
+              pl: '86px', // clear macOS traffic-light buttons (hiddenInset title bar)
+              pr: 3,
               py: 2,
               borderBottom: '1px solid',
               borderColor: 'border.default',
+              WebkitAppRegion: 'drag',
             }}
           >
             <Heading as="h1" sx={{ fontSize: 2 }}>
               Inkwell
             </Heading>
-            <ThemeToggle
-              key={loaded ? preference : 'loading'}
-              preference={preference}
-              onChange={(mode: ColorModePreference) => setPreference(mode)}
-            />
+            <Box sx={{ WebkitAppRegion: 'no-drag' }}>
+              <ThemeToggle
+                key={loaded ? preference : 'loading'}
+                preference={preference}
+                onChange={(mode: ColorModePreference) => setPreference(mode)}
+              />
+            </Box>
           </Box>
 
           {notes.error && (
