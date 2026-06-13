@@ -11,6 +11,7 @@ export function SearchBar({ value, onChange }: SearchBarProps): JSX.Element {
     <TextInput
       aria-label="Search notes"
       placeholder="Search notes"
+      size="small"
       value={value}
       onChange={(event) => onChange(event.target.value)}
       leadingVisual={SearchIcon}

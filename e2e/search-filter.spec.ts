@@ -75,7 +75,7 @@ test.describe('Search and filter', () => {
     await waitSaved(page);
 
     await page.getByTestId('search-input').fill('zzzzznomatch');
-    await expect(page.getByText('No matching notes.')).toBeVisible();
+    await expect(page.getByText('No matching notes')).toBeVisible();
   });
 
   test('filters notes by a single label', async () => {

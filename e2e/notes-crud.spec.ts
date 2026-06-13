@@ -113,7 +113,7 @@ test.describe('Notes CRUD', () => {
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
 
     await expect(page.getByTestId('editor-empty')).toBeVisible();
-    await expect(page.getByText('No notes yet. Create one to start.')).toBeVisible();
+    await expect(page.getByText('No notes yet')).toBeVisible();
     await expect.poll(() => countVaultNotes(vaultDir)).toBe(0);
   });
 });
