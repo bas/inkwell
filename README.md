@@ -1,5 +1,10 @@
 # Inkwell
 
+> ⚠️ **Status: early development — not production ready.** Inkwell is a work in progress and is
+> provided as-is. Expect breaking changes, incomplete features, and rough edges. There are no
+> stability or data-format guarantees yet — back up any notes you care about before using it. Not
+> recommended for daily use.
+
 A macOS (Apple Silicon) desktop app for keeping notes in **Markdown**, with a WYSIWYG editor, a
 notes list, labels, full-text search, dark mode, and English spellcheck.
 
