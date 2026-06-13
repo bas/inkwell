@@ -8,6 +8,10 @@ import { buildAppMenu } from './menu';
 import { IpcChannels } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
 
+// Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
+// even in development, where the name otherwise defaults to Electron's.
+app.setName('Inkwell');
+
 const isDev = !app.isPackaged;
 
 let notesService: NotesService | undefined;

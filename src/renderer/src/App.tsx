@@ -1,4 +1,4 @@
-import { ThemeProvider, BaseStyles, PageLayout, Heading, Box, Flash } from '@primer/react';
+import { ThemeProvider, BaseStyles, PageLayout, Box, Flash } from '@primer/react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
 import { useNotes } from './state/useNotes';
@@ -20,7 +20,7 @@ export function App(): JSX.Element {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-end',
               pl: '86px', // clear macOS traffic-light buttons (hiddenInset title bar)
               pr: 3,
               py: 2,
@@ -28,9 +28,6 @@ export function App(): JSX.Element {
               borderColor: 'border.default',
             }}
           >
-            <Heading as="h1" sx={{ fontSize: 2 }}>
-              Inkwell
-            </Heading>
             <Box style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
               <ThemeToggle
                 key={loaded ? preference : 'loading'}
