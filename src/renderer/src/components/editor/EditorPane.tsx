@@ -328,7 +328,7 @@ export function EditorPane({
       <Box sx={{ flex: 1, minHeight: 0 }} data-testid="editor-body">
         {viewSource ? (
           <Box sx={{ height: '100%', px: 4, py: 3 }}>
-            <Box sx={{ maxWidth: '720px', mx: 'auto', height: '100%' }}>
+            <Box sx={{ maxWidth: 'var(--ink-reading-column-max-width)', mx: 'auto', height: '100%' }}>
               <SourceEditor value={markdown} onChange={handleBodyChange} />
             </Box>
           </Box>
