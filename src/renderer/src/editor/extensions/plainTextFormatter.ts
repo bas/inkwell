@@ -13,10 +13,10 @@ export function heuristicPlainToMarkdown(text: string): string {
   const out: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i] ?? '';
     const trimmed = line.trim();
-    const prev = i > 0 ? lines[i - 1].trim() : '';
-    const next = i < lines.length - 1 ? lines[i + 1].trim() : '';
+    const prev = i > 0 ? (lines[i - 1] ?? '').trim() : '';
+    const next = i < lines.length - 1 ? (lines[i + 1] ?? '').trim() : '';
 
     // Blank line — preserve
     if (!trimmed) {
