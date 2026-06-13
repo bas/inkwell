@@ -1,0 +1,57 @@
+/*
+ * Editor surface styles. Custom CSS is permitted only here (the ProseMirror
+ * surface) and for layout mechanics. All colors come from Primer tokens.
+ * Typography comes from Primer's `.markdown-body` class applied to the editor.
+ */
+
+.ink-editor {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.ink-editor .ProseMirror {
+  min-height: 100%;
+  outline: none;
+  padding-bottom: var(--base-size-32, 2rem);
+}
+
+/* Placeholder text for an empty document. */
+.ink-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--fgColor-muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Task lists rendered as checkboxes. */
+.ink-editor .ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ink-editor .ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--base-size-8, 0.5rem);
+}
+
+.ink-editor .ProseMirror ul[data-type='taskList'] li > label {
+  margin-top: var(--base-size-4, 0.25rem);
+  user-select: none;
+}
+
+/* Table editing affordances (typography handled by .markdown-body). */
+.ink-editor .ProseMirror table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.ink-editor .ProseMirror .selectedCell {
+  background-color: var(--bgColor-accent-muted);
+}
+
+/* Focused link/code readability inside the editable surface. */
+.ink-editor .ProseMirror:focus {
+  outline: none;
+}

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Box, Heading, Text, Spinner, Flash } from '@primer/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Box, Text, Spinner, Flash, TextInput, SegmentedControl } from '@primer/react';
 import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { NoteActionsMenu } from './NoteActionsMenu';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { LabelChip } from '../common/LabelChip';
 import { relativeTime } from '../../utils/relativeTime';
+import { MarkdownEditor } from '../../editor/MarkdownEditor';
+import { SourceEditor } from '../../editor/SourceEditor';
 
 interface EditorPaneProps {
   noteId: string | undefined;
@@ -13,6 +15,10 @@ interface EditorPaneProps {
   onAfterChange: () => void;
   onAfterDelete: () => void;
 }
+
+type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+
+const SAVE_DEBOUNCE_MS = 700;
 
 function describeError(err: unknown): string {
   return err instanceof Error ? err.message : 'Could not open note';
@@ -25,15 +31,58 @@ export function EditorPane({
   onAfterDelete,
 }: EditorPaneProps): JSX.Element {
   const [note, setNote] = useState<Note | undefined>(undefined);
+  const [title, setTitle] = useState('');
+  const [markdown, setMarkdown] = useState('');
+  const [viewSource, setViewSource] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Latest editable data, read by the debounced/flush save without re-binding.
+  const dataRef = useRef({ id: '', title: '', markdown: '' });
+  const dirtyRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const save = useCallback(async () => {
+    if (!dirtyRef.current) return;
+    const { id, title: t, markdown: body } = dataRef.current;
+    if (!id) return;
+    dirtyRef.current = false;
+    setSaveState('saving');
+    try {
+      await window.api.updateNote({ id, title: t.trim() || 'Untitled', body });
+      setSaveState('saved');
+      onAfterChange();
+    } catch (err) {
+      dirtyRef.current = true;
+      setError(describeError(err));
+      setSaveState('error');
+    }
+  }, [onAfterChange]);
+
+  const scheduleSave = useCallback(() => {
+    dirtyRef.current = true;
+    setSaveState('dirty');
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => void save(), SAVE_DEBOUNCE_MS);
+  }, [save]);
+
+  const flush = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (dirtyRef.current) void save();
+  }, [save]);
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const loaded = await window.api.getNote(id);
       setNote(loaded);
+      setTitle(loaded.title);
+      setMarkdown(loaded.body);
+      dataRef.current = { id: loaded.id, title: loaded.title, markdown: loaded.body };
+      dirtyRef.current = false;
+      setSaveState('idle');
       setError(undefined);
     } catch (err) {
       setError(describeError(err));
@@ -43,31 +92,52 @@ export function EditorPane({
     }
   }, []);
 
+  // Load on selection change; flush pending edits for the previous note first.
   useEffect(() => {
+    flush();
+    setViewSource(false);
     if (!noteId) {
       setNote(undefined);
       return;
     }
     void load(noteId);
-  }, [noteId, load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId]);
+
+  // Flush on unmount.
+  useEffect(() => () => flush(), [flush]);
 
   const colorOf = (name: string): string =>
     labels.find((label) => label.name === name)?.color ?? 'default';
+
+  const handleTitleChange = (value: string): void => {
+    setTitle(value);
+    dataRef.current = { ...dataRef.current, title: value };
+    scheduleSave();
+  };
+
+  const handleBodyChange = (value: string): void => {
+    setMarkdown(value);
+    dataRef.current = { ...dataRef.current, markdown: value };
+    scheduleSave();
+  };
 
   const handleTogglePin = useCallback(async () => {
     if (!note) return;
     try {
       await window.api.updateNote({ id: note.id, pinned: !note.pinned });
-      await load(note.id);
+      setNote({ ...note, pinned: !note.pinned });
       onAfterChange();
     } catch (err) {
       setError(describeError(err));
     }
-  }, [note, load, onAfterChange]);
+  }, [note, onAfterChange]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!note) return;
     setConfirmDelete(false);
+    dirtyRef.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
     try {
       await window.api.deleteNote(note.id);
       onAfterDelete();
@@ -107,6 +177,17 @@ export function EditorPane({
 
   if (!note) return <Box />;
 
+  const saveLabel =
+    saveState === 'saving'
+      ? 'Saving…'
+      : saveState === 'dirty'
+        ? 'Unsaved changes'
+        : saveState === 'saved'
+          ? 'Saved'
+          : saveState === 'error'
+            ? 'Save failed'
+            : `Updated ${relativeTime(note.updatedAt)}`;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <Box
@@ -122,24 +203,55 @@ export function EditorPane({
           borderColor: 'border.default',
         }}
       >
-        <Box sx={{ minWidth: 0 }}>
-          <Heading as="h2" sx={{ fontSize: 3 }} data-testid="editor-title">
-            {note.title || 'Untitled'}
-          </Heading>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <TextInput
+            aria-label="Note title"
+            data-testid="editor-title"
+            value={title}
+            onChange={(event) => handleTitleChange(event.target.value)}
+            sx={{
+              width: '100%',
+              border: 'none',
+              boxShadow: 'none',
+              px: 0,
+              '& input': { fontSize: 4, fontWeight: 'bold', px: 0 },
+            }}
+          />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
-            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-              Updated {relativeTime(note.updatedAt)}
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="save-state">
+              {saveLabel}
             </Text>
             {note.labels.map((name) => (
               <LabelChip key={name} name={name} color={colorOf(name)} />
             ))}
           </Box>
         </Box>
-        <NoteActionsMenu
-          pinned={note.pinned}
-          onTogglePin={handleTogglePin}
-          onDelete={() => setConfirmDelete(true)}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+          <SegmentedControl aria-label="Editor view" size="small">
+            <SegmentedControl.Button
+              selected={!viewSource}
+              onClick={() => {
+                flush();
+                setViewSource(false);
+              }}
+              data-testid="view-wysiwyg"
+            >
+              Editor
+            </SegmentedControl.Button>
+            <SegmentedControl.Button
+              selected={viewSource}
+              onClick={() => setViewSource(true)}
+              data-testid="view-source"
+            >
+              Markdown
+            </SegmentedControl.Button>
+          </SegmentedControl>
+          <NoteActionsMenu
+            pinned={note.pinned}
+            onTogglePin={handleTogglePin}
+            onDelete={() => setConfirmDelete(true)}
+          />
+        </Box>
       </Box>
 
       {error && (
@@ -148,20 +260,14 @@ export function EditorPane({
         </Box>
       )}
 
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 4 }} data-testid="editor-body">
-        <Box
-          as="pre"
-          sx={{
-            m: 0,
-            fontFamily: 'mono',
-            fontSize: 1,
-            color: note.body ? 'fg.default' : 'fg.muted',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-        >
-          {note.body || 'This note is empty. The rich editor arrives in the next step.'}
-        </Box>
+      <Box sx={{ flex: 1, minHeight: 0 }} data-testid="editor-body">
+        {viewSource ? (
+          <Box sx={{ height: '100%', p: 4 }}>
+            <SourceEditor value={markdown} onChange={handleBodyChange} />
+          </Box>
+        ) : (
+          <MarkdownEditor key={note.id} initialMarkdown={markdown} onChange={handleBodyChange} />
+        )}
       </Box>
 
       <DeleteNoteDialog
