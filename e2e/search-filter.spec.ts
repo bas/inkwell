@@ -25,7 +25,7 @@ test.describe('Search and filter', () => {
   });
 
   test.afterEach(async () => {
-    await ctx.close();
+    await ctx?.close();
   });
 
   test('searches notes by body text', async () => {

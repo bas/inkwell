@@ -16,7 +16,7 @@ test.describe('Labels', () => {
   });
 
   test.afterEach(async () => {
-    await ctx.close();
+    await ctx?.close();
   });
 
   test('creates a label with a chosen color in the manager', async () => {
