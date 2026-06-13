@@ -7,6 +7,12 @@
    * `hiddenInset` title bar. Kept as a variable so the value is explicit and
    * overridable rather than scattered as a magic number in component code. */
   --ink-titlebar-inset: calc(var(--base-size-80) + var(--base-size-6));
+
+  /* Maximum width of the centered reading/editing column in both the WYSIWYG
+   * and source-editor views. Defined here as a deliberate layout constant so
+   * the value is documented and shared rather than duplicated as a magic
+   * number in each component. */
+  --ink-reading-column-max-width: 720px;
 }
 
 html,
