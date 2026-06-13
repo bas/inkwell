@@ -8,6 +8,7 @@ import {
   IconButton,
   ActionMenu,
   ActionList,
+  Flash,
   Label as PrimerLabel,
 } from '@primer/react';
 import { PlusIcon, TrashIcon, TriangleDownIcon } from '@primer/octicons-react';
@@ -87,9 +88,9 @@ export function LabelManagerDialog({
     <Dialog title="Manage labels" onClose={onClose} data-testid="label-manager">
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         {error && (
-          <Text sx={{ color: 'danger.fg', fontSize: 0 }} data-testid="label-manager-error">
+          <Flash variant="danger" data-testid="label-manager-error">
             {error}
-          </Text>
+          </Flash>
         )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
