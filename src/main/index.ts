@@ -1,10 +1,14 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
 import { join } from 'node:path';
 import { readSettings, setColorMode } from './settings';
+import { NotesService } from './storage/notesService';
+import { registerNoteHandlers } from './ipc';
 import { IpcChannels } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
 
 const isDev = !app.isPackaged;
+
+let notesService: NotesService | undefined;
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -54,7 +58,18 @@ function registerIpcHandlers(): void {
 
 app.whenReady().then(() => {
   registerIpcHandlers();
+
+  const vaultDir = join(app.getPath('documents'), 'Inkwell');
+  const dbPath = join(app.getPath('userData'), 'index.sqlite');
+  notesService = new NotesService(vaultDir, dbPath);
+  registerNoteHandlers(notesService);
+
   const window = createWindow();
+
+  // Reindex and notify the renderer when notes change on disk externally.
+  notesService.startWatching(() => {
+    if (!window.isDestroyed()) window.webContents.send(IpcChannels.notesChanged);
+  });
 
   // Forward system appearance changes so the renderer can react when in `auto`.
   nativeTheme.on('updated', () => {
@@ -69,6 +84,10 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('will-quit', () => {
+  void notesService?.dispose();
 });
 
 app.on('window-all-closed', () => {
