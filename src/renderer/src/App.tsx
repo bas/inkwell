@@ -45,7 +45,18 @@ export function App(): JSX.Element {
             </Box>
           )}
 
-          <PageLayout containerWidth="full" padding="none" sx={{ flex: 1, minHeight: 0 }}>
+          <PageLayout
+            containerWidth="full"
+            padding="none"
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              // Stretch Primer's internal wrapper/content regions to full height so the
+              // pane divider spans the entire layout instead of collapsing to content height.
+              '> div': { height: '100%' },
+              '> div > div': { height: '100%' },
+            }}
+          >
             <PageLayout.Pane position="start" divider="line" width="medium" resizable>
               <Sidebar
                 summaries={notes.summaries}
