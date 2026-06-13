@@ -57,6 +57,10 @@ export function App(): JSX.Element {
                 onLabelFilterChange={notes.setLabelFilter}
                 onSelect={notes.select}
                 onCreateNote={() => void notes.createNote()}
+                onLabelsChanged={() => {
+                  void notes.refreshLabels();
+                  void notes.refresh();
+                }}
               />
             </PageLayout.Pane>
             <PageLayout.Content>
@@ -64,6 +68,10 @@ export function App(): JSX.Element {
                 noteId={notes.selectedId}
                 labels={notes.labels}
                 onAfterChange={() => void notes.refresh()}
+                onLabelsChanged={() => {
+                  void notes.refreshLabels();
+                  void notes.refresh();
+                }}
                 onAfterDelete={() => {
                   notes.select(undefined);
                   void notes.refresh();

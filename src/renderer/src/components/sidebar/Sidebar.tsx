@@ -1,10 +1,12 @@
-import { Box, Button, Text, Spinner } from '@primer/react';
-import { PlusIcon } from '@primer/octicons-react';
+import { useState } from 'react';
+import { Box, Button, Text, Spinner, IconButton } from '@primer/react';
+import { PlusIcon, GearIcon } from '@primer/octicons-react';
 import type { NoteSummary } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { SearchBar } from './SearchBar';
 import { LabelFilter } from './LabelFilter';
 import { NoteList } from './NoteList';
+import { LabelManagerDialog } from '../labels/LabelManagerDialog';
 
 interface SidebarProps {
   summaries: NoteSummary[];
@@ -17,6 +19,7 @@ interface SidebarProps {
   onLabelFilterChange: (value: string | undefined) => void;
   onSelect: (id: string) => void;
   onCreateNote: () => void;
+  onLabelsChanged: () => void;
 }
 
 export function Sidebar({
@@ -30,7 +33,9 @@ export function Sidebar({
   onLabelFilterChange,
   onSelect,
   onCreateNote,
+  onLabelsChanged,
 }: SidebarProps): JSX.Element {
+  const [managingLabels, setManagingLabels] = useState(false);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <Box
@@ -53,7 +58,17 @@ export function Sidebar({
           New note
         </Button>
         <SearchBar value={query} onChange={onQueryChange} />
-        <LabelFilter labels={labels} selected={labelFilter} onSelect={onLabelFilterChange} />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <LabelFilter labels={labels} selected={labelFilter} onSelect={onLabelFilterChange} />
+          </Box>
+          <IconButton
+            icon={GearIcon}
+            aria-label="Manage labels"
+            data-testid="manage-labels"
+            onClick={() => setManagingLabels(true)}
+          />
+        </Box>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }} data-testid="note-list-scroll">
@@ -76,6 +91,14 @@ export function Sidebar({
           />
         )}
       </Box>
+
+      {managingLabels && (
+        <LabelManagerDialog
+          labels={labels}
+          onClose={() => setManagingLabels(false)}
+          onChanged={onLabelsChanged}
+        />
+      )}
     </Box>
   );
 }

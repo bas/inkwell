@@ -166,6 +166,24 @@ export class NotesService {
   }
 
   deleteLabel(id: number): void {
+    // Remove the label from every note that uses it so the files (source of
+    // truth) and the index never diverge, then drop the label itself.
+    const label = listLabels(this.db).find((l) => l.id === id);
+    if (label) {
+      for (const [noteId, path] of this.idToPath) {
+        if (!existsSync(path)) continue;
+        const note = readNoteFile(path);
+        if (!note.labels.includes(label.name)) continue;
+        const next: Note = {
+          ...note,
+          labels: note.labels.filter((name) => name !== label.name),
+          updatedAt: new Date().toISOString(),
+        };
+        writeNoteToPath(path, next);
+        upsertNote(this.db, indexInput(next, path));
+        this.idToPath.set(noteId, path);
+      }
+    }
     deleteLabel(this.db, id);
   }
 

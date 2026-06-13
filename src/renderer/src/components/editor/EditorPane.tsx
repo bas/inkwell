@@ -5,6 +5,7 @@ import type { Label } from '@shared/note-labels';
 import { NoteActionsMenu } from './NoteActionsMenu';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { LabelChip } from '../common/LabelChip';
+import { LabelPicker } from '../labels/LabelPicker';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
@@ -13,6 +14,7 @@ interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
   onAfterChange: () => void;
+  onLabelsChanged: () => void;
   onAfterDelete: () => void;
 }
 
@@ -28,6 +30,7 @@ export function EditorPane({
   noteId,
   labels,
   onAfterChange,
+  onLabelsChanged,
   onAfterDelete,
 }: EditorPaneProps): JSX.Element {
   const [note, setNote] = useState<Note | undefined>(undefined);
@@ -146,6 +149,34 @@ export function EditorPane({
     }
   }, []);
 
+  const applyLabels = useCallback(
+    async (nextLabels: string[]) => {
+      if (!note) return;
+      try {
+        await window.api.updateNote({ id: note.id, labels: nextLabels });
+        setNote({ ...note, labels: nextLabels });
+        onAfterChange();
+        onLabelsChanged();
+      } catch (err) {
+        setError(describeError(err));
+      }
+    },
+    [note, onAfterChange, onLabelsChanged],
+  );
+
+  const createAndAssign = useCallback(
+    async (name: string) => {
+      if (!note) return;
+      try {
+        await window.api.createLabel(name);
+        await applyLabels([...note.labels, name]);
+      } catch (err) {
+        setError(describeError(err));
+      }
+    },
+    [note, applyLabels],
+  );
+
   const handleConfirmDelete = useCallback(async () => {
     if (!note) return;
     setConfirmDelete(false);
@@ -239,6 +270,12 @@ export function EditorPane({
           </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+          <LabelPicker
+            noteLabels={note.labels}
+            allLabels={labels}
+            onChange={(next) => void applyLabels(next)}
+            onCreateAndAssign={(name) => void createAndAssign(name)}
+          />
           <SegmentedControl aria-label="Editor view" size="small">
             <SegmentedControl.Button
               selected={!viewSource}
