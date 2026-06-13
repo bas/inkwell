@@ -20,7 +20,7 @@ test.describe('Notes CRUD', () => {
   });
 
   test.afterEach(async () => {
-    await ctx.close();
+    await ctx?.close();
   });
 
   test('creates a note with the default title and writes it to disk', async () => {

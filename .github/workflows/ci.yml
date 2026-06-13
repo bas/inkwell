@@ -6,10 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: Typecheck, lint, test, build
     runs-on: macos-14 # Apple Silicon runner (arm64)
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -36,11 +44,61 @@ jobs:
       - name: Build
         run: npm run build
 
+  e2e:
+    name: E2E (Playwright + Electron)
+    needs: verify
+    runs-on: macos-14 # Apple Silicon runner (arm64)
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Build
+        run: npm run build
+
       - name: E2E tests
-        run: npm run test:e2e
+        run: npx playwright test
+
+  package:
+    name: Package DMG (arm64)
+    needs: e2e
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-14 # Apple Silicon runner (arm64)
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
 
       - name: Package DMG (arm64)
         run: npm run package

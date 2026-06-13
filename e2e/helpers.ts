@@ -41,6 +41,13 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     },
   });
 
+  // Surface the Electron main-process output so a startup crash (e.g. a native
+  // module ABI mismatch) shows the real reason instead of an opaque
+  // `firstWindow` timeout.
+  const child = app.process();
+  child.stdout?.on('data', (chunk) => process.stdout.write(`[electron stdout] ${chunk}`));
+  child.stderr?.on('data', (chunk) => process.stderr.write(`[electron stderr] ${chunk}`));
+
   const page = await app.firstWindow();
   await page.waitForSelector('[data-testid="new-note-button"]');
 

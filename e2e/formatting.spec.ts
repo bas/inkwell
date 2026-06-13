@@ -24,7 +24,7 @@ test.describe('Editor formatting', () => {
   });
 
   test.afterEach(async () => {
-    await ctx.close();
+    await ctx?.close();
   });
 
   test('applies headings via the heading menu', async () => {

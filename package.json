@@ -25,7 +25,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "pretest:e2e": "npm run build",
     "package": "npm run build && electron-builder --mac --arm64",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "prepare": "husky"
