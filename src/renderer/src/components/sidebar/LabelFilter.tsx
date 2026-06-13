@@ -1,5 +1,5 @@
 import { ActionMenu, ActionList } from '@primer/react';
-import { TriangleDownIcon, TagIcon, CheckIcon } from '@primer/octicons-react';
+import { TagIcon, CheckIcon } from '@primer/octicons-react';
 import type { Label } from '@shared/note-labels';
 import { toLabelVariant } from '../../utils/labelColor';
 
@@ -13,12 +13,7 @@ interface LabelFilterProps {
 export function LabelFilter({ labels, selected, onSelect }: LabelFilterProps): JSX.Element {
   return (
     <ActionMenu>
-      <ActionMenu.Button
-        leadingVisual={TagIcon}
-        trailingVisual={TriangleDownIcon}
-        data-testid="label-filter"
-        sx={{ width: '100%' }}
-      >
+      <ActionMenu.Button leadingVisual={TagIcon} data-testid="label-filter" sx={{ width: '100%' }}>
         {selected ?? 'All notes'}
       </ActionMenu.Button>
       <ActionMenu.Overlay width="medium">

@@ -23,7 +23,12 @@ export function LabelPicker({
 
   const items: SelectPanelItemInput[] = allLabels
     .filter((label) => label.name.toLowerCase().includes(filter.toLowerCase()))
-    .map((label) => ({ id: label.name, text: label.name, leadingVisual: TagIcon }));
+    .map((label) => ({
+      id: label.name,
+      text: label.name,
+      leadingVisual: TagIcon,
+      'data-testid': `label-option-${label.name}`,
+    }));
 
   const selected = items.filter((item) => noteLabels.includes(String(item.id)));
 

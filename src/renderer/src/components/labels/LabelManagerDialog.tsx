@@ -41,6 +41,7 @@ function ColorMenu({
             <ActionList.Item
               key={option}
               selected={option === color}
+              data-testid={`color-opt-${option}`}
               onSelect={() => onSelect(option)}
             >
               <PrimerLabel variant={toLabelVariant(option)}>{option}</PrimerLabel>

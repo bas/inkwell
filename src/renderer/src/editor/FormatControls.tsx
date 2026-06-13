@@ -111,6 +111,7 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
           <ActionList selectionVariant="single">
             <ActionList.Item
               selected={editor?.isActive('paragraph')}
+              data-testid="heading-opt-text"
               onSelect={() => editor?.chain().focus().setParagraph().run()}
             >
               Body text
@@ -119,6 +120,7 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
               <ActionList.Item
                 key={level}
                 selected={editor?.isActive('heading', { level })}
+                data-testid={`heading-opt-${level}`}
                 onSelect={() =>
                   editor
                     ?.chain()
@@ -230,6 +232,7 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
             <TextInput
               ref={linkInputRef}
               aria-label="Link URL"
+              data-testid="link-url"
               placeholder="https://example.com"
               value={linkUrl}
               onChange={(event) => setLinkUrl(event.target.value)}
