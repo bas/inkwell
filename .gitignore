@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Native module builds
+build/Release/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+.vitest/
+
+# Editor / OS
+.DS_Store
+.idea/
+*.swp
+
+# Local environment
+.env
+.env.local
+
+# App data created during dev (local vault for manual testing)
+.dev-vault/

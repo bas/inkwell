@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: macos-14 # Apple Silicon runner (arm64)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # E2E and DMG packaging are enabled once the app shell lands (Phase 1+).
+      # - name: Install Playwright browsers
+      #   run: npx playwright install --with-deps
+      # - name: E2E tests
+      #   run: npm run test:e2e
+      # - name: Package DMG (arm64)
+      #   run: npm run package
