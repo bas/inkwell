@@ -79,7 +79,7 @@ function registerIpcHandlers(): void {
 app.whenReady().then(() => {
   registerIpcHandlers();
 
-  const vaultDir = join(app.getPath('documents'), 'Inkwell');
+  const vaultDir = process.env['INKWELL_VAULT_DIR'] ?? join(app.getPath('documents'), 'Inkwell');
   const dbPath = join(app.getPath('userData'), 'index.sqlite');
   try {
     notesService = new NotesService(vaultDir, dbPath);

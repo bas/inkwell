@@ -16,7 +16,8 @@
     "start": "electron-vite preview",
     "typecheck:node": "tsc -p tsconfig.node.json --noEmit",
     "typecheck:web": "tsc -p tsconfig.web.json --noEmit",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:e2e",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -24,6 +25,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "pretest:e2e": "npm run build",
     "package": "npm run build && electron-builder --mac --arm64",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "prepare": "husky"
@@ -40,6 +42,7 @@
   "devDependencies": {
     "@electron/rebuild": "^3.7.2",
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
