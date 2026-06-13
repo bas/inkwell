@@ -88,7 +88,7 @@ export function NoteList({ summaries, labels, selectedId, onSelect }: NoteListPr
     <ActionList showDividers data-testid="note-list">
       {pinned.length > 0 && (
         <ActionList.Group>
-          <ActionList.GroupHeading>Pinned</ActionList.GroupHeading>
+          <ActionList.GroupHeading as="h3">Pinned</ActionList.GroupHeading>
           {pinned.map((summary) => (
             <NoteRow
               key={summary.id}
@@ -102,7 +102,7 @@ export function NoteList({ summaries, labels, selectedId, onSelect }: NoteListPr
       )}
       {others.length > 0 && (
         <ActionList.Group>
-          {pinned.length > 0 && <ActionList.GroupHeading>Notes</ActionList.GroupHeading>}
+          {pinned.length > 0 && <ActionList.GroupHeading as="h3">Notes</ActionList.GroupHeading>}
           {others.map((summary) => (
             <NoteRow
               key={summary.id}
