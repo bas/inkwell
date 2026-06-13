@@ -9,7 +9,7 @@ test.describe('Theme', () => {
   });
 
   test.afterEach(async () => {
-    await ctx.close();
+    await ctx?.close();
   });
 
   test('shows the empty editor state on a cold start', async () => {
