@@ -9,6 +9,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
 import type { Extensions } from '@tiptap/react';
+import { PlainTextFormatter } from './extensions/plainTextFormatter';
 
 /**
  * The TipTap extension set for the note editor. Provides headings, inline
@@ -34,6 +35,7 @@ export function buildExtensions(placeholder: string): Extensions {
     TaskList,
     TaskItem.configure({ nested: true }),
     Placeholder.configure({ placeholder }),
+    PlainTextFormatter,
     Markdown.configure({
       html: false,
       linkify: true,
