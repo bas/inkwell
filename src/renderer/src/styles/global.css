@@ -1,0 +1,15 @@
+/*
+ * Global layout mechanics only. All values come from Primer design tokens —
+ * never hardcode colors, spacing, or fonts here.
+ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bgColor-default);
+  color: var(--fgColor-default);
+}
