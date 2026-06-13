@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Text, Spinner, Flash, TextInput, SegmentedControl } from '@primer/react';
+import { Box, Text, Spinner, Flash, TextInput } from '@primer/react';
+import type { Editor } from '@tiptap/react';
 import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
-import { NoteActionsMenu } from './NoteActionsMenu';
+import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { LabelChip } from '../common/LabelChip';
 import { LabelPicker } from '../labels/LabelPicker';
@@ -37,6 +38,7 @@ export function EditorPane({
   const [title, setTitle] = useState('');
   const [markdown, setMarkdown] = useState('');
   const [viewSource, setViewSource] = useState(false);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -276,33 +278,22 @@ export function EditorPane({
             onChange={(next) => void applyLabels(next)}
             onCreateAndAssign={(name) => void createAndAssign(name)}
           />
-          <SegmentedControl aria-label="Editor view" size="small">
-            <SegmentedControl.Button
-              selected={!viewSource}
-              onClick={() => {
-                flush();
-                setViewSource(false);
-              }}
-              data-testid="view-wysiwyg"
-            >
-              Editor
-            </SegmentedControl.Button>
-            <SegmentedControl.Button
-              selected={viewSource}
-              onClick={() => setViewSource(true)}
-              data-testid="view-source"
-            >
-              Markdown
-            </SegmentedControl.Button>
-          </SegmentedControl>
-          <NoteActionsMenu
-            pinned={note.pinned}
-            onTogglePin={handleTogglePin}
-            onCopyMarkdown={() => void handleCopyMarkdown()}
-            onDelete={() => setConfirmDelete(true)}
-          />
         </Box>
       </Box>
+
+      <EditorToolbar
+        editor={editor}
+        viewSource={viewSource}
+        onSelectEditor={() => {
+          flush();
+          setViewSource(false);
+        }}
+        onSelectSource={() => setViewSource(true)}
+        pinned={note.pinned}
+        onTogglePin={handleTogglePin}
+        onCopyMarkdown={() => void handleCopyMarkdown()}
+        onDelete={() => setConfirmDelete(true)}
+      />
 
       {error && (
         <Box sx={{ px: 4, pt: 3 }}>
@@ -316,7 +307,12 @@ export function EditorPane({
             <SourceEditor value={markdown} onChange={handleBodyChange} />
           </Box>
         ) : (
-          <MarkdownEditor key={note.id} initialMarkdown={markdown} onChange={handleBodyChange} />
+          <MarkdownEditor
+            key={note.id}
+            initialMarkdown={markdown}
+            onChange={handleBodyChange}
+            onEditorReady={setEditor}
+          />
         )}
       </Box>
 

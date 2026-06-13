@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import { Box } from '@primer/react';
 import { buildExtensions } from './extensions';
-import { Toolbar } from './Toolbar';
 import './editor.css';
 
 interface MarkdownEditorProps {
@@ -11,6 +10,9 @@ interface MarkdownEditorProps {
   initialMarkdown: string;
   placeholder?: string;
   onChange: (markdown: string) => void;
+  /** Receives the TipTap editor instance when ready, and `null` on teardown,
+   * so an external toolbar can drive formatting. */
+  onEditorReady?: (editor: Editor | null) => void;
 }
 
 interface MarkdownStorage {
@@ -21,6 +23,7 @@ export function MarkdownEditor({
   initialMarkdown,
   placeholder = 'Start writing…',
   onChange,
+  onEditorReady,
 }: MarkdownEditorProps): JSX.Element {
   const editor = useEditor({
     extensions: buildExtensions(placeholder),
@@ -37,15 +40,18 @@ export function MarkdownEditor({
     },
   });
 
+  // Publish the editor instance upward; clear it on unmount/remount.
+  useEffect(() => {
+    onEditorReady?.(editor);
+    return () => onEditorReady?.(null);
+  }, [editor, onEditorReady]);
+
   // Make sure the editor releases ProseMirror resources on unmount.
   useEffect(() => () => editor?.destroy(), [editor]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      <Toolbar editor={editor} />
-      <Box className="ink-editor" sx={{ flex: 1, minHeight: 0, px: 4, py: 3 }}>
-        <EditorContent editor={editor} />
-      </Box>
+    <Box className="ink-editor" sx={{ height: '100%', minHeight: 0, px: 4, py: 3 }}>
+      <EditorContent editor={editor} />
     </Box>
   );
 }

@@ -16,6 +16,7 @@ export function App(): JSX.Element {
         <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Box
             as="header"
+            style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -25,13 +26,12 @@ export function App(): JSX.Element {
               py: 2,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              WebkitAppRegion: 'drag',
             }}
           >
             <Heading as="h1" sx={{ fontSize: 2 }}>
               Inkwell
             </Heading>
-            <Box sx={{ WebkitAppRegion: 'no-drag' }}>
+            <Box style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
               <ThemeToggle
                 key={loaded ? preference : 'loading'}
                 preference={preference}

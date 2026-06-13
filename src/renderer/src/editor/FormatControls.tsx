@@ -16,7 +16,7 @@ import {
 } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 
-interface ToolbarProps {
+interface FormatControlsProps {
   editor: Editor | null;
 }
 
@@ -51,8 +51,13 @@ function ToolbarButton({
   );
 }
 
-/** Formatting toolbar for the Markdown editor. */
-export function Toolbar({ editor }: ToolbarProps): JSX.Element {
+function Separator(): JSX.Element {
+  return <Box sx={{ width: '1px', height: 20, bg: 'border.default', mx: 1 }} />;
+}
+
+/** Formatting controls for the Markdown editor. Renders inline (no own bar);
+ * the host toolbar provides the surrounding container. */
+export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
@@ -61,23 +66,23 @@ export function Toolbar({ editor }: ToolbarProps): JSX.Element {
     if (linkOpen) linkInputRef.current?.focus();
   }, [linkOpen]);
 
-  if (!editor) return <Box sx={{ height: 44 }} />;
-
-  const headingLabel = editor.isActive('heading', { level: 1 })
+  const headingLabel = editor?.isActive('heading', { level: 1 })
     ? 'H1'
-    : editor.isActive('heading', { level: 2 })
+    : editor?.isActive('heading', { level: 2 })
       ? 'H2'
-      : editor.isActive('heading', { level: 3 })
+      : editor?.isActive('heading', { level: 3 })
         ? 'H3'
         : 'Text';
 
   const openLinkDialog = (): void => {
+    if (!editor) return;
     const previous = editor.getAttributes('link').href as string | undefined;
     setLinkUrl(previous ?? '');
     setLinkOpen(true);
   };
 
   const applyLink = (): void => {
+    if (!editor) return;
     const url = linkUrl.trim();
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -87,27 +92,16 @@ export function Toolbar({ editor }: ToolbarProps): JSX.Element {
     setLinkOpen(false);
   };
 
+  const disabled = !editor;
+
   return (
-    <Box
-      role="toolbar"
-      aria-label="Formatting"
-      data-testid="editor-toolbar"
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1,
-        flexWrap: 'wrap',
-        px: 3,
-        py: 2,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-      }}
-    >
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
       <ActionMenu>
         <ActionMenu.Button
           trailingVisual={TriangleDownIcon}
           leadingVisual={HeadingIcon}
           variant="invisible"
+          disabled={disabled}
           data-testid="heading-menu"
           onMouseDown={(event) => event.preventDefault()}
         >
@@ -116,18 +110,18 @@ export function Toolbar({ editor }: ToolbarProps): JSX.Element {
         <ActionMenu.Overlay width="small">
           <ActionList selectionVariant="single">
             <ActionList.Item
-              selected={editor.isActive('paragraph')}
-              onSelect={() => editor.chain().focus().setParagraph().run()}
+              selected={editor?.isActive('paragraph')}
+              onSelect={() => editor?.chain().focus().setParagraph().run()}
             >
               Body text
             </ActionList.Item>
             {[1, 2, 3].map((level) => (
               <ActionList.Item
                 key={level}
-                selected={editor.isActive('heading', { level })}
+                selected={editor?.isActive('heading', { level })}
                 onSelect={() =>
                   editor
-                    .chain()
+                    ?.chain()
                     .focus()
                     .toggleHeading({ level: level as 1 | 2 | 3 })
                     .run()
@@ -140,83 +134,93 @@ export function Toolbar({ editor }: ToolbarProps): JSX.Element {
         </ActionMenu.Overlay>
       </ActionMenu>
 
-      <Box sx={{ width: '1px', height: 20, bg: 'border.default', mx: 1 }} />
+      <Separator />
 
       <ToolbarButton
         icon={BoldIcon}
         label="Bold"
         testid="fmt-bold"
-        active={editor.isActive('bold')}
-        onClick={() => editor.chain().focus().toggleBold().run()}
+        disabled={disabled}
+        active={editor?.isActive('bold')}
+        onClick={() => editor?.chain().focus().toggleBold().run()}
       />
       <ToolbarButton
         icon={ItalicIcon}
         label="Italic"
         testid="fmt-italic"
-        active={editor.isActive('italic')}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
+        disabled={disabled}
+        active={editor?.isActive('italic')}
+        onClick={() => editor?.chain().focus().toggleItalic().run()}
       />
       <ToolbarButton
         icon={CodeIcon}
         label="Inline code"
         testid="fmt-code"
-        active={editor.isActive('code')}
-        onClick={() => editor.chain().focus().toggleCode().run()}
+        disabled={disabled}
+        active={editor?.isActive('code')}
+        onClick={() => editor?.chain().focus().toggleCode().run()}
       />
       <ToolbarButton
         icon={LinkIcon}
         label="Link"
         testid="fmt-link"
-        active={editor.isActive('link')}
+        disabled={disabled}
+        active={editor?.isActive('link')}
         onClick={openLinkDialog}
       />
 
-      <Box sx={{ width: '1px', height: 20, bg: 'border.default', mx: 1 }} />
+      <Separator />
 
       <ToolbarButton
         icon={ListUnorderedIcon}
         label="Bulleted list"
         testid="fmt-bullet"
-        active={editor.isActive('bulletList')}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        disabled={disabled}
+        active={editor?.isActive('bulletList')}
+        onClick={() => editor?.chain().focus().toggleBulletList().run()}
       />
       <ToolbarButton
         icon={ListOrderedIcon}
         label="Numbered list"
         testid="fmt-ordered"
-        active={editor.isActive('orderedList')}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        disabled={disabled}
+        active={editor?.isActive('orderedList')}
+        onClick={() => editor?.chain().focus().toggleOrderedList().run()}
       />
       <ToolbarButton
         icon={TasklistIcon}
         label="Task list"
         testid="fmt-task"
-        active={editor.isActive('taskList')}
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
+        disabled={disabled}
+        active={editor?.isActive('taskList')}
+        onClick={() => editor?.chain().focus().toggleTaskList().run()}
       />
 
-      <Box sx={{ width: '1px', height: 20, bg: 'border.default', mx: 1 }} />
+      <Separator />
 
       <ToolbarButton
         icon={QuoteIcon}
         label="Quote"
         testid="fmt-quote"
-        active={editor.isActive('blockquote')}
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        disabled={disabled}
+        active={editor?.isActive('blockquote')}
+        onClick={() => editor?.chain().focus().toggleBlockquote().run()}
       />
       <ToolbarButton
         icon={FileCodeIcon}
         label="Code block"
         testid="fmt-codeblock"
-        active={editor.isActive('codeBlock')}
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        disabled={disabled}
+        active={editor?.isActive('codeBlock')}
+        onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
       />
       <ToolbarButton
         icon={TableIcon}
         label="Insert table"
         testid="fmt-table"
+        disabled={disabled}
         onClick={() =>
-          editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+          editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
         }
       />
 
