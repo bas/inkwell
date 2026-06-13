@@ -1,0 +1,29 @@
+appId: com.bas.inkwell
+productName: Inkwell
+copyright: Copyright © 2026 bas
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+
+asarUnpack:
+  # Native modules (e.g. better-sqlite3) must live outside the asar archive.
+  - '**/*.node'
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  # v1 ships unsigned (free Apple account). Notarization is added later.
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+dmg:
+  title: Inkwell
