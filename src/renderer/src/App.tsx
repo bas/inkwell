@@ -1,10 +1,14 @@
-import { ThemeProvider, BaseStyles, PageLayout, Heading, Text, Box } from '@primer/react';
+import { ThemeProvider, BaseStyles, PageLayout, Heading, Box, Flash } from '@primer/react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
+import { useNotes } from './state/useNotes';
 import { ThemeToggle } from './components/ThemeToggle';
+import { Sidebar } from './components/sidebar/Sidebar';
+import { EditorPane } from './components/editor/EditorPane';
 
 export function App(): JSX.Element {
   const { preference, loaded, setPreference } = useColorMode();
+  const notes = useNotes();
 
   return (
     <ThemeProvider colorMode={toPrimerColorMode(preference)}>
@@ -32,25 +36,39 @@ export function App(): JSX.Element {
             />
           </Box>
 
+          {notes.error && (
+            <Box sx={{ px: 3, pt: 2 }}>
+              <Flash variant="danger" data-testid="app-error">
+                {notes.error}
+              </Flash>
+            </Box>
+          )}
+
           <PageLayout containerWidth="full" padding="none" sx={{ flex: 1, minHeight: 0 }}>
             <PageLayout.Pane position="start" divider="line" width="medium" resizable>
-              <Box sx={{ p: 3 }} data-testid="sidebar-placeholder">
-                <Text sx={{ color: 'fg.muted' }}>Notes list (coming next)</Text>
-              </Box>
+              <Sidebar
+                summaries={notes.summaries}
+                labels={notes.labels}
+                selectedId={notes.selectedId}
+                query={notes.query}
+                labelFilter={notes.labelFilter}
+                loading={notes.loading}
+                onQueryChange={notes.setQuery}
+                onLabelFilterChange={notes.setLabelFilter}
+                onSelect={notes.select}
+                onCreateNote={() => void notes.createNote()}
+              />
             </PageLayout.Pane>
             <PageLayout.Content>
-              <Box
-                sx={{
-                  p: 4,
-                  display: 'flex',
-                  height: '100%',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+              <EditorPane
+                noteId={notes.selectedId}
+                labels={notes.labels}
+                onAfterChange={() => void notes.refresh()}
+                onAfterDelete={() => {
+                  notes.select(undefined);
+                  void notes.refresh();
                 }}
-                data-testid="editor-placeholder"
-              >
-                <Text sx={{ color: 'fg.muted' }}>Select or create a note to start writing.</Text>
-              </Box>
+              />
             </PageLayout.Content>
           </PageLayout>
         </Box>
