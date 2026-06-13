@@ -58,7 +58,7 @@ export function EditorToolbar({
           onClick={onSelectSource}
           data-testid="view-source"
         >
-          Markdown
+          Source
         </SegmentedControl.Button>
       </SegmentedControl>
 
