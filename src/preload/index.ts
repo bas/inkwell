@@ -32,6 +32,12 @@ const api: InkwellApi = {
   deleteLabel: (id: number) => ipcRenderer.invoke(IpcChannels.deleteLabel, id),
 
   writeClipboard: (text: string) => ipcRenderer.invoke(IpcChannels.writeClipboard, text),
+
+  onMenuNewNote: (listener) => {
+    const handler = (): void => listener();
+    ipcRenderer.on(IpcChannels.menuNewNote, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.menuNewNote, handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

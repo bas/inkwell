@@ -1,7 +1,12 @@
 import { app } from 'electron';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { DEFAULT_SETTINGS, type AppSettings, type ColorModePreference } from '../shared/types';
+import {
+  DEFAULT_SETTINGS,
+  type AppSettings,
+  type ColorModePreference,
+  type WindowBounds,
+} from '../shared/types';
 
 function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json');
@@ -31,4 +36,8 @@ export function setColorMode(mode: ColorModePreference): AppSettings {
   const next: AppSettings = { ...readSettings(), colorMode: mode };
   writeSettings(next);
   return next;
+}
+
+export function setWindowBounds(bounds: WindowBounds): void {
+  writeSettings({ ...readSettings(), windowBounds: bounds });
 }

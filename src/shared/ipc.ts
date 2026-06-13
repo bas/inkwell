@@ -24,6 +24,9 @@ export const IpcChannels = {
   deleteLabel: 'labels:delete',
 
   writeClipboard: 'clipboard:writeText',
+
+  /** Main → renderer: the user picked File → New Note from the menu. */
+  menuNewNote: 'menu:newNote',
 } as const;
 
 /**
@@ -52,4 +55,7 @@ export interface InkwellApi {
 
   /** Copy plain text (e.g. Markdown) to the system clipboard. */
   writeClipboard(text: string): Promise<void>;
+
+  /** Subscribe to the File → New Note menu command. Returns an unsubscribe function. */
+  onMenuNewNote(listener: () => void): () => void;
 }

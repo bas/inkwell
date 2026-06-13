@@ -98,6 +98,9 @@ export function useNotes(): NotesState & NotesActions {
     }
   }, [refresh]);
 
+  // Respond to the File → New Note menu command.
+  useEffect(() => window.api.onMenuNewNote(() => void createNote()), [createNote]);
+
   const deleteNote = useCallback(
     async (id: string) => {
       try {

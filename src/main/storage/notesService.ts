@@ -72,6 +72,11 @@ export class NotesService {
     rebuildIndex(this.db, inputs);
   }
 
+  /** Public entry point to force a full reindex (e.g. from the menu). */
+  rebuildIndex(): void {
+    this.rebuild();
+  }
+
   /** Watch the vault for external edits; `onChange` fires (debounced) after a rebuild. */
   startWatching(onChange: () => void): void {
     this.watcher = watch(this.vaultDir, {
