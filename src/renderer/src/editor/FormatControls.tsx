@@ -15,6 +15,7 @@ import {
   TriangleDownIcon,
 } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
+import { Separator } from '../components/common/Separator';
 
 interface FormatControlsProps {
   editor: Editor | null;
@@ -49,10 +50,6 @@ function ToolbarButton({
       sx={active ? { bg: 'accent.subtle', color: 'accent.fg' } : undefined}
     />
   );
-}
-
-function Separator(): JSX.Element {
-  return <Box sx={{ width: '1px', height: 20, bg: 'border.default', mx: 1 }} />;
 }
 
 /** Formatting controls for the Markdown editor. Renders inline (no own bar);

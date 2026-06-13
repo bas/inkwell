@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Box, Button, Text, Spinner, IconButton } from '@primer/react';
-import { PlusIcon, GearIcon } from '@primer/octicons-react';
+import { Box, Button, Spinner, IconButton } from '@primer/react';
+import { Blankslate } from '@primer/react/experimental';
+import { PlusIcon, GearIcon, SearchIcon, NoteIcon } from '@primer/octicons-react';
 import type { NoteSummary } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { SearchBar } from './SearchBar';
@@ -44,8 +45,8 @@ export function Sidebar({
           flexDirection: 'column',
           gap: 2,
           p: 3,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
+          bg: 'canvas.subtle',
+          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
         }}
       >
         <Button
@@ -74,14 +75,27 @@ export function Sidebar({
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }} data-testid="note-list-scroll">
         {loading && summaries.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <Spinner size="small" />
+            <Spinner size="small" aria-label="Loading notes" />
           </Box>
         ) : summaries.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-              {query || labelFilter ? 'No matching notes.' : 'No notes yet. Create one to start.'}
-            </Text>
-          </Box>
+          <Blankslate spacious={false} narrow>
+            <Blankslate.Visual>
+              {query || labelFilter ? <SearchIcon size="medium" /> : <NoteIcon size="medium" />}
+            </Blankslate.Visual>
+            <Blankslate.Heading as="h3">
+              {query || labelFilter ? 'No matching notes' : 'No notes yet'}
+            </Blankslate.Heading>
+            <Blankslate.Description>
+              {query || labelFilter
+                ? 'Try a different search or label filter.'
+                : 'Create your first note to start writing.'}
+            </Blankslate.Description>
+            {!query && !labelFilter && (
+              <Blankslate.PrimaryAction onClick={onCreateNote} data-testid="empty-new-note">
+                New note
+              </Blankslate.PrimaryAction>
+            )}
+          </Blankslate>
         ) : (
           <NoteList
             summaries={summaries}

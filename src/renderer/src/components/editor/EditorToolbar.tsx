@@ -1,6 +1,7 @@
 import { Box, SegmentedControl } from '@primer/react';
 import type { Editor } from '@tiptap/react';
 import { FormatControls } from '../../editor/FormatControls';
+import { Separator } from '../common/Separator';
 import { NoteActionsMenu } from './NoteActionsMenu';
 
 interface EditorToolbarProps {
@@ -38,11 +39,10 @@ export function EditorToolbar({
         alignItems: 'center',
         gap: 2,
         flexWrap: 'wrap',
-        px: 3,
+        px: 4,
         py: 2,
         bg: 'canvas.subtle',
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
+        boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
       }}
     >
       <SegmentedControl aria-label="Editor view" size="small">
@@ -64,7 +64,7 @@ export function EditorToolbar({
 
       {!viewSource && (
         <>
-          <Box sx={{ width: '1px', height: 20, bg: 'border.default', mx: 1 }} />
+          <Separator />
           <FormatControls editor={editor} />
         </>
       )}

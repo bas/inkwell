@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Text, Spinner, Flash, TextInput } from '@primer/react';
+import { Blankslate } from '@primer/react/experimental';
+import { NoteIcon } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
@@ -14,6 +16,7 @@ import { SourceEditor } from '../../editor/SourceEditor';
 interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
+  onCreateNote?: () => void;
   onAfterChange: () => void;
   onLabelsChanged: () => void;
   onAfterDelete: () => void;
@@ -30,6 +33,7 @@ function describeError(err: unknown): string {
 export function EditorPane({
   noteId,
   labels,
+  onCreateNote,
   onAfterChange,
   onLabelsChanged,
   onAfterDelete,
@@ -198,7 +202,20 @@ export function EditorPane({
         sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}
         data-testid="editor-empty"
       >
-        <Text sx={{ color: 'fg.muted' }}>Select or create a note to start writing.</Text>
+        <Blankslate>
+          <Blankslate.Visual>
+            <NoteIcon size="medium" />
+          </Blankslate.Visual>
+          <Blankslate.Heading>No note selected</Blankslate.Heading>
+          <Blankslate.Description>
+            Select a note from the list, or create a new one to start writing.
+          </Blankslate.Description>
+          {onCreateNote && (
+            <Blankslate.PrimaryAction onClick={onCreateNote} data-testid="editor-empty-new-note">
+              New note
+            </Blankslate.PrimaryAction>
+          )}
+        </Blankslate>
       </Box>
     );
   }
@@ -206,14 +223,22 @@ export function EditorPane({
   if (loading && !note) {
     return (
       <Box sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-        <Spinner />
+        <Spinner aria-label="Loading note" />
       </Box>
     );
   }
 
   if (error && !note) {
     return (
-      <Box sx={{ p: 4 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          height: '100%',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 4,
+        }}
+      >
         <Flash variant="danger" data-testid="editor-error">
           {error}
         </Flash>
@@ -244,8 +269,7 @@ export function EditorPane({
           gap: 2,
           px: 4,
           py: 3,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
+          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
         }}
       >
         <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -303,8 +327,12 @@ export function EditorPane({
 
       <Box sx={{ flex: 1, minHeight: 0 }} data-testid="editor-body">
         {viewSource ? (
-          <Box sx={{ height: '100%', p: 4 }}>
-            <SourceEditor value={markdown} onChange={handleBodyChange} />
+          <Box sx={{ height: '100%', px: 4, py: 3 }}>
+            <Box
+              sx={{ maxWidth: 'var(--ink-reading-column-max-width)', mx: 'auto', height: '100%' }}
+            >
+              <SourceEditor value={markdown} onChange={handleBodyChange} />
+            </Box>
           </Box>
         ) : (
           <MarkdownEditor

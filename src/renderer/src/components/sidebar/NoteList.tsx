@@ -16,11 +16,13 @@ function NoteRow({
   summary,
   colorOf,
   selected,
+  reserveLeading,
   onSelect,
 }: {
   summary: NoteSummary;
   colorOf: (name: string) => string;
   selected: boolean;
+  reserveLeading: boolean;
   onSelect: (id: string) => void;
 }): JSX.Element {
   return (
@@ -29,9 +31,9 @@ function NoteRow({
       onSelect={() => onSelect(summary.id)}
       data-testid={`note-item-${summary.id}`}
     >
-      {summary.pinned && (
+      {(summary.pinned || reserveLeading) && (
         <ActionList.LeadingVisual>
-          <PinIcon />
+          {summary.pinned ? <PinIcon /> : <Box aria-hidden sx={{ width: '100%' }} />}
         </ActionList.LeadingVisual>
       )}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
@@ -66,7 +68,7 @@ function NoteRow({
           </Text>
         )}
         {summary.labels.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {summary.labels.map((name) => (
               <LabelChip key={name} name={name} color={colorOf(name)} />
             ))}
@@ -83,18 +85,20 @@ export function NoteList({ summaries, labels, selectedId, onSelect }: NoteListPr
 
   const pinned = summaries.filter((note) => note.pinned);
   const others = summaries.filter((note) => !note.pinned);
+  const reserveLeading = pinned.length > 0;
 
   return (
     <ActionList showDividers data-testid="note-list">
       {pinned.length > 0 && (
         <ActionList.Group>
-          <ActionList.GroupHeading>Pinned</ActionList.GroupHeading>
+          <ActionList.GroupHeading as="h3">Pinned</ActionList.GroupHeading>
           {pinned.map((summary) => (
             <NoteRow
               key={summary.id}
               summary={summary}
               colorOf={colorOf}
               selected={summary.id === selectedId}
+              reserveLeading={reserveLeading}
               onSelect={onSelect}
             />
           ))}
@@ -102,13 +106,14 @@ export function NoteList({ summaries, labels, selectedId, onSelect }: NoteListPr
       )}
       {others.length > 0 && (
         <ActionList.Group>
-          {pinned.length > 0 && <ActionList.GroupHeading>Notes</ActionList.GroupHeading>}
+          {pinned.length > 0 && <ActionList.GroupHeading as="h3">Notes</ActionList.GroupHeading>}
           {others.map((summary) => (
             <NoteRow
               key={summary.id}
               summary={summary}
               colorOf={colorOf}
               selected={summary.id === selectedId}
+              reserveLeading={reserveLeading}
               onSelect={onSelect}
             />
           ))}

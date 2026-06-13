@@ -50,8 +50,18 @@ export function MarkdownEditor({
   useEffect(() => () => editor?.destroy(), [editor]);
 
   return (
-    <Box className="ink-editor" sx={{ height: '100%', minHeight: 0, px: 4, py: 3 }}>
-      <EditorContent editor={editor} />
+    <Box className="ink-editor" sx={{ height: '100%', minHeight: 0 }}>
+      <Box
+        sx={{
+          maxWidth: 'var(--ink-reading-column-max-width)',
+          minHeight: '100%',
+          mx: 'auto',
+          px: 4,
+          py: 3,
+        }}
+      >
+        <EditorContent editor={editor} />
+      </Box>
     </Box>
   );
 }

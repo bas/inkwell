@@ -1,4 +1,4 @@
-import { ThemeProvider, BaseStyles, PageLayout, Box, Flash } from '@primer/react';
+import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, Heading } from '@primer/react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
 import { useNotes } from './state/useNotes';
@@ -20,15 +20,20 @@ export function App(): JSX.Element {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
-              pl: '86px', // clear macOS traffic-light buttons (hiddenInset title bar)
+              gap: 2,
+              pl: 'var(--ink-titlebar-inset)',
               pr: 3,
               py: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
+              bg: 'canvas.subtle',
+              // A filled surface plus a single inset bottom edge reads as a
+              // contained bar rather than two floating hairlines.
+              boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
             }}
           >
-            <Box style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <Heading as="h1" sx={{ fontSize: 1, fontWeight: 'bold', color: 'fg.default' }}>
+              Inkwell
+            </Heading>
+            <Box sx={{ ml: 'auto' }} style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
               <ThemeToggle
                 key={loaded ? preference : 'loading'}
                 preference={preference}
@@ -45,19 +50,28 @@ export function App(): JSX.Element {
             </Box>
           )}
 
-          <PageLayout
-            containerWidth="full"
-            padding="none"
+          <SplitPageLayout
             sx={{
               flex: 1,
               minHeight: 0,
-              // Stretch Primer's internal wrapper/content regions to full height so the
-              // pane divider spans the entire layout instead of collapsing to content height.
-              '> div': { height: '100%' },
-              '> div > div': { height: '100%' },
+              // PageLayout is not a full-height shell by default, so the pane
+              // divider would otherwise collapse to content height. Stretch the
+              // generated wrapper regions, targeting Primer's stable class
+              // prefixes instead of fragile positional `> div > div` selectors.
+              '& [class*="PageLayoutWrapper"]': { height: '100%' },
+              '& [class*="PageLayoutContent"]': { height: '100%' },
             }}
           >
-            <PageLayout.Pane position="start" divider="line" width="medium" resizable>
+            <SplitPageLayout.Pane
+              position="start"
+              divider="line"
+              width="medium"
+              padding="none"
+              resizable
+              widthStorageKey="inkwell-sidebar-width"
+              aria-label="Notes"
+              sx={{ height: '100%' }}
+            >
               <Sidebar
                 summaries={notes.summaries}
                 labels={notes.labels}
@@ -74,11 +88,12 @@ export function App(): JSX.Element {
                   void notes.refresh();
                 }}
               />
-            </PageLayout.Pane>
-            <PageLayout.Content>
+            </SplitPageLayout.Pane>
+            <SplitPageLayout.Content padding="none" width="full" sx={{ height: '100%' }}>
               <EditorPane
                 noteId={notes.selectedId}
                 labels={notes.labels}
+                onCreateNote={() => void notes.createNote()}
                 onAfterChange={() => void notes.refresh()}
                 onLabelsChanged={() => {
                   void notes.refreshLabels();
@@ -89,8 +104,8 @@ export function App(): JSX.Element {
                   void notes.refresh();
                 }}
               />
-            </PageLayout.Content>
-          </PageLayout>
+            </SplitPageLayout.Content>
+          </SplitPageLayout>
         </Box>
       </BaseStyles>
     </ThemeProvider>
