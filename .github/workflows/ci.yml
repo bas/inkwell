@@ -36,10 +36,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      # E2E and DMG packaging are enabled once the app shell lands (Phase 1+).
-      # - name: Install Playwright browsers
-      #   run: npx playwright install --with-deps
-      # - name: E2E tests
-      #   run: npm run test:e2e
-      # - name: Package DMG (arm64)
-      #   run: npm run package
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Package DMG (arm64)
+        run: npm run package
