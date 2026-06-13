@@ -6,7 +6,7 @@
   /* Horizontal inset that clears the macOS traffic-light buttons in the
    * `hiddenInset` title bar. Kept as a variable so the value is explicit and
    * overridable rather than scattered as a magic number in component code. */
-  --ink-titlebar-inset: 86px;
+  --ink-titlebar-inset: calc(var(--base-size-80) + var(--base-size-6));
 }
 
 html,
