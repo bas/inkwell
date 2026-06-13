@@ -51,6 +51,14 @@ function createWindow(): BrowserWindow {
     return { action: 'deny' };
   });
 
+  // Block navigation away from the app (prevents phishing via crafted links).
+  const allowedOrigin = isDev ? process.env['ELECTRON_RENDERER_URL'] : undefined;
+  window.webContents.on('will-navigate', (event, url) => {
+    if (allowedOrigin && url.startsWith(allowedOrigin)) return;
+    if (url.startsWith('file://')) return;
+    event.preventDefault();
+  });
+
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     void window.loadURL(process.env['ELECTRON_RENDERER_URL']);
   } else {
