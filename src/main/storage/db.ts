@@ -193,10 +193,21 @@ export function searchSummaries(db: DB, query: string): NoteSummary[] {
 /** Rebuild the entire index from the given notes (used on startup / recovery). */
 export function rebuildIndex(db: DB, notes: Array<{ path: string; note: UpsertInput }>): void {
   const tx = db.transaction(() => {
+    // Snapshot label colors before clearing so user-assigned colors survive the rebuild.
+    const savedColors = db
+      .prepare(`SELECT name, color FROM labels WHERE color != 'default'`)
+      .all() as { name: string; color: string }[];
+
     db.exec(
       `DELETE FROM note_labels; DELETE FROM notes; DELETE FROM notes_fts; DELETE FROM labels;`,
     );
     for (const { note } of notes) upsertNote(db, note);
+
+    // Restore label colors that were set before the rebuild.
+    const restore = db.prepare(`UPDATE labels SET color = ? WHERE name = ?`);
+    for (const { name, color } of savedColors) {
+      restore.run(color, name);
+    }
   });
   tx();
 }

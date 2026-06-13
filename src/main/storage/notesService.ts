@@ -51,6 +51,8 @@ export class NotesService {
   private readonly idToPath = new Map<string, string>();
   private watcher: FSWatcher | undefined;
   private rescanTimer: NodeJS.Timeout | undefined;
+  /** Paths currently being written by the app; suppresses watcher-triggered rebuilds. */
+  private selfWritePaths = new Set<string>();
 
   constructor(
     private readonly vaultDir: string,
@@ -84,7 +86,12 @@ export class NotesService {
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 150, pollInterval: 50 },
     });
-    const schedule = (): void => {
+    const schedule = (path: string): void => {
+      // Ignore events fired by our own writes.
+      if (this.selfWritePaths.has(path)) {
+        this.selfWritePaths.delete(path);
+        return;
+      }
       if (this.rescanTimer) clearTimeout(this.rescanTimer);
       this.rescanTimer = setTimeout(() => {
         this.rebuild();
@@ -128,6 +135,7 @@ export class NotesService {
       body: input.body ?? '',
     };
     const path = this.uniquePath(noteFilename(title, id));
+    this.selfWritePaths.add(path);
     writeNoteToPath(path, note);
     this.idToPath.set(id, path);
     upsertNote(this.db, indexInput(note, path));
@@ -146,6 +154,7 @@ export class NotesService {
       pinned: input.pinned ?? current.pinned,
       updatedAt: new Date().toISOString(),
     };
+    this.selfWritePaths.add(path);
     writeNoteToPath(path, next);
     upsertNote(this.db, indexInput(next, path));
     return next;
@@ -184,6 +193,7 @@ export class NotesService {
           labels: note.labels.filter((name) => name !== label.name),
           updatedAt: new Date().toISOString(),
         };
+        this.selfWritePaths.add(path);
         writeNoteToPath(path, next);
         upsertNote(this.db, indexInput(next, path));
         this.idToPath.set(noteId, path);
