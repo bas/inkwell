@@ -37,6 +37,7 @@ export function EditorPane({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Latest editable data, read by the debounced/flush save without re-binding.
@@ -133,6 +134,18 @@ export function EditorPane({
     }
   }, [note, onAfterChange]);
 
+  const handleCopyMarkdown = useCallback(async () => {
+    const { title: t, markdown: body } = dataRef.current;
+    const heading = t.trim() ? `# ${t.trim()}\n\n` : '';
+    try {
+      await window.api.writeClipboard(`${heading}${body}`.trimEnd() + '\n');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      setError(describeError(err));
+    }
+  }, []);
+
   const handleConfirmDelete = useCallback(async () => {
     if (!note) return;
     setConfirmDelete(false);
@@ -187,7 +200,6 @@ export function EditorPane({
           : saveState === 'error'
             ? 'Save failed'
             : `Updated ${relativeTime(note.updatedAt)}`;
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <Box
@@ -219,7 +231,7 @@ export function EditorPane({
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
             <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="save-state">
-              {saveLabel}
+              {copied ? 'Copied to clipboard' : saveLabel}
             </Text>
             {note.labels.map((name) => (
               <LabelChip key={name} name={name} color={colorOf(name)} />
@@ -249,6 +261,7 @@ export function EditorPane({
           <NoteActionsMenu
             pinned={note.pinned}
             onTogglePin={handleTogglePin}
+            onCopyMarkdown={() => void handleCopyMarkdown()}
             onDelete={() => setConfirmDelete(true)}
           />
         </Box>

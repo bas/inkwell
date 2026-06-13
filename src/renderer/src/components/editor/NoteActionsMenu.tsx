@@ -1,9 +1,10 @@
 import { ActionMenu, ActionList, IconButton } from '@primer/react';
-import { KebabHorizontalIcon, PinIcon, TrashIcon } from '@primer/octicons-react';
+import { KebabHorizontalIcon, PinIcon, TrashIcon, CopyIcon } from '@primer/octicons-react';
 
 interface NoteActionsMenuProps {
   pinned: boolean;
   onTogglePin: () => void;
+  onCopyMarkdown: () => void;
   onDelete: () => void;
 }
 
@@ -11,6 +12,7 @@ interface NoteActionsMenuProps {
 export function NoteActionsMenu({
   pinned,
   onTogglePin,
+  onCopyMarkdown,
   onDelete,
 }: NoteActionsMenuProps): JSX.Element {
   return (
@@ -30,6 +32,12 @@ export function NoteActionsMenu({
               <PinIcon />
             </ActionList.LeadingVisual>
             {pinned ? 'Unpin note' : 'Pin note'}
+          </ActionList.Item>
+          <ActionList.Item onSelect={onCopyMarkdown} data-testid="action-copy-markdown">
+            <ActionList.LeadingVisual>
+              <CopyIcon />
+            </ActionList.LeadingVisual>
+            Copy as Markdown
           </ActionList.Item>
           <ActionList.Divider />
           <ActionList.Item variant="danger" onSelect={onDelete} data-testid="action-delete">

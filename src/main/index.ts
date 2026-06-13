@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, nativeTheme, shell } from 'electron';
 import { join } from 'node:path';
 import { readSettings, setColorMode } from './settings';
 import { NotesService } from './storage/notesService';
 import { registerNoteHandlers } from './ipc';
+import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { IpcChannels } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
 
@@ -27,6 +28,10 @@ function createWindow(): BrowserWindow {
   });
 
   window.on('ready-to-show', () => window.show());
+
+  // English spellcheck for editable surfaces, with a suggestions context menu.
+  configureSpellcheck(window.webContents.session);
+  attachSpellcheckMenu(window.webContents);
 
   // Open external links in the user's browser; never inside the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -53,6 +58,11 @@ function registerIpcHandlers(): void {
       throw new Error('Invalid color mode');
     }
     return setColorMode(mode as ColorModePreference);
+  });
+
+  ipcMain.handle(IpcChannels.writeClipboard, (_event, text: unknown) => {
+    if (typeof text !== 'string') throw new Error('Clipboard text must be a string');
+    clipboard.writeText(text);
   });
 }
 

@@ -22,6 +22,8 @@ export const IpcChannels = {
   createLabel: 'labels:create',
   setLabelColor: 'labels:setColor',
   deleteLabel: 'labels:delete',
+
+  writeClipboard: 'clipboard:writeText',
 } as const;
 
 /**
@@ -47,4 +49,7 @@ export interface InkwellApi {
   createLabel(name: string, color?: string): Promise<Label>;
   setLabelColor(id: number, color: string): Promise<void>;
   deleteLabel(id: number): Promise<void>;
+
+  /** Copy plain text (e.g. Markdown) to the system clipboard. */
+  writeClipboard(text: string): Promise<void>;
 }

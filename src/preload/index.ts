@@ -30,6 +30,8 @@ const api: InkwellApi = {
   setLabelColor: (id: number, color: string) =>
     ipcRenderer.invoke(IpcChannels.setLabelColor, id, color),
   deleteLabel: (id: number) => ipcRenderer.invoke(IpcChannels.deleteLabel, id),
+
+  writeClipboard: (text: string) => ipcRenderer.invoke(IpcChannels.writeClipboard, text),
 };
 
 contextBridge.exposeInMainWorld('api', api);
