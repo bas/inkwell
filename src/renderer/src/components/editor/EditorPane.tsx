@@ -178,6 +178,7 @@ export function EditorPane({
     setSummaryOpen(true);
     void (async () => {
       await save();
+      if (dirtyRef.current) return;
       runSummarize(id);
     })();
   }, [save, runSummarize]);
