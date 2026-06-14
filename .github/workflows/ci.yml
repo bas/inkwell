@@ -101,4 +101,4 @@ jobs:
         run: npm run rebuild
 
       - name: Package DMG (arm64)
-        run: npm run package
+        run: npm run package -- --publish never
