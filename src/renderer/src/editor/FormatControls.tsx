@@ -12,7 +12,6 @@ import {
   FileCodeIcon,
   LinkIcon,
   TableIcon,
-  TriangleDownIcon,
 } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import { Separator } from '../components/common/Separator';
@@ -95,7 +94,6 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
       <ActionMenu>
         <ActionMenu.Button
-          trailingVisual={TriangleDownIcon}
           leadingVisual={HeadingIcon}
           variant="invisible"
           disabled={disabled}
