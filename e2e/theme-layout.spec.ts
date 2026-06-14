@@ -67,6 +67,9 @@ test.describe('Theme', () => {
     await expect(labelDialog).toBeVisible();
     await expectInDarkMode(labelDialog);
 
+    await page.keyboard.press('Escape');
+    await expect(labelDialog).toBeHidden();
+
     await page.getByTestId('new-note-button').click();
     await page.getByTestId('note-actions').click();
     const deleteItem = page.getByTestId('action-delete');
