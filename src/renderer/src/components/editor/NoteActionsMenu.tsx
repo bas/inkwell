@@ -1,8 +1,15 @@
 import { ActionMenu, ActionList, IconButton } from '@primer/react';
-import { KebabHorizontalIcon, PinIcon, TrashIcon, CopyIcon } from '@primer/octicons-react';
+import {
+  KebabHorizontalIcon,
+  PinIcon,
+  TrashIcon,
+  CopyIcon,
+  CopilotIcon,
+} from '@primer/octicons-react';
 
 interface NoteActionsMenuProps {
   pinned: boolean;
+  onSummarize: () => void;
   onTogglePin: () => void;
   onCopyMarkdown: () => void;
   onDelete: () => void;
@@ -11,6 +18,7 @@ interface NoteActionsMenuProps {
 /** Overflow menu of actions for the currently open note. */
 export function NoteActionsMenu({
   pinned,
+  onSummarize,
   onTogglePin,
   onCopyMarkdown,
   onDelete,
@@ -27,6 +35,13 @@ export function NoteActionsMenu({
       </ActionMenu.Anchor>
       <ActionMenu.Overlay width="small">
         <ActionList>
+          <ActionList.Item onSelect={onSummarize} data-testid="action-summarize">
+            <ActionList.LeadingVisual>
+              <CopilotIcon />
+            </ActionList.LeadingVisual>
+            Summarize with Copilot
+          </ActionList.Item>
+          <ActionList.Divider />
           <ActionList.Item onSelect={onTogglePin} data-testid="action-toggle-pin">
             <ActionList.LeadingVisual>
               <PinIcon />

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IpcChannels, type InkwellApi } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
+import type { AiStreamChunk } from '../shared/ai';
 
 const api: InkwellApi = {
   getSettings: () => ipcRenderer.invoke(IpcChannels.getSettings),
@@ -32,6 +33,23 @@ const api: InkwellApi = {
   deleteLabel: (id: number) => ipcRenderer.invoke(IpcChannels.deleteLabel, id),
 
   writeClipboard: (text: string) => ipcRenderer.invoke(IpcChannels.writeClipboard, text),
+
+  getAiAvailability: () => ipcRenderer.invoke(IpcChannels.aiGetAvailability),
+
+  summarizeNote: (noteId: string, requestId: string) =>
+    ipcRenderer.invoke(IpcChannels.aiSummarize, noteId, requestId),
+
+  cancelSummarize: (requestId: string) => ipcRenderer.invoke(IpcChannels.aiCancel, requestId),
+
+  insertTldr: (noteId: string, summary: string) =>
+    ipcRenderer.invoke(IpcChannels.aiInsertTldr, noteId, summary),
+
+  onAiStreamDelta: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, chunk: AiStreamChunk): void =>
+      listener(chunk);
+    ipcRenderer.on(IpcChannels.aiStreamDelta, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.aiStreamDelta, handler);
+  },
 
   onMenuNewNote: (listener) => {
     const handler = (): void => listener();

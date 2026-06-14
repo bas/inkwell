@@ -85,8 +85,8 @@ export function LabelManagerDialog({
   };
 
   return (
-    <Dialog title="Manage labels" onClose={onClose} data-testid="label-manager">
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Dialog title="Manage labels" onClose={onClose}>
+      <Box data-testid="label-manager" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         {error && (
           <Flash variant="danger" data-testid="label-manager-error">
             {error}

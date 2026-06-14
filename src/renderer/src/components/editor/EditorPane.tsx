@@ -6,11 +6,13 @@ import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
+import { AiSummaryDialog } from './AiSummaryDialog';
 import { LabelChip } from '../common/LabelChip';
 import { LabelPicker } from '../labels/LabelPicker';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
+import { useAiSummary } from '../../state/useAiSummary';
 
 interface EditorPaneProps {
   noteId: string | undefined;
@@ -47,6 +49,18 @@ export function EditorPane({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryNoteId, setSummaryNoteId] = useState('');
+  const [summaryNoteTitle, setSummaryNoteTitle] = useState('');
+  const [inserting, setInserting] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const {
+    state: summaryState,
+    summarize: runSummarize,
+    cancel: cancelSummary,
+    stop: stopSummary,
+    reset: resetSummary,
+  } = useAiSummary();
 
   // Latest editable data, read by the debounced/flush save without re-binding.
   const dataRef = useRef({ id: '', title: '', markdown: '' });
@@ -104,6 +118,8 @@ export function EditorPane({
   // Load on selection change; flush pending edits for the previous note first.
   useEffect(() => {
     flush();
+    setSummaryOpen(false);
+    cancelSummary();
     setViewSource(false);
     if (!noteId) {
       setNote(undefined);
@@ -153,6 +169,56 @@ export function EditorPane({
       setError(describeError(err));
     }
   }, []);
+
+  const handleSummarize = useCallback(() => {
+    const { id, title } = dataRef.current;
+    if (!id) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    resetSummary();
+    setSummaryNoteId(id);
+    setSummaryNoteTitle(title);
+    setSummaryOpen(true);
+    void (async () => {
+      await save();
+      if (dirtyRef.current) {
+        // Couldn't reach a clean on-disk state; don't summarize stale content.
+        setSummaryOpen(false);
+        setError('Could not save the note before summarizing. Please try again.');
+        return;
+      }
+      runSummarize(id);
+    })();
+  }, [save, runSummarize, resetSummary]);
+
+  const handleCloseSummary = useCallback(() => {
+    setSummaryOpen(false);
+    cancelSummary();
+  }, [cancelSummary]);
+
+  const handleInsertTldr = useCallback(async () => {
+    if (!summaryNoteId || !summaryState.text) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    await save();
+    if (dirtyRef.current) return;
+    setInserting(true);
+    try {
+      const updated = await window.api.insertTldr(summaryNoteId, summaryState.text);
+      setNote(updated);
+      setTitle(updated.title);
+      setMarkdown(updated.body);
+      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dirtyRef.current = false;
+      setSaveState('saved');
+      setReloadNonce((nonce) => nonce + 1);
+      setSummaryOpen(false);
+      resetSummary();
+      onAfterChange();
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setInserting(false);
+    }
+  }, [summaryNoteId, summaryState.text, save, resetSummary, onAfterChange]);
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
@@ -373,6 +439,7 @@ export function EditorPane({
             }}
             onSelectSource={() => setViewSource(true)}
             pinned={note.pinned}
+            onSummarize={handleSummarize}
             onTogglePin={handleTogglePin}
             onCopyMarkdown={() => void handleCopyMarkdown()}
             onDelete={() => setConfirmDelete(true)}
@@ -390,7 +457,7 @@ export function EditorPane({
               </Box>
             ) : (
               <MarkdownEditor
-                key={note.id}
+                key={`${note.id}:${reloadNonce}`}
                 initialMarkdown={markdown}
                 onChange={handleBodyChange}
                 onEditorReady={setEditor}
@@ -406,6 +473,18 @@ export function EditorPane({
         onCancel={() => setConfirmDelete(false)}
         onConfirm={handleConfirmDelete}
       />
+
+      {summaryOpen && (
+        <AiSummaryDialog
+          state={summaryState}
+          noteTitle={summaryNoteTitle}
+          inserting={inserting}
+          onClose={handleCloseSummary}
+          onStop={stopSummary}
+          onRetry={() => runSummarize(summaryNoteId)}
+          onInsert={() => void handleInsertTldr()}
+        />
+      )}
     </Box>
   );
 }

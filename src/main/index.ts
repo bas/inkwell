@@ -4,6 +4,7 @@ import { readSettings, setColorMode, setWindowBounds } from './settings';
 import { NotesService } from './storage/notesService';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
+import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { IpcChannels } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
@@ -96,6 +97,7 @@ app.whenReady().then(() => {
   try {
     notesService = new NotesService(vaultDir, dbPath);
     registerNoteHandlers(notesService);
+    registerAiHandlers(notesService);
   } catch (err) {
     dialog.showErrorBox(
       'Inkwell could not open your notes',
@@ -143,6 +145,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   void notesService?.dispose();
+  void disposeAi();
 });
 
 app.on('window-all-closed', () => {

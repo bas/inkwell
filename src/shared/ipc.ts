@@ -1,6 +1,7 @@
 import type { AppSettings, ColorModePreference } from './types';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note';
 import type { Label } from './note-labels';
+import type { AiAvailability, AiResult, AiStreamChunk } from './ai';
 
 /** IPC channel names. Keep in sync between main handlers and the preload bridge. */
 export const IpcChannels = {
@@ -24,6 +25,17 @@ export const IpcChannels = {
   deleteLabel: 'labels:delete',
 
   writeClipboard: 'clipboard:writeText',
+
+  /** AI: report whether the Copilot runtime is reachable and authenticated. */
+  aiGetAvailability: 'ai:getAvailability',
+  /** AI: summarize a note's body. */
+  aiSummarize: 'ai:summarize',
+  /** AI: cancel an in-flight summarize request by id. */
+  aiCancel: 'ai:cancel',
+  /** AI: insert/replace a regenerable TL;DR block at the top of a note. */
+  aiInsertTldr: 'ai:insertTldr',
+  /** Main → renderer: a streamed chunk of an in-progress AI response. */
+  aiStreamDelta: 'ai:streamDelta',
 
   /** Main → renderer: the user picked File → New Note from the menu. */
   menuNewNote: 'menu:newNote',
@@ -55,6 +67,17 @@ export interface InkwellApi {
 
   /** Copy plain text (e.g. Markdown) to the system clipboard. */
   writeClipboard(text: string): Promise<void>;
+
+  /** Report whether the Copilot AI runtime is reachable and authenticated. */
+  getAiAvailability(): Promise<AiAvailability>;
+  /** Summarize a note's body with Copilot. Streams via `onAiStreamDelta`. */
+  summarizeNote(noteId: string, requestId: string): Promise<AiResult>;
+  /** Cancel an in-flight summarize request by id. Safe to call when none is running. */
+  cancelSummarize(requestId: string): Promise<void>;
+  /** Insert/replace a regenerable TL;DR block at the top of a note. Returns the saved note. */
+  insertTldr(noteId: string, summary: string): Promise<Note>;
+  /** Subscribe to streamed AI response chunks. Returns an unsubscribe function. */
+  onAiStreamDelta(listener: (chunk: AiStreamChunk) => void): () => void;
 
   /** Subscribe to the File → New Note menu command. Returns an unsubscribe function. */
   onMenuNewNote(listener: () => void): () => void;
