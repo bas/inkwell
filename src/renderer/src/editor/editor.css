@@ -15,6 +15,38 @@
   padding-bottom: var(--base-size-32, 2rem);
 }
 
+/*
+ * Roomier reading rhythm for editor content. Typography colors/sizes still come
+ * from Primer's `.markdown-body`; here we only relax line-height and the spacing
+ * between blocks using Primer spacing tokens.
+ */
+.ink-editor .ProseMirror.markdown-body {
+  line-height: var(--text-body-lineHeight-large, 1.5);
+}
+
+.ink-editor .ProseMirror.markdown-body > * + * {
+  margin-top: var(--base-size-16, 1rem);
+}
+
+.ink-editor .ProseMirror.markdown-body > h1,
+.ink-editor .ProseMirror.markdown-body > h2,
+.ink-editor .ProseMirror.markdown-body > h3 {
+  margin-top: var(--base-size-24, 1.5rem);
+  margin-bottom: var(--base-size-8, 0.5rem);
+}
+
+.ink-editor .ProseMirror.markdown-body > h1:first-child,
+.ink-editor .ProseMirror.markdown-body > h2:first-child,
+.ink-editor .ProseMirror.markdown-body > h3:first-child {
+  margin-top: 0;
+}
+
+.ink-editor .ProseMirror.markdown-body > pre,
+.ink-editor .ProseMirror.markdown-body > blockquote {
+  margin-top: var(--base-size-16, 1rem);
+  margin-bottom: var(--base-size-16, 1rem);
+}
+
 /* Placeholder text for an empty document. */
 .ink-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
