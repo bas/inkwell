@@ -13,6 +13,11 @@
    * the value is documented and shared rather than duplicated as a magic
    * number in each component. */
   --ink-reading-column-max-width: 720px;
+
+  /* Maximum width of the bordered editor card. Wider than the reading column
+   * so the editing surface uses more of the available pane; the toolbar wraps
+   * to additional rows when the pane is too narrow to fit it on one line. */
+  --ink-editor-column-max-width: 1024px;
 }
 
 html,

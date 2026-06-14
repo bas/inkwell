@@ -39,7 +39,7 @@ export function EditorToolbar({
         alignItems: 'center',
         gap: 2,
         flexWrap: 'wrap',
-        px: 4,
+        px: 3,
         py: 2,
         bg: 'canvas.subtle',
         boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
