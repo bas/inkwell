@@ -99,9 +99,9 @@ let shimPath: string | undefined;
 function buildCliShim(nodeBin: string): string {
   if (shimPath && existsSync(shimPath)) return shimPath;
   const cli = resolveBundledCli();
-  const file = join(tmpdir(), 'inkwell-copilot-cli');
+  const file = join(tmpdir(), `inkwell-copilot-cli-${process.pid}-${Date.now()}`);
   const script = `#!/bin/sh\nexec ${shQuote(nodeBin)} ${shQuote(cli)} "$@"\n`;
-  writeFileSync(file, script, { mode: 0o755 });
+  writeFileSync(file, script, { mode: 0o755, flag: 'wx' });
   chmodSync(file, 0o755);
   shimPath = file;
   return file;

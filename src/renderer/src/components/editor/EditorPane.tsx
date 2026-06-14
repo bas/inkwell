@@ -181,6 +181,7 @@ export function EditorPane({
   const handleInsertTldr = useCallback(async () => {
     const { id } = dataRef.current;
     if (!id || !summaryState.text) return;
+    flush();
     setInserting(true);
     try {
       const updated = await window.api.insertTldr(id, summaryState.text);
@@ -199,7 +200,7 @@ export function EditorPane({
     } finally {
       setInserting(false);
     }
-  }, [summaryState.text, resetSummary, onAfterChange]);
+  }, [summaryState.text, flush, resetSummary, onAfterChange]);
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {

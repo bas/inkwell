@@ -40,18 +40,22 @@ function formatTldrBlock(summary: string): string {
 export function upsertTldrBlock(body: string, summary: string): string {
   const block = formatTldrBlock(summary);
   const withoutLegacy = body.replace(LEGACY_BLOCK, '');
-  const leadingWs = withoutLegacy.match(/^\s*/)?.[0] ?? '';
-  const lines = withoutLegacy.slice(leadingWs.length).split('\n');
+  const lines = withoutLegacy.split('\n');
+
+  // Skip leading blank lines when detecting an existing TL;DR block, but preserve
+  // any leading whitespace/indentation in the original body when prepending.
+  let start = 0;
+  while (start < lines.length && (lines[start] ?? '').trim() === '') start++;
 
   let rest: string;
-  if (TLDR_FIRST_LINE.test(lines[0] ?? '')) {
+  if (TLDR_FIRST_LINE.test(lines[start] ?? '')) {
     // Consume the contiguous leading blockquote, then any blank separator lines.
-    let i = 0;
+    let i = start;
     while (i < lines.length && (lines[i] ?? '').startsWith('>')) i++;
     while (i < lines.length && (lines[i] ?? '').trim() === '') i++;
-    rest = lines.slice(i).join('\n');
+    rest = [...lines.slice(0, start), ...lines.slice(i)].join('\n');
   } else {
-    rest = withoutLegacy.slice(leadingWs.length);
+    rest = withoutLegacy;
   }
 
   return rest ? `${block}\n\n${rest}` : `${block}\n`;

@@ -59,13 +59,20 @@ export async function runGeneration({
     return { ok: true, content: faked };
   }
 
-  const client = await getCopilotClient();
-  const session = await client.createSession({
-    model: 'auto',
-    streaming: true,
-    availableTools: [],
-    onPermissionRequest: denyAllTools,
-  });
+  let session: Awaited<
+    ReturnType<Awaited<ReturnType<typeof getCopilotClient>>['createSession']>
+  >;
+  try {
+    const client = await getCopilotClient();
+    session = await client.createSession({
+      model: 'auto',
+      streaming: true,
+      availableTools: [],
+      onPermissionRequest: denyAllTools,
+    });
+  } catch (err) {
+    return { ok: false, errorType: 'runtime', message: errorText(err) };
+  }
 
   let streamed = '';
   let errorMessage: string | undefined;
@@ -76,7 +83,11 @@ export async function runGeneration({
   const disconnect = async (): Promise<void> => {
     if (disconnected) return;
     disconnected = true;
-    await session.disconnect();
+    try {
+      await session.disconnect();
+    } catch {
+      // Ignore disconnect errors; teardown should not override the generation outcome.
+    }
   };
 
   const offDelta = session.on('assistant.message_delta', (event) => {
