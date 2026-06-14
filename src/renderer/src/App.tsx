@@ -1,4 +1,4 @@
-import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, Heading } from '@primer/react';
+import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash } from '@primer/react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
 import { useNotes } from './state/useNotes';
@@ -30,9 +30,6 @@ export function App(): JSX.Element {
               boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
             }}
           >
-            <Heading as="h1" sx={{ fontSize: 1, fontWeight: 'bold', color: 'fg.default' }}>
-              Inkwell
-            </Heading>
             <Box sx={{ ml: 'auto' }} style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
               <ThemeToggle
                 key={loaded ? preference : 'loading'}
