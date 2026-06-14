@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 import { launchApp, type LaunchedApp } from './helpers';
 
+async function expectInDarkMode(
+  locator: ReturnType<LaunchedApp['page']['getByTestId']>,
+): Promise<void> {
+  await expect
+    .poll(async () =>
+      locator.evaluate((element) => Boolean(element.closest('[data-color-mode="dark"]'))),
+    )
+    .toBe(true);
+}
+
 test.describe('Theme', () => {
   let ctx: LaunchedApp;
 
@@ -20,10 +30,48 @@ test.describe('Theme', () => {
     const { page } = ctx;
 
     await page.getByRole('button', { name: 'Dark' }).click();
-    await expect(page.locator('[data-color-mode="dark"]')).toHaveCount(1);
+    await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
 
     await page.getByRole('button', { name: 'Light' }).click();
-    await expect(page.locator('[data-color-mode="light"]')).toHaveCount(1);
+    await expect(page.locator('html[data-color-mode="light"]')).toHaveCount(1);
+  });
+
+  test('follows system appearance changes when preference is auto', async () => {
+    const { app, page } = ctx;
+
+    await page.getByRole('button', { name: 'Auto' }).click();
+
+    await app.evaluate(({ nativeTheme }) => {
+      nativeTheme.themeSource = 'dark';
+    });
+    await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
+
+    await app.evaluate(({ nativeTheme }) => {
+      nativeTheme.themeSource = 'light';
+    });
+    await expect(page.locator('html[data-color-mode="light"]')).toHaveCount(1);
+
+    await app.evaluate(({ nativeTheme }) => {
+      nativeTheme.themeSource = 'system';
+    });
+  });
+
+  test('applies dark mode to dialog and action-menu overlays', async () => {
+    const { page } = ctx;
+
+    await page.getByRole('button', { name: 'Dark' }).click();
+    await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
+
+    await page.getByTestId('manage-labels').click();
+    const labelDialog = page.getByTestId('label-manager');
+    await expect(labelDialog).toBeVisible();
+    await expectInDarkMode(labelDialog);
+
+    await page.getByTestId('new-note-button').click();
+    await page.getByTestId('note-actions').click();
+    const deleteItem = page.getByTestId('action-delete');
+    await expect(deleteItem).toBeVisible();
+    await expectInDarkMode(deleteItem);
   });
 });
 
@@ -31,13 +79,13 @@ test.describe('Persistence across relaunch', () => {
   test('remembers the dark color mode after a relaunch', async () => {
     const first = await launchApp();
     await first.page.getByRole('button', { name: 'Dark' }).click();
-    await expect(first.page.locator('[data-color-mode="dark"]')).toHaveCount(1);
+    await expect(first.page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
     await first.close({ keepDirs: true });
 
     const second = await launchApp({
       reuse: { vaultDir: first.vaultDir, userDataDir: first.userDataDir },
     });
-    await expect(second.page.locator('[data-color-mode="dark"]')).toHaveCount(1);
+    await expect(second.page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
     await second.close();
   });
 

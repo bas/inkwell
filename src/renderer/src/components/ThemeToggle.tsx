@@ -24,17 +24,17 @@ export function ThemeToggle({ preference, onChange }: ThemeToggleProps): JSX.Ele
       <SegmentedControl.IconButton
         icon={SunIcon}
         aria-label="Light"
-        defaultSelected={preference === 'light'}
+        selected={preference === 'light'}
       />
       <SegmentedControl.IconButton
         icon={DeviceDesktopIcon}
         aria-label="Auto"
-        defaultSelected={preference === 'auto'}
+        selected={preference === 'auto'}
       />
       <SegmentedControl.IconButton
         icon={MoonIcon}
         aria-label="Dark"
-        defaultSelected={preference === 'dark'}
+        selected={preference === 'dark'}
       />
     </SegmentedControl>
   );

@@ -335,7 +335,15 @@ export function EditorPane({
             ? 'Save failed'
             : `Updated ${relativeTime(note.updatedAt)}`;
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        bg: 'canvas.default',
+      }}
+    >
       <Box
         as="header"
         sx={{
@@ -345,6 +353,7 @@ export function EditorPane({
           gap: 2,
           px: 4,
           py: 3,
+          bg: 'canvas.default',
           boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
         }}
       >

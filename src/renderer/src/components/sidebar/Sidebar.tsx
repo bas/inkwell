@@ -38,7 +38,15 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
   const [managingLabels, setManagingLabels] = useState(false);
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        bg: 'canvas.default',
+      }}
+    >
       <Box
         sx={{
           display: 'flex',
@@ -67,12 +75,15 @@ export function Sidebar({
             icon={GearIcon}
             aria-label="Manage labels"
             data-testid="manage-labels"
-            onClick={() => setManagingLabels(true)}
+            onClick={() => queueMicrotask(() => setManagingLabels(true))}
           />
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }} data-testid="note-list-scroll">
+      <Box
+        sx={{ flex: 1, minHeight: 0, overflowY: 'auto', bg: 'canvas.default' }}
+        data-testid="note-list-scroll"
+      >
         {loading && summaries.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <Spinner size="small" aria-label="Loading notes" />
