@@ -39,6 +39,7 @@ export type AiErrorCode =
   | AiUnavailableReason
   | 'no-entitlement'
   | 'generation-failed'
+  | 'timeout'
   | 'empty-note';
 
 /** A typed AI failure carried back to the renderer for first-class error states. */

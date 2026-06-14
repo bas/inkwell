@@ -15,10 +15,15 @@ function classifyErrorType(errorType: string | undefined): AiErrorCode {
       return 'no-entitlement';
     case 'authentication':
       return 'not-authenticated';
+    case 'timeout':
+      return 'timeout';
     default:
       return 'generation-failed';
   }
 }
+
+/** Cancel functions for in-flight summarize requests, keyed by requestId. */
+const activeRequests = new Map<string, () => void>();
 
 /**
  * Summarize a note's body with Copilot, streaming deltas back to the calling
@@ -57,6 +62,11 @@ async function summarizeNote(
         sender.send(IpcChannels.aiStreamDelta, { requestId, delta });
       }
     },
+    onStart: (cancel) => {
+      activeRequests.set(requestId, cancel);
+    },
+  }).finally(() => {
+    activeRequests.delete(requestId);
   });
 
   if (!outcome.ok) {
@@ -75,6 +85,12 @@ export function registerSummarizeHandler(service: NotesService): void {
     if (typeof noteId !== 'string') throw new Error('Expected noteId to be a string');
     if (typeof requestId !== 'string') throw new Error('Expected requestId to be a string');
     return summarizeNote(service, event.sender, noteId, requestId);
+  });
+
+  ipcMain.handle(IpcChannels.aiCancel, (_event, requestId: unknown) => {
+    if (typeof requestId !== 'string') throw new Error('Expected requestId to be a string');
+    activeRequests.get(requestId)?.();
+    activeRequests.delete(requestId);
   });
 
   ipcMain.handle(IpcChannels.aiInsertTldr, async (_event, noteId: unknown, summary: unknown) => {

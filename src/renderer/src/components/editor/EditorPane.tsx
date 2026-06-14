@@ -52,7 +52,12 @@ export function EditorPane({
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [inserting, setInserting] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
-  const { state: summaryState, summarize: runSummarize, reset: resetSummary } = useAiSummary();
+  const {
+    state: summaryState,
+    summarize: runSummarize,
+    cancel: cancelSummary,
+    reset: resetSummary,
+  } = useAiSummary();
 
   // Latest editable data, read by the debounced/flush save without re-binding.
   const dataRef = useRef({ id: '', title: '', markdown: '' });
@@ -170,8 +175,8 @@ export function EditorPane({
 
   const handleCloseSummary = useCallback(() => {
     setSummaryOpen(false);
-    resetSummary();
-  }, [resetSummary]);
+    cancelSummary();
+  }, [cancelSummary]);
 
   const handleInsertTldr = useCallback(async () => {
     const { id } = dataRef.current;

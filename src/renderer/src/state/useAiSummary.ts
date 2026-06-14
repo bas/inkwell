@@ -14,6 +14,8 @@ export interface UseAiSummary {
   state: AiSummaryState;
   /** Start summarizing the given note. Replaces any in-flight summary. */
   summarize: (noteId: string) => void;
+  /** Cancel any in-flight summary and return to idle. */
+  cancel: () => void;
   /** Return to the idle state and clear any text/error. */
   reset: () => void;
 }
@@ -29,6 +31,8 @@ function describeAiError(error: AiError): string {
       return 'Sign in to Copilot first — run `copilot login` in your terminal, then retry.';
     case 'no-entitlement':
       return 'Your account doesn’t have Copilot access right now (no license or quota exhausted).';
+    case 'timeout':
+      return 'Copilot took too long to respond. Please try again.';
     case 'empty-note':
       return 'This note has no content to summarize.';
     case 'generation-failed':
@@ -82,10 +86,17 @@ export function useAiSummary(): UseAiSummary {
       });
   }, []);
 
+  const cancel = useCallback(() => {
+    const requestId = activeRequestId.current;
+    if (requestId) void window.api.cancelSummarize(requestId);
+    activeRequestId.current = undefined;
+    setState(IDLE);
+  }, []);
+
   const reset = useCallback(() => {
     activeRequestId.current = undefined;
     setState(IDLE);
   }, []);
 
-  return { state, summarize, reset };
+  return { state, summarize, cancel, reset };
 }

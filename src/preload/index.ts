@@ -39,6 +39,8 @@ const api: InkwellApi = {
   summarizeNote: (noteId: string, requestId: string) =>
     ipcRenderer.invoke(IpcChannels.aiSummarize, noteId, requestId),
 
+  cancelSummarize: (requestId: string) => ipcRenderer.invoke(IpcChannels.aiCancel, requestId),
+
   insertTldr: (noteId: string, summary: string) =>
     ipcRenderer.invoke(IpcChannels.aiInsertTldr, noteId, summary),
 

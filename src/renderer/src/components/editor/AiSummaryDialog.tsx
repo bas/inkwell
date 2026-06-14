@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, Button, Dialog, Flash, Spinner, Text } from '@primer/react';
-import { ArrowUpIcon, CheckIcon, CopyIcon, SyncIcon } from '@primer/octicons-react';
+import { ArrowUpIcon, CheckIcon, CopyIcon, SyncIcon, XIcon } from '@primer/octicons-react';
 import type { AiSummaryState } from '../../state/useAiSummary';
 
 interface AiSummaryDialogProps {
@@ -69,7 +69,11 @@ export function AiSummaryDialog({
         )}
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          {state.status === 'error' ? (
+          {state.status === 'streaming' ? (
+            <Button leadingVisual={XIcon} onClick={onClose} data-testid="ai-summary-stop">
+              Stop
+            </Button>
+          ) : state.status === 'error' ? (
             <Button leadingVisual={SyncIcon} onClick={onRetry} data-testid="ai-summary-retry">
               Try again
             </Button>
