@@ -39,6 +39,9 @@ const api: InkwellApi = {
   summarizeNote: (noteId: string, requestId: string) =>
     ipcRenderer.invoke(IpcChannels.aiSummarize, noteId, requestId),
 
+  insertTldr: (noteId: string, summary: string) =>
+    ipcRenderer.invoke(IpcChannels.aiInsertTldr, noteId, summary),
+
   onAiStreamDelta: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, chunk: AiStreamChunk): void =>
       listener(chunk);

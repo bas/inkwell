@@ -50,6 +50,8 @@ export function EditorPane({
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [inserting, setInserting] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const { state: summaryState, summarize: runSummarize, reset: resetSummary } = useAiSummary();
 
   // Latest editable data, read by the debounced/flush save without re-binding.
@@ -170,6 +172,29 @@ export function EditorPane({
     setSummaryOpen(false);
     resetSummary();
   }, [resetSummary]);
+
+  const handleInsertTldr = useCallback(async () => {
+    const { id } = dataRef.current;
+    if (!id || !summaryState.text) return;
+    setInserting(true);
+    try {
+      const updated = await window.api.insertTldr(id, summaryState.text);
+      setNote(updated);
+      setTitle(updated.title);
+      setMarkdown(updated.body);
+      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dirtyRef.current = false;
+      setSaveState('saved');
+      setReloadNonce((nonce) => nonce + 1);
+      setSummaryOpen(false);
+      resetSummary();
+      onAfterChange();
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setInserting(false);
+    }
+  }, [summaryState.text, resetSummary, onAfterChange]);
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
@@ -383,7 +408,7 @@ export function EditorPane({
               </Box>
             ) : (
               <MarkdownEditor
-                key={note.id}
+                key={`${note.id}:${reloadNonce}`}
                 initialMarkdown={markdown}
                 onChange={handleBodyChange}
                 onEditorReady={setEditor}
@@ -404,8 +429,10 @@ export function EditorPane({
         <AiSummaryDialog
           state={summaryState}
           noteTitle={note.title}
+          inserting={inserting}
           onClose={handleCloseSummary}
           onRetry={() => runSummarize(note.id)}
+          onInsert={() => void handleInsertTldr()}
         />
       )}
     </Box>

@@ -30,6 +30,8 @@ export const IpcChannels = {
   aiGetAvailability: 'ai:getAvailability',
   /** AI: summarize a note's body. */
   aiSummarize: 'ai:summarize',
+  /** AI: insert/replace a regenerable TL;DR block at the top of a note. */
+  aiInsertTldr: 'ai:insertTldr',
   /** Main → renderer: a streamed chunk of an in-progress AI response. */
   aiStreamDelta: 'ai:streamDelta',
 
@@ -68,6 +70,8 @@ export interface InkwellApi {
   getAiAvailability(): Promise<AiAvailability>;
   /** Summarize a note's body with Copilot. Streams via `onAiStreamDelta`. */
   summarizeNote(noteId: string, requestId: string): Promise<AiResult>;
+  /** Insert/replace a regenerable TL;DR block at the top of a note. Returns the saved note. */
+  insertTldr(noteId: string, summary: string): Promise<Note>;
   /** Subscribe to streamed AI response chunks. Returns an unsubscribe function. */
   onAiStreamDelta(listener: (chunk: AiStreamChunk) => void): () => void;
 

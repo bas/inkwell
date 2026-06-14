@@ -5,6 +5,7 @@ import type { NotesService } from '../storage/notesService';
 import { getAiAvailability } from './availability';
 import { buildSummarizePrompt } from './prompts';
 import { runGeneration } from './runner';
+import { upsertTldrBlock } from './tldr';
 
 /** Map a runtime `errorType` category to Inkwell's typed AI error code. */
 function classifyErrorType(errorType: string | undefined): AiErrorCode {
@@ -68,11 +69,19 @@ async function summarizeNote(
   return { ok: true, requestId, content: outcome.content };
 }
 
-/** Register the summarize IPC handler. */
+/** Register the summarize and TL;DR-insert IPC handlers. */
 export function registerSummarizeHandler(service: NotesService): void {
   ipcMain.handle(IpcChannels.aiSummarize, (event, noteId: unknown, requestId: unknown) => {
     if (typeof noteId !== 'string') throw new Error('Expected noteId to be a string');
     if (typeof requestId !== 'string') throw new Error('Expected requestId to be a string');
     return summarizeNote(service, event.sender, noteId, requestId);
+  });
+
+  ipcMain.handle(IpcChannels.aiInsertTldr, async (_event, noteId: unknown, summary: unknown) => {
+    if (typeof noteId !== 'string') throw new Error('Expected noteId to be a string');
+    if (typeof summary !== 'string') throw new Error('Expected summary to be a string');
+    if (!summary.trim()) throw new Error('Cannot insert an empty summary');
+    const note = await service.getNote(noteId);
+    return service.updateNote({ id: noteId, body: upsertTldrBlock(note.body, summary) });
   });
 }

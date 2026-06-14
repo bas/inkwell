@@ -1,25 +1,29 @@
 import { useState } from 'react';
 import { Box, Button, Dialog, Flash, Spinner, Text } from '@primer/react';
-import { CheckIcon, CopyIcon, SyncIcon } from '@primer/octicons-react';
+import { ArrowUpIcon, CheckIcon, CopyIcon, SyncIcon } from '@primer/octicons-react';
 import type { AiSummaryState } from '../../state/useAiSummary';
 
 interface AiSummaryDialogProps {
   state: AiSummaryState;
   noteTitle: string;
+  inserting: boolean;
   onClose: () => void;
   onRetry: () => void;
+  onInsert: () => void;
 }
 
 /**
  * Ephemeral, read-only panel that shows a Copilot-generated summary of the
- * current note. Streams text while running, offers Copy when complete, and
- * surfaces typed error states. It never writes back to the note.
+ * current note. Streams text while running, then offers Copy or "Insert as
+ * TL;DR" when complete, and surfaces typed error states.
  */
 export function AiSummaryDialog({
   state,
   noteTitle,
+  inserting,
   onClose,
   onRetry,
+  onInsert,
 }: AiSummaryDialogProps): JSX.Element {
   const [copied, setCopied] = useState(false);
 
@@ -70,14 +74,24 @@ export function AiSummaryDialog({
               Try again
             </Button>
           ) : (
-            <Button
-              leadingVisual={copied ? CheckIcon : CopyIcon}
-              onClick={() => void handleCopy()}
-              disabled={state.status !== 'done' || !state.text}
-              data-testid="ai-summary-copy"
-            >
-              {copied ? 'Copied' : 'Copy'}
-            </Button>
+            <>
+              <Button
+                leadingVisual={copied ? CheckIcon : CopyIcon}
+                onClick={() => void handleCopy()}
+                disabled={state.status !== 'done' || !state.text}
+                data-testid="ai-summary-copy"
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
+              <Button
+                leadingVisual={ArrowUpIcon}
+                onClick={onInsert}
+                disabled={state.status !== 'done' || !state.text || inserting}
+                data-testid="ai-summary-insert"
+              >
+                {inserting ? 'Inserting…' : 'Insert as TL;DR'}
+              </Button>
+            </>
           )}
           <Button variant="primary" onClick={onClose} data-testid="ai-summary-close">
             Close
