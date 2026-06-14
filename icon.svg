@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- macOS Squircle Icon Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FCFAF5" />
+      <stop offset="100%" stop-color="#E5DFCE" />
+    </linearGradient>
+
+    <!-- Deep Volumetric Royal Blue Ink Gradient -->
+    <radialGradient id="ink-glow" cx="50%" cy="32%" r="68%">
+      <stop offset="0%" stop-color="#4673FF" />
+      <stop offset="28%" stop-color="#183FC4" />
+      <stop offset="65%" stop-color="#051052" />
+      <stop offset="100%" stop-color="#01031C" />
+    </radialGradient>
+
+    <!-- Side Glass Refraction Shading (Left) -->
+    <linearGradient id="glass-side-shading-left" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)" />
+      <stop offset="35%" stop-color="rgba(255, 255, 255, 0.15)" />
+      <stop offset="75%" stop-color="rgba(120, 162, 255, 0.05)" />
+      <stop offset="100%" stop-color="rgba(120, 162, 255, 0.0)" />
+    </linearGradient>
+
+    <!-- Side Glass Refraction Shading (Right) -->
+    <linearGradient id="glass-side-shading-right" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)" />
+      <stop offset="35%" stop-color="rgba(255, 255, 255, 0.15)" />
+      <stop offset="75%" stop-color="rgba(120, 162, 255, 0.05)" />
+      <stop offset="100%" stop-color="rgba(120, 162, 255, 0.0)" />
+    </linearGradient>
+
+    <!-- Thick Glass Base Gradient -->
+    <linearGradient id="glass-base-overlay" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.0)" />
+      <stop offset="50%" stop-color="rgba(180, 210, 255, 0.22)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.45)" />
+    </linearGradient>
+
+    <!-- Soft Diagonal Glare for Glass Facet -->
+    <linearGradient id="glare-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.35)" />
+      <stop offset="30%" stop-color="rgba(255, 255, 255, 0.1)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0)" />
+    </linearGradient>
+
+    <!-- Cylinder Cap Shading (3D cylindrical volume) -->
+    <linearGradient id="cap-shading-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="rgba(0, 0, 0, 0.95)" />
+      <stop offset="12%" stop-color="rgba(0, 0, 0, 0.72)" />
+      <stop offset="25%" stop-color="rgba(255, 255, 255, 0.38)" />
+      <stop offset="32%" stop-color="rgba(255, 255, 255, 0.12)" />
+      <stop offset="52%" stop-color="rgba(0, 0, 0, 0.22)" />
+      <stop offset="82%" stop-color="rgba(0, 0, 0, 0.75)" />
+      <stop offset="100%" stop-color="rgba(0, 0, 0, 0.95)" />
+    </linearGradient>
+
+    <!-- Cap Top Gradient -->
+    <linearGradient id="cap-top-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4C4C54" />
+      <stop offset="25%" stop-color="#2D2D34" />
+      <stop offset="75%" stop-color="#141416" />
+      <stop offset="100%" stop-color="#08080A" />
+    </linearGradient>
+
+    <!-- Soft Under-Bottle Shadow -->
+    <radialGradient id="bottle-shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(24, 20, 16, 0.42)" />
+      <stop offset="60%" stop-color="rgba(24, 20, 16, 0.15)" />
+      <stop offset="100%" stop-color="rgba(24, 20, 16, 0)" />
+    </radialGradient>
+
+    <!-- Cap Body Clip Path (cylinder profile for ribbed body - all curving UPWARDS) -->
+    <clipPath id="cap-ribs-clip">
+      <path d="M 180,110 A 76,9 0 0,0 332,110 L 332,175 A 76,9 0 0,1 180,175 Z" />
+    </clipPath>
+
+    <!-- Front Facet Clip Path for light reflections -->
+    <clipPath id="facet-clip">
+      <path d="M 140,245 Q 256,208 372,245 L 350,345 L 162,345 Z" />
+    </clipPath>
+
+    <!-- Fine Cap Ribs Repeating Pattern -->
+    <pattern id="cap-ribs-pattern" width="6" height="60" patternUnits="userSpaceOnUse">
+      <rect width="3" height="60" fill="#2D2D34" />
+      <rect x="3" width="3" height="60" fill="#141418" />
+      <rect x="1.5" width="1" height="60" fill="#FFFFFF" opacity="0.1" />
+    </pattern>
+  </defs>
+
+  <!-- ICON CONTAINER (macOS-style Squircle with Shadows and Subtle Border) -->
+  <g id="app-icon">
+    <!-- Outer Soft Drop Shadow for macOS look -->
+    <path d="M 24,132 C 24,60 56,28 128,28 L 384,28 C 456,28 488,60 488,132 L 488,388 C 488,460 456,492 384,492 L 128,492 C 56,492 24,460 24,388 Z" fill="rgba(15, 12, 8, 0.16)" />
+    <path d="M 24,130 C 24,58 56,26 128,28 L 384,28 C 456,26 488,58 488,130 L 488,386 C 488,458 456,490 384,490 L 128,490 C 56,490 24,458 24,386 Z" fill="rgba(15, 12, 8, 0.12)" />
+
+    <!-- Main Squircle Background -->
+    <path d="M 24,128 C 24,56 56,24 128,24 L 384,24 C 456,24 488,56 488,128 L 488,384 C 488,456 456,488 384,488 L 128,488 C 56,488 24,456 24,384 Z" fill="url(#bg-grad)" stroke="#C6BF9E" stroke-width="2" />
+  </g>
+
+  <!-- INK BOTTLE ARTWORK -->
+  <g id="ink-bottle">
+    <!-- Under-Bottle Soft Shadow -->
+    <ellipse cx="256" cy="396" rx="170" ry="12" fill="url(#bottle-shadow)" />
+
+    <!-- 1. Outer Glass Bottle Body Backing (Clean squat polygonal layout mimicking real Pelikan bottle) -->
+    <path d="M 196,190 C 160,190 110,205 84,225 C 64,242 60,252 60,265 L 78,345 C 80,360 95,380 115,380 L 397,380 C 417,380 432,360 434,345 L 452,265 C 452,252 448,242 428,225 C 402,205 352,190 316,190 Z" fill="rgba(225, 235, 250, 0.3)" stroke="rgba(255, 255, 255, 0.65)" stroke-width="1.5" />
+
+    <!-- 2. Volumetric Ink Body (Perfect nest shape representing liquid filled inside, leaving clear glass bottom base and side walls) -->
+    <path d="M 200,198 C 172,198 128,212 108,230 C 94,245 94,255 94,265 L 110,345 C 112,354 122,365 138,365 L 374,365 C 390,365 400,354 402,345 L 418,265 C 418,255 418,245 404,230 C 384,212 340,198 312,198 Q 256,202 200,198 Z" fill="url(#ink-glow)" />
+
+    <!-- 3. Thick Refracting Glass Side Walls Overlay -->
+    <path d="M 98,245 L 118,245 L 158,360 L 138,360 Z" fill="url(#glass-side-shading-left)" opacity="0.32" style="mix-blend-mode: screen;" />
+    <path d="M 414,245 L 394,245 L 354,360 L 374,360 Z" fill="url(#glass-side-shading-right)" opacity="0.32" style="mix-blend-mode: screen;" />
+
+    <!-- 4. Heavy Molded Glass Bottom Block Overlay -->
+    <path d="M 134,358 C 137,364 148,395 160,395 L 352,395 C 364,395 375,364 378,358 L 362,385 L 150,385 Z" fill="url(#glass-base-overlay)" opacity="0.38" style="mix-blend-mode: screen;" />
+
+    <!-- 5. Front Glass Facet (Symmetric flat glass panel representing the bottle front) -->
+    <path d="M 140,245 Q 256,208 372,245 L 350,345 L 162,345 Z" fill="#132EA3" fill-opacity="0.18" stroke="rgba(255, 255, 255, 0.22)" stroke-width="1" />
+    <path d="M 140,245 Q 256,208 372,245" fill="none" stroke="rgba(255, 255, 255, 0.45)" stroke-width="1.5" />
+
+    <!-- 6. Facet Glass Glare Reflection -->
+    <g clip-path="url(#facet-clip)">
+      <rect x="50" y="100" width="400" height="150" fill="url(#glare-grad)" transform="rotate(-28, 256, 280)" style="mix-blend-mode: screen;" />
+    </g>
+
+    <!-- 7. Bottom Molded-Glass Seams & Horizontal Refractions -->
+    <path d="M 154,372 L 358,372" fill="none" stroke="rgba(255, 255, 255, 0.45)" stroke-width="1.5" stroke-linecap="round" />
+    <path d="M 164,378 L 348,378" fill="none" stroke="rgba(78, 119, 255, 0.4)" stroke-width="2.2" stroke-linecap="round" />
+    <path d="M 136,384 L 376,384" fill="none" stroke="rgba(15, 12, 8, 0.15)" stroke-width="1.2" />
+
+    <!-- 8. Shoulder High-Gloss Reflection (Extremely glossy and sharp) -->
+    <path d="M 185,193 C 150,195 115,210 96,230 C 86,242 82,254 82,265" fill="none" stroke="rgba(255, 255, 255, 0.6)" stroke-width="4" stroke-linecap="round" />
+    <path d="M 185,193 C 150,195 115,210 96,230 C 86,242 82,254 82,265" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" />
+    <!-- Right Shoulder Soft Ambient Reflection -->
+    <path d="M 327,193 C 362,195 397,210 416,230" fill="none" stroke="rgba(255, 255, 255, 0.35)" stroke-width="2" stroke-linecap="round" />
+
+    <!-- 9. Bottle Glass Neck (All ellipses curving UPWARDS consistently) -->
+    <path d="M 196,170 A 60,5 0 0,0 316,170 L 316,190 A 60,5 0 0,1 196,190 Z" fill="#051052" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+    <path d="M 196,170 A 60,5 0 0,0 316,170" fill="none" stroke="rgba(255, 255, 255, 0.3)" stroke-width="1.5" />
+    <path d="M 196,182 A 60,5.5 0 0,0 316,182" fill="none" stroke="rgba(255, 255, 255, 0.22)" stroke-width="1.5" />
+
+    <!-- 10. Screw Cap (Black Plastic Ribbed Cylinder) -->
+    <!-- Contact shadow under the cap bottom (bowing UPWARDS to match consistent perspective) -->
+    <path d="M 180,175 A 76,9 0 0,0 332,175" fill="none" stroke="#000000" stroke-width="6" opacity="0.65" stroke-linecap="round" />
+
+    <g id="bottle-cap">
+      <!-- A. Ribbed Cap Body (using Clip Path - all curving UPWARDS) -->
+      <g clip-path="url(#cap-ribs-clip)">
+        <rect x="178" y="105" width="156" height="80" fill="url(#cap-ribs-pattern)" />
+        <!-- Overlay Cylindrical 3D Light Shading Gradient -->
+        <rect x="178" y="105" width="156" height="80" fill="url(#cap-shading-grad)" />
+      </g>
+      <!-- Cap Ribs Border lines for ultra-crisp cylindrical definition -->
+      <path d="M 180,110 L 180,175" fill="none" stroke="#141418" stroke-width="1" />
+      <path d="M 332,110 L 332,175" fill="none" stroke="#141418" stroke-width="1" />
+
+      <!-- Base ring bottom rim highlight (Bows UPWARDS perfectly) -->
+      <path d="M 180,175 A 76,9 0 0,0 332,175" fill="none" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1.2" />
+
+      <!-- C. Cap Top Beveled Face (Bowing UPWARDS) -->
+      <ellipse cx="256" cy="110" rx="76" ry="9" fill="url(#cap-top-grad)" stroke="#4A4A51" stroke-width="0.8" />
+      <ellipse cx="256" cy="109" rx="75" ry="8.5" fill="none" stroke="rgba(255, 255, 255, 0.18)" stroke-width="1.0" />
+
+      <!-- Concentric circular molding grooves on cap top (Bowing UPWARDS) -->
+      <ellipse cx="256" cy="110" rx="60" ry="7.1" fill="none" stroke="#08080a" stroke-width="0.8" />
+      <ellipse cx="256" cy="110" rx="44" ry="5.2" fill="none" stroke="#08080a" stroke-width="0.8" />
+      <ellipse cx="256" cy="110" rx="28" ry="3.3" fill="none" stroke="#08080a" stroke-width="1.0" />
+
+      <!-- High-End Stylized Pen Nib Engraving in Top Center -->
+      <g transform="translate(256, 110) scale(1, 0.125)">
+        <path d="M 0,-20 L -6,-6 L -4,10 L 4,10 L 6,-6 Z" fill="none" stroke="#5A5A62" stroke-width="1.5" stroke-linejoin="round" />
+        <line x1="0" y1="-20" x2="0" y2="-2" stroke="#5A5A62" stroke-width="1.2" />
+        <circle cx="0" cy="1.5" r="2" fill="#1A1A1E" stroke="#5A5A62" stroke-width="1.0" />
+      </g>
+    </g>
+  </g>
+</svg>
