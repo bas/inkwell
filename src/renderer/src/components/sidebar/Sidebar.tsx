@@ -67,7 +67,7 @@ export function Sidebar({
             icon={GearIcon}
             aria-label="Manage labels"
             data-testid="manage-labels"
-            onClick={() => setManagingLabels(true)}
+            onClick={() => queueMicrotask(() => setManagingLabels(true))}
           />
         </Box>
       </Box>
