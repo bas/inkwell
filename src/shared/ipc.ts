@@ -1,7 +1,7 @@
 import type { AppSettings, ColorModePreference } from './types';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note';
 import type { Label } from './note-labels';
-import type { AiAvailability } from './ai';
+import type { AiAvailability, AiResult, AiStreamChunk } from './ai';
 
 /** IPC channel names. Keep in sync between main handlers and the preload bridge. */
 export const IpcChannels = {
@@ -28,6 +28,10 @@ export const IpcChannels = {
 
   /** AI: report whether the Copilot runtime is reachable and authenticated. */
   aiGetAvailability: 'ai:getAvailability',
+  /** AI: summarize a note's body. */
+  aiSummarize: 'ai:summarize',
+  /** Main → renderer: a streamed chunk of an in-progress AI response. */
+  aiStreamDelta: 'ai:streamDelta',
 
   /** Main → renderer: the user picked File → New Note from the menu. */
   menuNewNote: 'menu:newNote',
@@ -62,6 +66,10 @@ export interface InkwellApi {
 
   /** Report whether the Copilot AI runtime is reachable and authenticated. */
   getAiAvailability(): Promise<AiAvailability>;
+  /** Summarize a note's body with Copilot. Streams via `onAiStreamDelta`. */
+  summarizeNote(noteId: string, requestId: string): Promise<AiResult>;
+  /** Subscribe to streamed AI response chunks. Returns an unsubscribe function. */
+  onAiStreamDelta(listener: (chunk: AiStreamChunk) => void): () => void;
 
   /** Subscribe to the File → New Note menu command. Returns an unsubscribe function. */
   onMenuNewNote(listener: () => void): () => void;

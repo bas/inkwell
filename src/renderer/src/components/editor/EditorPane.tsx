@@ -6,11 +6,13 @@ import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
+import { AiSummaryDialog } from './AiSummaryDialog';
 import { LabelChip } from '../common/LabelChip';
 import { LabelPicker } from '../labels/LabelPicker';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
+import { useAiSummary } from '../../state/useAiSummary';
 
 interface EditorPaneProps {
   noteId: string | undefined;
@@ -47,6 +49,8 @@ export function EditorPane({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const { state: summaryState, summarize: runSummarize, reset: resetSummary } = useAiSummary();
 
   // Latest editable data, read by the debounced/flush save without re-binding.
   const dataRef = useRef({ id: '', title: '', markdown: '' });
@@ -153,6 +157,19 @@ export function EditorPane({
       setError(describeError(err));
     }
   }, []);
+
+  const handleSummarize = useCallback(() => {
+    const { id } = dataRef.current;
+    if (!id) return;
+    flush();
+    setSummaryOpen(true);
+    runSummarize(id);
+  }, [flush, runSummarize]);
+
+  const handleCloseSummary = useCallback(() => {
+    setSummaryOpen(false);
+    resetSummary();
+  }, [resetSummary]);
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
@@ -353,6 +370,7 @@ export function EditorPane({
             }}
             onSelectSource={() => setViewSource(true)}
             pinned={note.pinned}
+            onSummarize={handleSummarize}
             onTogglePin={handleTogglePin}
             onCopyMarkdown={() => void handleCopyMarkdown()}
             onDelete={() => setConfirmDelete(true)}
@@ -381,6 +399,15 @@ export function EditorPane({
         onCancel={() => setConfirmDelete(false)}
         onConfirm={handleConfirmDelete}
       />
+
+      {summaryOpen && (
+        <AiSummaryDialog
+          state={summaryState}
+          noteTitle={note.title}
+          onClose={handleCloseSummary}
+          onRetry={() => runSummarize(note.id)}
+        />
+      )}
     </Box>
   );
 }

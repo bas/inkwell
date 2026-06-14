@@ -10,6 +10,7 @@ interface EditorToolbarProps {
   onSelectEditor: () => void;
   onSelectSource: () => void;
   pinned: boolean;
+  onSummarize: () => void;
   onTogglePin: () => void;
   onCopyMarkdown: () => void;
   onDelete: () => void;
@@ -25,6 +26,7 @@ export function EditorToolbar({
   onSelectEditor,
   onSelectSource,
   pinned,
+  onSummarize,
   onTogglePin,
   onCopyMarkdown,
   onDelete,
@@ -72,6 +74,7 @@ export function EditorToolbar({
       <Box sx={{ ml: 'auto' }}>
         <NoteActionsMenu
           pinned={pinned}
+          onSummarize={onSummarize}
           onTogglePin={onTogglePin}
           onCopyMarkdown={onCopyMarkdown}
           onDelete={onDelete}

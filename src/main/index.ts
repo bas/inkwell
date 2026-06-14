@@ -87,8 +87,6 @@ function registerIpcHandlers(): void {
     if (typeof text !== 'string') throw new Error('Clipboard text must be a string');
     clipboard.writeText(text);
   });
-
-  registerAiHandlers();
 }
 
 app.whenReady().then(() => {
@@ -99,6 +97,7 @@ app.whenReady().then(() => {
   try {
     notesService = new NotesService(vaultDir, dbPath);
     registerNoteHandlers(notesService);
+    registerAiHandlers(notesService);
   } catch (err) {
     dialog.showErrorBox(
       'Inkwell could not open your notes',
