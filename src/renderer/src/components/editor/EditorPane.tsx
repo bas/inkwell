@@ -198,7 +198,13 @@ export function EditorPane({
   if (!noteId) {
     return (
       <Box
-        sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', px: 4 }}
+        sx={{
+          display: 'flex',
+          height: '100%',
+          alignItems: 'center',
+          justifyContent: 'center',
+          px: 4,
+        }}
         data-testid="editor-empty"
       >
         <Box
