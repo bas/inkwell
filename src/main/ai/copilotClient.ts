@@ -1,8 +1,9 @@
-import { spawnSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { chmodSync, existsSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { CopilotClient } from '@github/copilot-sdk';
 
 /**
@@ -23,38 +24,41 @@ function runtimeEnv(): Record<string, string | undefined> {
 
 const require_ = createRequire(import.meta.url);
 
+const execFileAsync = promisify(execFile);
+
 /**
  * The Copilot CLI requires the `node:sqlite` builtin (Node ≥ 22.5). Electron's
  * bundled Node is older (20.x), so the CLI cannot run under `process.execPath`.
  * We therefore locate an external Node that provides `node:sqlite` and run the
  * bundled CLI through it (see {@link buildCliShim}).
  */
-function nodeSupportsSqlite(bin: string): boolean {
+async function nodeSupportsSqlite(bin: string): Promise<boolean> {
   try {
-    const result = spawnSync(bin, ['-e', 'require("node:sqlite")'], {
-      stdio: 'ignore',
+    await execFileAsync(bin, ['-e', 'require("node:sqlite")'], {
       timeout: 5_000,
     });
-    return result.status === 0;
+    return true;
   } catch {
     return false;
   }
 }
 
 /** Find an external Node binary new enough to host the Copilot CLI, if any. */
-function findCapableNode(): string | undefined {
+async function findCapableNode(): Promise<string | undefined> {
   const candidates: string[] = [];
   const override = process.env.INKWELL_NODE_PATH;
   if (override) candidates.push(override);
 
   // Resolve `node` from the user's PATH without assuming a shell.
-  const fromPath = spawnSync('/usr/bin/env', ['node', '-p', 'process.execPath'], {
-    encoding: 'utf8',
-    timeout: 5_000,
-  });
-  if (fromPath.status === 0) {
+  try {
+    const fromPath = await execFileAsync('/usr/bin/env', ['node', '-p', 'process.execPath'], {
+      encoding: 'utf8',
+      timeout: 5_000,
+    });
     const resolved = fromPath.stdout.trim();
     if (resolved) candidates.push(resolved);
+  } catch {
+    // Ignore PATH lookup failures and continue with fallback locations.
   }
 
   // Common macOS install locations as a fallback (e.g. packaged app with a
@@ -65,7 +69,7 @@ function findCapableNode(): string | undefined {
   for (const candidate of candidates) {
     if (!candidate || seen.has(candidate)) continue;
     seen.add(candidate);
-    if (existsSync(candidate) && nodeSupportsSqlite(candidate)) return candidate;
+    if (existsSync(candidate) && (await nodeSupportsSqlite(candidate))) return candidate;
   }
   return undefined;
 }
@@ -118,7 +122,7 @@ let started: CopilotClient | undefined;
 export async function getCopilotClient(): Promise<CopilotClient> {
   if (!startPromise) {
     startPromise = (async () => {
-      const nodeBin = findCapableNode();
+      const nodeBin = await findCapableNode();
       if (!nodeBin) {
         throw new Error(
           'Copilot AI requires Node.js 22.5 or newer (for node:sqlite), which was not found. ' +
