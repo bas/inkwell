@@ -47,6 +47,16 @@
   margin-bottom: var(--base-size-16, 1rem);
 }
 
+/*
+ * Keep the blockquote's vertical bar but avoid indenting the content. Primer's
+ * `.markdown-body` applies `padding: 0 1em`, which pushes the text away from the
+ * left margin; we collapse the left padding to a small Primer spacing token so
+ * the text sits close to the bar instead of being indented.
+ */
+.ink-editor .ProseMirror.markdown-body > blockquote {
+  padding-left: var(--base-size-8, 0.5rem);
+}
+
 /* Placeholder text for an empty document. */
 .ink-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
