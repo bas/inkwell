@@ -55,9 +55,9 @@ test.describe('AI summarize', () => {
     await expect(page.getByTestId('ai-summary-dialog')).toBeHidden();
     await waitSaved(page);
 
-    await expect.poll(() => readSingleNote(vaultDir)).toContain('<!-- inkwell:tldr -->');
+    await expect.poll(() => readSingleNote(vaultDir)).toContain('**TL;DR**');
     const note = readSingleNote(vaultDir);
-    expect(note).toContain('**TL;DR**');
+    expect(note).not.toContain('<!--');
     expect(note).toContain(FAKE_SUMMARY);
     expect(note).toContain('Original body text.');
   });
