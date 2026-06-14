@@ -1,4 +1,4 @@
-import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { app, Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { IpcChannels } from '../shared/ipc';
 
 interface MenuActions {
@@ -10,8 +10,26 @@ interface MenuActions {
 export function buildAppMenu(window: BrowserWindow, actions: MenuActions): void {
   const isMac = process.platform === 'darwin';
 
+  // Build the macOS app menu explicitly so its label is always the app name
+  // ("Inkwell"). The `appMenu` role derives its label from the bundle name,
+  // which shows "Electron" in development.
+  const appMenu: MenuItemConstructorOptions = {
+    label: app.name,
+    submenu: [
+      { role: 'about' },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  };
+
   const template: MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    ...(isMac ? [appMenu] : []),
     {
       label: 'File',
       submenu: [
