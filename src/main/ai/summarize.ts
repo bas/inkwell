@@ -69,6 +69,13 @@ async function summarizeNote(
     };
   }
 
+  let cancelFn: (() => void) | undefined;
+  let canceled = false;
+  activeRequests.set(requestId, () => {
+    canceled = true;
+    cancelFn?.();
+  });
+
   const outcome = await runGeneration({
     prompt: buildSummarizePrompt(note.body),
     onDelta: (delta) => {
@@ -77,7 +84,8 @@ async function summarizeNote(
       }
     },
     onStart: (cancel) => {
-      activeRequests.set(requestId, cancel);
+      cancelFn = cancel;
+      if (canceled) cancel();
     },
   }).finally(() => {
     activeRequests.delete(requestId);

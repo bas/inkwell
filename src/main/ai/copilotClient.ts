@@ -157,4 +157,15 @@ export async function disposeCopilotClient(): Promise<void> {
   started = undefined;
   startPromise = undefined;
   if (client) await client.stop();
+
+  const shim = shimPath;
+  shimPath = undefined;
+  if (shim) {
+    try {
+      const { rmSync } = await import('node:fs');
+      rmSync(shim, { force: true });
+    } catch {
+      // best-effort cleanup
+    }
+  }
 }
