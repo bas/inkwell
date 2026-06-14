@@ -12,7 +12,7 @@ import {
 /** Select all text in the focused WYSIWYG editor. */
 async function selectAll(page: Page): Promise<void> {
   await page.getByTestId('editor-content').click();
-  await page.keyboard.press('Meta+a');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a');
 }
 
 test.describe('Editor formatting', () => {
