@@ -251,8 +251,8 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
       />
 
       {linkOpen && (
-        <Dialog title="Add link" onClose={() => setLinkOpen(false)} data-testid="link-dialog">
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Dialog title="Add link" onClose={() => setLinkOpen(false)}>
+          <Box data-testid="link-dialog" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <TextInput
               ref={linkInputRef}
               aria-label="Link URL"

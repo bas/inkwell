@@ -40,8 +40,11 @@ export function AiSummaryDialog({
   const subtitle = noteTitle.trim() || 'Untitled';
 
   return (
-    <Dialog title="Summary" subtitle={subtitle} onClose={onClose} data-testid="ai-summary-dialog">
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, minHeight: 80 }}>
+    <Dialog title="Summary" subtitle={subtitle} onClose={onClose}>
+      <Box
+        data-testid="ai-summary-dialog"
+        sx={{ display: 'flex', flexDirection: 'column', gap: 3, minHeight: 80 }}
+      >
         {state.status === 'error' ? (
           <Flash variant="danger" data-testid="ai-summary-error">
             {state.error}
