@@ -17,6 +17,8 @@ function classifyErrorType(errorType: string | undefined): AiErrorCode {
       return 'not-authenticated';
     case 'timeout':
       return 'timeout';
+    case 'runtime':
+      return 'runtime-error';
     default:
       return 'generation-failed';
   }
@@ -46,7 +48,19 @@ async function summarizeNote(
     return { ok: false, requestId, error };
   }
 
-  const note = await service.getNote(noteId);
+  let note: ReturnType<NotesService['getNote']>;
+  try {
+    note = service.getNote(noteId);
+  } catch (err) {
+    return {
+      ok: false,
+      requestId,
+      error: {
+        code: 'generation-failed',
+        message: err instanceof Error ? err.message : 'Could not load note.',
+      },
+    };
+  }
   if (!note.body.trim()) {
     return {
       ok: false,

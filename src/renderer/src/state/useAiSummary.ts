@@ -58,10 +58,17 @@ export function useAiSummary(): UseAiSummary {
         prev.status === 'streaming' ? { ...prev, text: prev.text + chunk.delta } : prev,
       );
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      const requestId = activeRequestId.current;
+      if (requestId) void window.api.cancelSummarize(requestId);
+    };
   }, []);
 
   const summarize = useCallback((noteId: string) => {
+    const previous = activeRequestId.current;
+    if (previous) void window.api.cancelSummarize(previous);
+
     const requestId = crypto.randomUUID();
     activeRequestId.current = requestId;
     setState({ status: 'streaming', text: '' });

@@ -168,10 +168,13 @@ export function EditorPane({
   const handleSummarize = useCallback(() => {
     const { id } = dataRef.current;
     if (!id) return;
-    flush();
+    if (timerRef.current) clearTimeout(timerRef.current);
     setSummaryOpen(true);
-    runSummarize(id);
-  }, [flush, runSummarize]);
+    void (async () => {
+      await save();
+      runSummarize(id);
+    })();
+  }, [save, runSummarize]);
 
   const handleCloseSummary = useCallback(() => {
     setSummaryOpen(false);
@@ -181,7 +184,9 @@ export function EditorPane({
   const handleInsertTldr = useCallback(async () => {
     const { id } = dataRef.current;
     if (!id || !summaryState.text) return;
-    flush();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    await save();
+    if (dirtyRef.current) return;
     setInserting(true);
     try {
       const updated = await window.api.insertTldr(id, summaryState.text);
@@ -200,7 +205,7 @@ export function EditorPane({
     } finally {
       setInserting(false);
     }
-  }, [summaryState.text, flush, resetSummary, onAfterChange]);
+  }, [summaryState.text, save, resetSummary, onAfterChange]);
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
