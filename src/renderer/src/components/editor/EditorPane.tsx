@@ -328,12 +328,23 @@ export function EditorPane({
         </Box>
       )}
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: 'center', px: 4, py: 4 }}>
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          px: 4,
+          py: 4,
+          overflow: 'hidden',
+        }}
+      >
         <Box
           data-testid="editor-card"
           sx={{
             display: 'flex',
             flexDirection: 'column',
+            height: '100%',
             minHeight: 0,
             width: '100%',
             maxWidth: 'var(--ink-editor-column-max-width)',
@@ -358,9 +369,14 @@ export function EditorPane({
             onDelete={() => setConfirmDelete(true)}
           />
 
-          <Box sx={{ flex: 1, minHeight: 0 }} data-testid="editor-body">
+          <Box
+            sx={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}
+            data-testid="editor-body"
+          >
             {viewSource ? (
-              <Box sx={{ height: '100%', px: 4, py: 3 }}>
+              <Box
+                sx={{ display: 'flex', height: '100%', minHeight: 0, width: '100%', px: 4, py: 3 }}
+              >
                 <SourceEditor value={markdown} onChange={handleBodyChange} />
               </Box>
             ) : (

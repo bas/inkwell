@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { launchApp, type LaunchedApp, createNote } from './helpers';
+import {
+  launchApp,
+  type LaunchedApp,
+  createNote,
+  setTitle,
+  switchView,
+  waitSaved,
+} from './helpers';
 
 test.describe('Editor layout', () => {
   let ctx: LaunchedApp;
@@ -35,5 +42,83 @@ test.describe('Editor layout', () => {
     expect(cardBox).not.toBeNull();
     expect(cardBox!.y).toBeGreaterThanOrEqual(0);
     expect(cardBox!.height).toBeLessThanOrEqual(windowHeight);
+  });
+
+  test('reopens a long note and can scroll between the top and bottom in both editor views', async () => {
+    const first = ctx;
+    const { page } = first;
+
+    await createNote(page);
+    await setTitle(page, 'Long scrolling note');
+
+    await page.getByTestId('editor-content').click();
+    for (let i = 0; i < 160; i++) {
+      await page.keyboard.type(`Paragraph ${i} of a note that must stay scrollable after reopen.`);
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Enter');
+    }
+    await waitSaved(page);
+    await first.close({ keepDirs: true });
+
+    ctx = await launchApp({
+      reuse: { vaultDir: first.vaultDir, userDataDir: first.userDataDir },
+    });
+    await ctx.page.getByText('Long scrolling note', { exact: true }).click();
+
+    await expect(ctx.page.getByTestId('editor-title')).toBeVisible();
+    await expect(ctx.page.getByTestId('editor-toolbar')).toBeInViewport();
+
+    const wysiwygScroll = await ctx.page.getByTestId('editor-content').evaluate((element) => {
+      const scroller = element.closest('.ink-editor');
+      if (
+        !scroller ||
+        typeof (scroller as { scrollHeight?: unknown }).scrollHeight !== 'number' ||
+        typeof (scroller as { clientHeight?: unknown }).clientHeight !== 'number' ||
+        typeof (scroller as { scrollTop?: unknown }).scrollTop !== 'number'
+      ) {
+        throw new Error('Expected a scrollable WYSIWYG container');
+      }
+      const scrollable = scroller as {
+        scrollHeight: number;
+        clientHeight: number;
+        scrollTop: number;
+      };
+      const max = scrollable.scrollHeight - scrollable.clientHeight;
+      scrollable.scrollTop = max;
+      const bottom = scrollable.scrollTop;
+      scrollable.scrollTop = 0;
+      return { max, bottom, top: scroller.scrollTop };
+    });
+
+    expect(wysiwygScroll.max).toBeGreaterThan(0);
+    expect(wysiwygScroll.bottom).toBeGreaterThan(0);
+    expect(wysiwygScroll.top).toBe(0);
+
+    await switchView(ctx.page, 'source');
+    const source = ctx.page.getByTestId('source-editor');
+    await expect(source).toBeVisible();
+    const sourceScroll = await source.evaluate((element) => {
+      if (
+        typeof (element as { scrollHeight?: unknown }).scrollHeight !== 'number' ||
+        typeof (element as { clientHeight?: unknown }).clientHeight !== 'number' ||
+        typeof (element as { scrollTop?: unknown }).scrollTop !== 'number'
+      ) {
+        throw new Error('Expected the Markdown source textarea');
+      }
+      const textarea = element as {
+        scrollHeight: number;
+        clientHeight: number;
+        scrollTop: number;
+      };
+      const max = textarea.scrollHeight - textarea.clientHeight;
+      textarea.scrollTop = max;
+      const bottom = textarea.scrollTop;
+      textarea.scrollTop = 0;
+      return { max, bottom, top: textarea.scrollTop };
+    });
+
+    expect(sourceScroll.max).toBeGreaterThan(0);
+    expect(sourceScroll.bottom).toBeGreaterThan(0);
+    expect(sourceScroll.top).toBe(0);
   });
 });
