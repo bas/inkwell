@@ -305,43 +305,57 @@ export function EditorPane({
         </Box>
       </Box>
 
-      <EditorToolbar
-        editor={editor}
-        viewSource={viewSource}
-        onSelectEditor={() => {
-          flush();
-          setViewSource(false);
-        }}
-        onSelectSource={() => setViewSource(true)}
-        pinned={note.pinned}
-        onTogglePin={handleTogglePin}
-        onCopyMarkdown={() => void handleCopyMarkdown()}
-        onDelete={() => setConfirmDelete(true)}
-      />
-
       {error && (
         <Box sx={{ px: 4, pt: 3 }}>
           <Flash variant="danger">{error}</Flash>
         </Box>
       )}
 
-      <Box sx={{ flex: 1, minHeight: 0 }} data-testid="editor-body">
-        {viewSource ? (
-          <Box sx={{ height: '100%', px: 4, py: 3 }}>
-            <Box
-              sx={{ maxWidth: 'var(--ink-reading-column-max-width)', mx: 'auto', height: '100%' }}
-            >
-              <SourceEditor value={markdown} onChange={handleBodyChange} />
-            </Box>
-          </Box>
-        ) : (
-          <MarkdownEditor
-            key={note.id}
-            initialMarkdown={markdown}
-            onChange={handleBodyChange}
-            onEditorReady={setEditor}
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: 'center', px: 4, py: 4 }}>
+        <Box
+          data-testid="editor-card"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            width: '100%',
+            maxWidth: 'var(--ink-editor-column-max-width)',
+            bg: 'canvas.default',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}
+        >
+          <EditorToolbar
+            editor={editor}
+            viewSource={viewSource}
+            onSelectEditor={() => {
+              flush();
+              setViewSource(false);
+            }}
+            onSelectSource={() => setViewSource(true)}
+            pinned={note.pinned}
+            onTogglePin={handleTogglePin}
+            onCopyMarkdown={() => void handleCopyMarkdown()}
+            onDelete={() => setConfirmDelete(true)}
           />
-        )}
+
+          <Box sx={{ flex: 1, minHeight: 0 }} data-testid="editor-body">
+            {viewSource ? (
+              <Box sx={{ height: '100%', px: 4, py: 3 }}>
+                <SourceEditor value={markdown} onChange={handleBodyChange} />
+              </Box>
+            ) : (
+              <MarkdownEditor
+                key={note.id}
+                initialMarkdown={markdown}
+                onChange={handleBodyChange}
+                onEditorReady={setEditor}
+              />
+            )}
+          </Box>
+        </Box>
       </Box>
 
       <DeleteNoteDialog

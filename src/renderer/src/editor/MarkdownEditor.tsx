@@ -53,11 +53,9 @@ export function MarkdownEditor({
     <Box className="ink-editor" sx={{ height: '100%', minHeight: 0 }}>
       <Box
         sx={{
-          maxWidth: 'var(--ink-reading-column-max-width)',
           minHeight: '100%',
-          mx: 'auto',
           px: 4,
-          py: 3,
+          py: 4,
         }}
       >
         <EditorContent editor={editor} />
