@@ -216,16 +216,26 @@ test.describe('Editor formatting', () => {
     expect(md).toContain('const x = 1');
   });
 
-  test('adds a link via the link dialog', async () => {
+  test('adds a link to a partial selection via the link dialog', async () => {
     const { page, vaultDir } = ctx;
-    await typeBody(page, 'click here');
-    await selectAll(page);
+    await typeBody(page, 'visit the site now');
+    await waitSaved(page);
+
+    // Select just the word "site" so the link must apply to the captured range,
+    // not the whole paragraph — this guards against the dialog focus trap
+    // collapsing the selection before the link is applied.
+    await page.getByTestId('editor-content').click();
+    await page.keyboard.press('Home');
+    for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
+
     await page.getByTestId('fmt-link').click();
     await page.getByTestId('link-url').fill('https://example.com');
     await page.getByTestId('link-apply').click();
     await waitSaved(page);
 
-    expect(readSingleNote(vaultDir)).toContain('[click here](https://example.com)');
+    expect(readSingleNote(vaultDir)).toContain('visit the [site](https://example.com) now');
+    await expect(page.getByTestId('fmt-link')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('inserts a table', async () => {

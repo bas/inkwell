@@ -12,7 +12,6 @@ import {
   FileCodeIcon,
   LinkIcon,
   TableIcon,
-  TriangleDownIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
 } from '@primer/octicons-react';
@@ -61,6 +60,10 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
+  // The editor selection captured when the dialog opens. The dialog's focus
+  // trap moves focus off the editor, which can collapse the live DOM selection;
+  // restoring this range on apply keeps the link tied to the selected text.
+  const savedSelection = useRef<{ from: number; to: number } | null>(null);
 
   useEffect(() => {
     if (linkOpen) linkInputRef.current?.focus();
@@ -76,6 +79,8 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
 
   const openLinkDialog = (): void => {
     if (!editor) return;
+    const { from, to } = editor.state.selection;
+    savedSelection.current = { from, to };
     const previous = editor.getAttributes('link').href as string | undefined;
     setLinkUrl(previous ?? '');
     setLinkOpen(true);
@@ -83,12 +88,18 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
 
   const applyLink = (): void => {
     if (!editor) return;
+    const range = savedSelection.current;
     const url = linkUrl.trim();
+    const chain = editor.chain().focus();
+    // Restore the selection captured before the dialog stole focus, otherwise a
+    // collapsed cursor makes setLink a no-op and no link is applied.
+    if (range) chain.setTextSelection(range);
     if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      chain.extendMarkRange('link').unsetLink().run();
     } else {
-      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+      chain.extendMarkRange('link').setLink({ href: url }).run();
     }
+    savedSelection.current = null;
     setLinkOpen(false);
   };
 
@@ -98,7 +109,6 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
       <ActionMenu>
         <ActionMenu.Button
-          trailingVisual={TriangleDownIcon}
           leadingVisual={HeadingIcon}
           variant="invisible"
           disabled={disabled}
