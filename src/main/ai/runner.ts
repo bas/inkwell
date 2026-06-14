@@ -59,9 +59,7 @@ export async function runGeneration({
     return { ok: true, content: faked };
   }
 
-  let session: Awaited<
-    ReturnType<Awaited<ReturnType<typeof getCopilotClient>>['createSession']>
-  >;
+  let session: Awaited<ReturnType<Awaited<ReturnType<typeof getCopilotClient>>['createSession']>>;
   try {
     const client = await getCopilotClient();
     session = await client.createSession({
