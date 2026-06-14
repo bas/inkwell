@@ -50,6 +50,8 @@ export function EditorPane({
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryNoteId, setSummaryNoteId] = useState('');
+  const [summaryNoteTitle, setSummaryNoteTitle] = useState('');
   const [inserting, setInserting] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
   const {
@@ -115,6 +117,8 @@ export function EditorPane({
   // Load on selection change; flush pending edits for the previous note first.
   useEffect(() => {
     flush();
+    setSummaryOpen(false);
+    cancelSummary();
     setViewSource(false);
     if (!noteId) {
       setNote(undefined);
@@ -166,9 +170,11 @@ export function EditorPane({
   }, []);
 
   const handleSummarize = useCallback(() => {
-    const { id } = dataRef.current;
+    const { id, title } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    setSummaryNoteId(id);
+    setSummaryNoteTitle(title);
     setSummaryOpen(true);
     void (async () => {
       await save();
@@ -182,14 +188,13 @@ export function EditorPane({
   }, [cancelSummary]);
 
   const handleInsertTldr = useCallback(async () => {
-    const { id } = dataRef.current;
-    if (!id || !summaryState.text) return;
+    if (!summaryNoteId || !summaryState.text) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     await save();
     if (dirtyRef.current) return;
     setInserting(true);
     try {
-      const updated = await window.api.insertTldr(id, summaryState.text);
+      const updated = await window.api.insertTldr(summaryNoteId, summaryState.text);
       setNote(updated);
       setTitle(updated.title);
       setMarkdown(updated.body);
@@ -205,7 +210,7 @@ export function EditorPane({
     } finally {
       setInserting(false);
     }
-  }, [summaryState.text, save, resetSummary, onAfterChange]);
+  }, [summaryNoteId, summaryState.text, save, resetSummary, onAfterChange]);
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
@@ -455,10 +460,10 @@ export function EditorPane({
       {summaryOpen && (
         <AiSummaryDialog
           state={summaryState}
-          noteTitle={note.title}
+          noteTitle={summaryNoteTitle}
           inserting={inserting}
           onClose={handleCloseSummary}
-          onRetry={() => runSummarize(note.id)}
+          onRetry={() => runSummarize(summaryNoteId)}
           onInsert={() => void handleInsertTldr()}
         />
       )}
