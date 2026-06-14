@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Text, Spinner, Flash, TextInput } from '@primer/react';
-import { Blankslate } from '@primer/react/experimental';
+import { Box, Text, Heading, Button, Spinner, Flash, TextInput } from '@primer/react';
 import { NoteIcon } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import type { Note } from '@shared/note';
@@ -202,20 +201,32 @@ export function EditorPane({
         sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}
         data-testid="editor-empty"
       >
-        <Blankslate>
-          <Blankslate.Visual>
-            <NoteIcon size="medium" />
-          </Blankslate.Visual>
-          <Blankslate.Heading>No note selected</Blankslate.Heading>
-          <Blankslate.Description>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            textAlign: 'left',
+            width: '100%',
+            maxWidth: 360,
+            px: 4,
+          }}
+        >
+          <Box sx={{ color: 'fg.muted', mb: 3 }}>
+            <NoteIcon size={32} />
+          </Box>
+          <Heading as="h2" sx={{ fontSize: 4, mb: 2 }}>
+            No note selected
+          </Heading>
+          <Text sx={{ color: 'fg.muted', mb: 4 }}>
             Select a note from the list, or create a new one to start writing.
-          </Blankslate.Description>
+          </Text>
           {onCreateNote && (
-            <Blankslate.PrimaryAction onClick={onCreateNote} data-testid="editor-empty-new-note">
+            <Button variant="primary" onClick={onCreateNote} data-testid="editor-empty-new-note">
               New note
-            </Blankslate.PrimaryAction>
+            </Button>
           )}
-        </Blankslate>
+        </Box>
       </Box>
     );
   }
