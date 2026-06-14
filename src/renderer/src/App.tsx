@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash } from '@primer/react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
@@ -7,13 +8,31 @@ import { Sidebar } from './components/sidebar/Sidebar';
 import { EditorPane } from './components/editor/EditorPane';
 
 export function App(): JSX.Element {
-  const { preference, loaded, setPreference } = useColorMode();
+  const { preference, resolvedMode, loaded, setPreference } = useColorMode();
   const notes = useNotes();
 
+  useEffect(() => {
+    const applyThemeAttrs = (element: HTMLElement): void => {
+      element.setAttribute('data-color-mode', resolvedMode);
+      element.setAttribute('data-light-theme', 'light');
+      element.setAttribute('data-dark-theme', 'dark');
+    };
+    applyThemeAttrs(document.documentElement);
+    applyThemeAttrs(document.body);
+  }, [resolvedMode]);
+
   return (
-    <ThemeProvider colorMode={toPrimerColorMode(preference)}>
+    <ThemeProvider colorMode={toPrimerColorMode(resolvedMode)}>
       <BaseStyles>
-        <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Box
+          sx={{
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            bg: 'canvas.default',
+            color: 'fg.default',
+          }}
+        >
           <Box
             as="header"
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -64,6 +83,7 @@ export function App(): JSX.Element {
               // pane and hides the toolbar. Bound it to the available height so
               // the editor body scrolls internally and the toolbar stays put.
               '& [class*="PageLayout-Content"]': { height: '100%', minHeight: 0 },
+              bg: 'canvas.default',
             }}
           >
             <SplitPageLayout.Pane
@@ -74,7 +94,7 @@ export function App(): JSX.Element {
               resizable
               widthStorageKey="inkwell-sidebar-width"
               aria-label="Notes"
-              sx={{ height: '100%' }}
+              sx={{ height: '100%', bg: 'canvas.default' }}
             >
               <Sidebar
                 summaries={notes.summaries}
@@ -93,7 +113,11 @@ export function App(): JSX.Element {
                 }}
               />
             </SplitPageLayout.Pane>
-            <SplitPageLayout.Content padding="none" width="full" sx={{ height: '100%' }}>
+            <SplitPageLayout.Content
+              padding="none"
+              width="full"
+              sx={{ height: '100%', bg: 'canvas.default' }}
+            >
               <EditorPane
                 noteId={notes.selectedId}
                 labels={notes.labels}

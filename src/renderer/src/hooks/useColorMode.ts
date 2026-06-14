@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ColorModePreference } from '@shared/types';
 
+type EffectiveColorMode = 'light' | 'dark';
+
 interface UseColorModeResult {
   /** The user's persisted preference (light / dark / auto). */
   preference: ColorModePreference;
+  /** The resolved color mode actually applied to the UI. */
+  resolvedMode: EffectiveColorMode;
   /** Whether the preference has finished loading from the main process. */
   loaded: boolean;
   setPreference: (mode: ColorModePreference) => void;
@@ -16,6 +20,9 @@ interface UseColorModeResult {
  */
 export function useColorMode(): UseColorModeResult {
   const [preference, setPreferenceState] = useState<ColorModePreference>('auto');
+  const [systemIsDark, setSystemIsDark] = useState<boolean>(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches,
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -36,17 +43,31 @@ export function useColorMode(): UseColorModeResult {
     };
   }, []);
 
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onMediaChange = (event: MediaQueryListEvent): void => setSystemIsDark(event.matches);
+    media.addEventListener('change', onMediaChange);
+    const unsubscribeIpc = window.api.onSystemColorSchemeChanged((isDark) =>
+      setSystemIsDark(isDark),
+    );
+    return () => {
+      media.removeEventListener('change', onMediaChange);
+      unsubscribeIpc();
+    };
+  }, []);
+
   const setPreference = useCallback((mode: ColorModePreference) => {
     setPreferenceState(mode);
     void window.api.setColorMode(mode);
   }, []);
 
-  return { preference, loaded, setPreference };
+  const resolvedMode: EffectiveColorMode =
+    preference === 'auto' ? (systemIsDark ? 'dark' : 'light') : preference;
+
+  return { preference, resolvedMode, loaded, setPreference };
 }
 
-/** Maps our preference to Primer's `ThemeProvider` `colorMode` prop. */
-export function toPrimerColorMode(preference: ColorModePreference): 'day' | 'night' | 'auto' {
-  if (preference === 'light') return 'day';
-  if (preference === 'dark') return 'night';
-  return 'auto';
+/** Maps the resolved app mode to Primer's `ThemeProvider` `colorMode` prop. */
+export function toPrimerColorMode(mode: EffectiveColorMode): 'day' | 'night' {
+  return mode === 'dark' ? 'night' : 'day';
 }
