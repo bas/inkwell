@@ -10,6 +10,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
 import type { Extensions } from '@tiptap/react';
 import { PlainTextFormatter } from './extensions/plainTextFormatter';
+import { ListIndent } from './extensions/listIndent';
 
 /**
  * The TipTap extension set for the note editor. Provides headings, inline
@@ -34,6 +35,7 @@ export function buildExtensions(placeholder: string): Extensions {
     TableCell,
     TaskList,
     TaskItem.configure({ nested: true }),
+    ListIndent,
     Placeholder.configure({ placeholder }),
     PlainTextFormatter,
     Markdown.configure({

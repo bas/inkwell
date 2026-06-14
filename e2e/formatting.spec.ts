@@ -105,6 +105,97 @@ test.describe('Editor formatting', () => {
     expect(readSingleNote(vaultDir)).toContain('- [ ] task item');
   });
 
+  test('nests a list item with the indent control', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'parent');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('child');
+    await page.getByTestId('fmt-indent').click();
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- parent');
+    expect(md).toContain('  - child');
+  });
+
+  test('nests a list item with the Tab key', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'parent');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('child');
+    await page.keyboard.press('Tab');
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- parent');
+    expect(md).toContain('  - child');
+  });
+
+  test('outdents a nested list item with the outdent control', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'parent');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('child');
+    await page.getByTestId('fmt-indent').click();
+    await page.getByTestId('fmt-outdent').click();
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- parent');
+    expect(md).toContain('- child');
+    expect(md).not.toContain('  - child');
+  });
+
+  test('caps list nesting at three levels', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'a');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('b');
+    await page.getByTestId('fmt-indent').click(); // level 2
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('c');
+    await page.getByTestId('fmt-indent').click(); // level 3
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('d'); // sibling of c, also level 3
+
+    // At the depth cap the indent control is disabled…
+    await expect(page.getByTestId('fmt-indent')).toBeDisabled();
+    // …and the Tab key is swallowed rather than nesting deeper.
+    await page.keyboard.press('Tab');
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- a');
+    expect(md).toContain('  - b');
+    expect(md).toContain('    - c');
+    expect(md).toContain('    - d');
+    expect(md).not.toContain('      - d');
+  });
+
+  test('round-trips a three-level nested list through the source view', async () => {
+    const { page, vaultDir } = ctx;
+
+    await switchView(page, 'source');
+    const source = page.getByTestId('source-editor');
+    await source.click();
+    await source.fill(['- one', '  - two', '    - three'].join('\n'));
+    await waitSaved(page);
+
+    // Re-rendered in the WYSIWYG view without flattening…
+    await switchView(page, 'wysiwyg');
+    await switchView(page, 'source');
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- one');
+    expect(md).toContain('  - two');
+    expect(md).toContain('    - three');
+  });
+
   test('creates a blockquote', async () => {
     const { page, vaultDir } = ctx;
     await typeBody(page, 'quote me');
