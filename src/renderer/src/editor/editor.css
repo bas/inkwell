@@ -59,7 +59,6 @@
 /* Task lists rendered as checkboxes. */
 .ink-editor .ProseMirror ul[data-type='taskList'] {
   list-style: none;
-  padding-left: 0;
 }
 
 .ink-editor .ProseMirror ul[data-type='taskList'] li {
@@ -71,6 +70,23 @@
 .ink-editor .ProseMirror ul[data-type='taskList'] li > label {
   margin-top: var(--base-size-4, 0.25rem);
   user-select: none;
+}
+
+/*
+ * List indentation. The first level sits flush with the body text (no extra
+ * left padding); each nested level is indented by one Primer spacing step so
+ * up to three levels of nesting read clearly. Markers render in the editor's
+ * own horizontal padding.
+ */
+.ink-editor .ProseMirror.markdown-body > ul,
+.ink-editor .ProseMirror.markdown-body > ol,
+.ink-editor .ProseMirror.markdown-body > ul[data-type='taskList'] {
+  padding-left: 0;
+}
+
+.ink-editor .ProseMirror.markdown-body li > ul,
+.ink-editor .ProseMirror.markdown-body li > ol {
+  padding-left: var(--base-size-24, 1.5rem);
 }
 
 /* Table editing affordances (typography handled by .markdown-body). */

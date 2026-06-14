@@ -13,9 +13,12 @@ import {
   LinkIcon,
   TableIcon,
   TriangleDownIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
 } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import { Separator } from '../components/common/Separator';
+import { canIndentList, canOutdentList, indentList, outdentList } from './extensions/listIndent';
 
 interface FormatControlsProps {
   editor: Editor | null;
@@ -193,6 +196,20 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
         disabled={disabled}
         active={editor?.isActive('taskList')}
         onClick={() => editor?.chain().focus().toggleTaskList().run()}
+      />
+      <ToolbarButton
+        icon={ChevronLeftIcon}
+        label="Decrease indent"
+        testid="fmt-outdent"
+        disabled={disabled || !editor || !canOutdentList(editor)}
+        onClick={() => editor && outdentList(editor)}
+      />
+      <ToolbarButton
+        icon={ChevronRightIcon}
+        label="Increase indent"
+        testid="fmt-indent"
+        disabled={disabled || !editor || !canIndentList(editor)}
+        onClick={() => editor && indentList(editor)}
       />
 
       <Separator />
