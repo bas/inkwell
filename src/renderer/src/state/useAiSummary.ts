@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AiError } from '@shared/ai';
 
-export type AiSummaryStatus = 'idle' | 'streaming' | 'done' | 'error';
+export type AiSummaryStatus = 'idle' | 'streaming' | 'done' | 'stopped' | 'error';
 
 export interface AiSummaryState {
   status: AiSummaryStatus;
@@ -16,6 +16,11 @@ export interface UseAiSummary {
   summarize: (noteId: string) => void;
   /** Cancel any in-flight summary and return to idle. */
   cancel: () => void;
+  /**
+   * Stop the in-flight summary but keep the panel open with whatever partial
+   * text streamed so far, so the user can copy it or try again.
+   */
+  stop: () => void;
   /** Return to the idle state and clear any text/error. */
   reset: () => void;
 }
@@ -28,11 +33,15 @@ function describeAiError(error: AiError): string {
     case 'runtime-error':
       return (
         error.message ||
-        'Copilot isn’t available. Make sure the Copilot CLI is installed and try again.'
+        'Copilot isn’t available. It needs Node.js 22.5+ on your PATH (or set INKWELL_NODE_PATH). Check your setup and try again.'
       );
     case 'not-authenticated':
+      return error.message || 'Sign in with `copilot login` to use Copilot AI features.';
     case 'no-entitlement':
-      return 'Your account doesn’t have Copilot access right now (no license or quota exhausted).';
+      return (
+        error.message ||
+        'Your account doesn’t have Copilot access right now (no license or quota exhausted).'
+      );
     case 'timeout':
       return 'Copilot took too long to respond. Please try again.';
     case 'empty-note':
@@ -102,10 +111,19 @@ export function useAiSummary(): UseAiSummary {
     setState(IDLE);
   }, []);
 
+  const stop = useCallback(() => {
+    const requestId = activeRequestId.current;
+    if (requestId) void window.api.cancelSummarize(requestId);
+    activeRequestId.current = undefined;
+    setState((prev) =>
+      prev.status === 'streaming' && prev.text ? { status: 'stopped', text: prev.text } : IDLE,
+    );
+  }, []);
+
   const reset = useCallback(() => {
     activeRequestId.current = undefined;
     setState(IDLE);
   }, []);
 
-  return { state, summarize, cancel, reset };
+  return { state, summarize, cancel, stop, reset };
 }

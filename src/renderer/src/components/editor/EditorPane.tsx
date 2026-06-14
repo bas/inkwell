@@ -58,6 +58,7 @@ export function EditorPane({
     state: summaryState,
     summarize: runSummarize,
     cancel: cancelSummary,
+    stop: stopSummary,
     reset: resetSummary,
   } = useAiSummary();
 
@@ -173,15 +174,21 @@ export function EditorPane({
     const { id, title } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    resetSummary();
     setSummaryNoteId(id);
     setSummaryNoteTitle(title);
     setSummaryOpen(true);
     void (async () => {
       await save();
-      if (dirtyRef.current) return;
+      if (dirtyRef.current) {
+        // Couldn't reach a clean on-disk state; don't summarize stale content.
+        setSummaryOpen(false);
+        setError('Could not save the note before summarizing. Please try again.');
+        return;
+      }
       runSummarize(id);
     })();
-  }, [save, runSummarize]);
+  }, [save, runSummarize, resetSummary]);
 
   const handleCloseSummary = useCallback(() => {
     setSummaryOpen(false);
@@ -473,6 +480,7 @@ export function EditorPane({
           noteTitle={summaryNoteTitle}
           inserting={inserting}
           onClose={handleCloseSummary}
+          onStop={stopSummary}
           onRetry={() => runSummarize(summaryNoteId)}
           onInsert={() => void handleInsertTldr()}
         />
