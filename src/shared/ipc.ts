@@ -1,6 +1,7 @@
 import type { AppSettings, ColorModePreference } from './types';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note';
 import type { Label } from './note-labels';
+import type { AiAvailability } from './ai';
 
 /** IPC channel names. Keep in sync between main handlers and the preload bridge. */
 export const IpcChannels = {
@@ -24,6 +25,9 @@ export const IpcChannels = {
   deleteLabel: 'labels:delete',
 
   writeClipboard: 'clipboard:writeText',
+
+  /** AI: report whether the Copilot runtime is reachable and authenticated. */
+  aiGetAvailability: 'ai:getAvailability',
 
   /** Main → renderer: the user picked File → New Note from the menu. */
   menuNewNote: 'menu:newNote',
@@ -55,6 +59,9 @@ export interface InkwellApi {
 
   /** Copy plain text (e.g. Markdown) to the system clipboard. */
   writeClipboard(text: string): Promise<void>;
+
+  /** Report whether the Copilot AI runtime is reachable and authenticated. */
+  getAiAvailability(): Promise<AiAvailability>;
 
   /** Subscribe to the File → New Note menu command. Returns an unsubscribe function. */
   onMenuNewNote(listener: () => void): () => void;

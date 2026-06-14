@@ -68,6 +68,7 @@
     "vitest": "^3.2.6"
   },
   "dependencies": {
+    "@github/copilot-sdk": "^1.0.1",
     "@primer/css": "^21.5.1",
     "@primer/octicons-react": "^19.28.1",
     "@primer/primitives": "^10.7.0",

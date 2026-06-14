@@ -4,6 +4,7 @@ import { readSettings, setColorMode, setWindowBounds } from './settings';
 import { NotesService } from './storage/notesService';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
+import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { IpcChannels } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
@@ -86,6 +87,8 @@ function registerIpcHandlers(): void {
     if (typeof text !== 'string') throw new Error('Clipboard text must be a string');
     clipboard.writeText(text);
   });
+
+  registerAiHandlers();
 }
 
 app.whenReady().then(() => {
@@ -143,6 +146,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   void notesService?.dispose();
+  void disposeAi();
 });
 
 app.on('window-all-closed', () => {

@@ -33,6 +33,8 @@ const api: InkwellApi = {
 
   writeClipboard: (text: string) => ipcRenderer.invoke(IpcChannels.writeClipboard, text),
 
+  getAiAvailability: () => ipcRenderer.invoke(IpcChannels.aiGetAvailability),
+
   onMenuNewNote: (listener) => {
     const handler = (): void => listener();
     ipcRenderer.on(IpcChannels.menuNewNote, handler);
