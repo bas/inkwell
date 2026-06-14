@@ -25,8 +25,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "package": "npm run build && electron-builder --mac --arm64",
+    "package": "npm run build && electron-builder --mac --arm64 --publish never",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "npm run rebuild",
     "prepare": "husky"
   },
   "lint-staged": {

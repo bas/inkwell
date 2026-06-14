@@ -15,8 +15,11 @@ export function SourceEditor({ value, onChange }: SourceEditorProps): JSX.Elemen
       onChange={(event) => onChange(event.target.value)}
       sx={{
         height: '100%',
+        minHeight: 0,
+        width: '100%',
         '& textarea': {
           height: '100%',
+          minHeight: 0,
           fontFamily: 'mono',
           fontSize: 1,
           resize: 'none',

@@ -12,7 +12,7 @@ import {
 /** Select all text in the focused WYSIWYG editor. */
 async function selectAll(page: Page): Promise<void> {
   await page.getByTestId('editor-content').click();
-  await page.keyboard.press('Meta+a');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a');
 }
 
 test.describe('Editor formatting', () => {
@@ -105,6 +105,97 @@ test.describe('Editor formatting', () => {
     expect(readSingleNote(vaultDir)).toContain('- [ ] task item');
   });
 
+  test('nests a list item with the indent control', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'parent');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('child');
+    await page.getByTestId('fmt-indent').click();
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- parent');
+    expect(md).toContain('  - child');
+  });
+
+  test('nests a list item with the Tab key', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'parent');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('child');
+    await page.keyboard.press('Tab');
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- parent');
+    expect(md).toContain('  - child');
+  });
+
+  test('outdents a nested list item with the outdent control', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'parent');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('child');
+    await page.getByTestId('fmt-indent').click();
+    await page.getByTestId('fmt-outdent').click();
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- parent');
+    expect(md).toContain('- child');
+    expect(md).not.toContain('  - child');
+  });
+
+  test('caps list nesting at three levels', async () => {
+    const { page, vaultDir } = ctx;
+    await typeBody(page, 'a');
+    await page.getByTestId('fmt-bullet').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('b');
+    await page.getByTestId('fmt-indent').click(); // level 2
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('c');
+    await page.getByTestId('fmt-indent').click(); // level 3
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('d'); // sibling of c, also level 3
+
+    // At the depth cap the indent control is disabled…
+    await expect(page.getByTestId('fmt-indent')).toBeDisabled();
+    // …and the Tab key is swallowed rather than nesting deeper.
+    await page.keyboard.press('Tab');
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- a');
+    expect(md).toContain('  - b');
+    expect(md).toContain('    - c');
+    expect(md).toContain('    - d');
+    expect(md).not.toContain('      - d');
+  });
+
+  test('round-trips a three-level nested list through the source view', async () => {
+    const { page, vaultDir } = ctx;
+
+    await switchView(page, 'source');
+    const source = page.getByTestId('source-editor');
+    await source.click();
+    await source.fill(['- one', '  - two', '    - three'].join('\n'));
+    await waitSaved(page);
+
+    // Re-rendered in the WYSIWYG view without flattening…
+    await switchView(page, 'wysiwyg');
+    await switchView(page, 'source');
+    await waitSaved(page);
+
+    const md = readSingleNote(vaultDir);
+    expect(md).toContain('- one');
+    expect(md).toContain('  - two');
+    expect(md).toContain('    - three');
+  });
+
   test('creates a blockquote', async () => {
     const { page, vaultDir } = ctx;
     await typeBody(page, 'quote me');
@@ -125,16 +216,26 @@ test.describe('Editor formatting', () => {
     expect(md).toContain('const x = 1');
   });
 
-  test('adds a link via the link dialog', async () => {
+  test('adds a link to a partial selection via the link dialog', async () => {
     const { page, vaultDir } = ctx;
-    await typeBody(page, 'click here');
-    await selectAll(page);
+    await typeBody(page, 'visit the site now');
+    await waitSaved(page);
+
+    // Select just the word "site" so the link must apply to the captured range,
+    // not the whole paragraph — this guards against the dialog focus trap
+    // collapsing the selection before the link is applied.
+    await page.getByTestId('editor-content').click();
+    await page.keyboard.press('Home');
+    for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
+
     await page.getByTestId('fmt-link').click();
     await page.getByTestId('link-url').fill('https://example.com');
     await page.getByTestId('link-apply').click();
     await waitSaved(page);
 
-    expect(readSingleNote(vaultDir)).toContain('[click here](https://example.com)');
+    expect(readSingleNote(vaultDir)).toContain('visit the [site](https://example.com) now');
+    await expect(page.getByTestId('fmt-link')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('inserts a table', async () => {

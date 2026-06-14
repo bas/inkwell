@@ -6,6 +6,7 @@
 
 .ink-editor {
   height: 100%;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -47,6 +48,16 @@
   margin-bottom: var(--base-size-16, 1rem);
 }
 
+/*
+ * Keep the blockquote's vertical bar but avoid indenting the content. Primer's
+ * `.markdown-body` applies `padding: 0 1em`, which pushes the text away from the
+ * left margin; we collapse the left padding to a small Primer spacing token so
+ * the text sits close to the bar instead of being indented.
+ */
+.ink-editor .ProseMirror.markdown-body > blockquote {
+  padding-left: var(--base-size-8, 0.5rem);
+}
+
 /* Placeholder text for an empty document. */
 .ink-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -59,7 +70,6 @@
 /* Task lists rendered as checkboxes. */
 .ink-editor .ProseMirror ul[data-type='taskList'] {
   list-style: none;
-  padding-left: 0;
 }
 
 .ink-editor .ProseMirror ul[data-type='taskList'] li {
@@ -71,6 +81,23 @@
 .ink-editor .ProseMirror ul[data-type='taskList'] li > label {
   margin-top: var(--base-size-4, 0.25rem);
   user-select: none;
+}
+
+/*
+ * List indentation. The first level sits flush with the body text (no extra
+ * left padding); each nested level is indented by one Primer spacing step so
+ * up to three levels of nesting read clearly. Markers render in the editor's
+ * own horizontal padding.
+ */
+.ink-editor .ProseMirror.markdown-body > ul,
+.ink-editor .ProseMirror.markdown-body > ol,
+.ink-editor .ProseMirror.markdown-body > ul[data-type='taskList'] {
+  padding-left: 0;
+}
+
+.ink-editor .ProseMirror.markdown-body li > ul,
+.ink-editor .ProseMirror.markdown-body li > ol {
+  padding-left: var(--base-size-24, 1.5rem);
 }
 
 /* Table editing affordances (typography handled by .markdown-body). */

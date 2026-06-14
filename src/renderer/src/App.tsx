@@ -57,6 +57,13 @@ export function App(): JSX.Element {
               // prefixes instead of fragile positional `> div > div` selectors.
               '& [class*="PageLayoutWrapper"]': { height: '100%' },
               '& [class*="PageLayoutContent"]': { height: '100%' },
+              // The inner content region (`PageLayout-ContentWrapper` and its
+              // `PageLayout-Content` child) defaults to `min-height: auto`, so a
+              // tall note makes it grow past the viewport instead of letting the
+              // editor's own scroll container take over — which scrolls the whole
+              // pane and hides the toolbar. Bound it to the available height so
+              // the editor body scrolls internally and the toolbar stays put.
+              '& [class*="PageLayout-Content"]': { height: '100%', minHeight: 0 },
             }}
           >
             <SplitPageLayout.Pane
