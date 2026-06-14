@@ -12,6 +12,11 @@ function errorMessage(err: unknown): string {
  * renderer can render a first-class error state instead of an unhandled error.
  */
 export async function getAiAvailability(): Promise<AiAvailability> {
+  // E2E test seam: pretend the runtime is ready so Playwright can drive the AI
+  // flow without a live Copilot login. Paired with the seam in `runner.ts`.
+  if (process.env.INKWELL_FAKE_AI) {
+    return { ready: true, authType: 'fake', login: 'e2e' };
+  }
   try {
     const client = await getCopilotClient();
     const auth = await client.getAuthStatus();

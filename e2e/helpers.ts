@@ -14,6 +14,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export interface LaunchOptions {
   /** Reuse existing directories instead of creating fresh ones (for persistence/relaunch tests). */
   reuse?: { vaultDir: string; userDataDir: string };
+  /** Extra environment variables for the Electron main process (e.g. test seams). */
+  env?: Record<string, string>;
 }
 
 export interface LaunchedApp {
@@ -38,6 +40,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     env: {
       ...process.env,
       INKWELL_VAULT_DIR: vaultDir,
+      ...options.env,
     },
   });
 
@@ -120,4 +123,11 @@ export async function switchView(page: Page, view: 'wysiwyg' | 'source'): Promis
 /** Read the OS clipboard text from the main process. */
 export async function readClipboard(app: ElectronApplication): Promise<string> {
   return app.evaluate(({ clipboard }) => clipboard.readText());
+}
+
+/** Open the note overflow menu and choose "Summarize with Copilot". */
+export async function openSummary(page: Page): Promise<void> {
+  await page.getByTestId('note-actions').click();
+  await page.getByTestId('action-summarize').click();
+  await expect(page.getByTestId('ai-summary-dialog')).toBeVisible();
 }

@@ -49,6 +49,16 @@ export async function runGeneration({
   onDelta,
   onStart,
 }: GenerationRequest): Promise<GenerationOutcome> {
+  // E2E test seam: when INKWELL_FAKE_AI is set, stream its value back as the
+  // generated text instead of contacting the Copilot runtime. Lets Playwright
+  // exercise the full summarize/insert flow deterministically and offline.
+  const faked = process.env.INKWELL_FAKE_AI;
+  if (faked) {
+    onStart?.(() => {});
+    for (const chunk of faked.match(/.{1,8}/g) ?? [faked]) onDelta?.(chunk);
+    return { ok: true, content: faked };
+  }
+
   const client = await getCopilotClient();
   const session = await client.createSession({
     model: 'auto',
@@ -108,7 +118,7 @@ export async function runGeneration({
       };
     }
 
-    const content = (final?.data.content ?? streamed).trim();
+    const content = (final?.data.content || streamed).trim();
     if (!content) {
       return {
         ok: false,
