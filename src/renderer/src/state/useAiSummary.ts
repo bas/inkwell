@@ -26,7 +26,10 @@ const IDLE: AiSummaryState = { status: 'idle', text: '' };
 function describeAiError(error: AiError): string {
   switch (error.code) {
     case 'runtime-error':
-      return error.message || 'Copilot isn’t available. Make sure the Copilot CLI is installed and try again.';
+      return (
+        error.message ||
+        'Copilot isn’t available. Make sure the Copilot CLI is installed and try again.'
+      );
     case 'not-authenticated':
     case 'no-entitlement':
       return 'Your account doesn’t have Copilot access right now (no license or quota exhausted).';
