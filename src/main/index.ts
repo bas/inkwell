@@ -14,6 +14,8 @@ import type { ColorModePreference } from '../shared/types';
 app.setName('Inkwell');
 
 const isDev = !app.isPackaged;
+const isE2EHeadless =
+  process.env['INKWELL_E2E_HEADLESS'] === '1' || process.env['INKWELL_E2E_HEADLESS'] === 'true';
 
 let notesService: NotesService | undefined;
 
@@ -36,7 +38,9 @@ function createWindow(): BrowserWindow {
     },
   });
 
-  window.on('ready-to-show', () => window.show());
+  window.on('ready-to-show', () => {
+    if (!isE2EHeadless) window.show();
+  });
 
   // Persist window position and size so the next launch restores it.
   const saveBounds = (): void => {
