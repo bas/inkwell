@@ -36,6 +36,8 @@ test.describe('AI summarize', () => {
     await openSummary(page);
 
     await expect(page.getByTestId('ai-summary-text')).toContainText(FAKE_SUMMARY);
+    await expect(page.getByTestId('ai-usage-panel')).toBeVisible();
+    await expect(page.getByTestId('ai-usage-panel')).toContainText('Usage for this request');
     await expect(page.getByTestId('ai-summary-insert')).toBeEnabled();
   });
 

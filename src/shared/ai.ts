@@ -54,10 +54,40 @@ export interface AiStreamChunk {
   delta: string;
 }
 
+export type AiCreditsSource = 'exact' | 'estimated' | 'unavailable';
+
+/** Structured usage details for a single AI request. */
+export interface AiUsage {
+  /** How the displayed AI Credits value was derived. */
+  creditsSource: AiCreditsSource;
+  /** AI Credits consumed for this request (when known). */
+  aiCredits?: number;
+  /** Model used for this request, when reported by the runtime. */
+  model?: string;
+  /** Input tokens consumed by this request. */
+  inputTokens?: number;
+  /** Output tokens produced by this request. */
+  outputTokens?: number;
+  /** Prompt-cache read tokens, when applicable. */
+  cacheReadTokens?: number;
+  /** Prompt-cache write tokens, when applicable. */
+  cacheWriteTokens?: number;
+  /** Reasoning tokens, when reported by the model/runtime. */
+  reasoningTokens?: number;
+  /** End-to-end model call duration (ms), when available. */
+  durationMs?: number;
+  /** Current context window token usage after this request, when reported. */
+  contextTokens?: number;
+  /** Maximum context window tokens for the active model, when reported. */
+  contextTokenLimit?: number;
+  /** Context message count after this request, when reported. */
+  contextMessageCount?: number;
+}
+
 /** Final result of an AI generation request. */
 export type AiResult =
-  | { ok: true; requestId: string; content: string }
-  | { ok: false; requestId: string; error: AiError };
+  | { ok: true; requestId: string; content: string; usage?: AiUsage }
+  | { ok: false; requestId: string; error: AiError; usage?: AiUsage };
 
 /** Categories supported by the first AI review release. */
 export type AiReviewCategory = 'grammar' | 'clarity' | 'style';

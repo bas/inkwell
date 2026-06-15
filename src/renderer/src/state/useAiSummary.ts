@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AiError } from '@shared/ai';
+import type { AiError, AiUsage } from '@shared/ai';
 
 export type AiSummaryStatus = 'idle' | 'streaming' | 'done' | 'stopped' | 'error';
 
@@ -8,6 +8,7 @@ export interface AiSummaryState {
   /** Accumulated summary text (streamed while running, final when done). */
   text: string;
   error?: string;
+  usage?: AiUsage;
 }
 
 export interface UseAiSummary {
@@ -82,16 +83,21 @@ export function useAiSummary(): UseAiSummary {
 
     const requestId = crypto.randomUUID();
     activeRequestId.current = requestId;
-    setState({ status: 'streaming', text: '' });
+    setState({ status: 'streaming', text: '', usage: undefined });
 
     void window.api
       .summarizeNote(noteId, requestId)
       .then((result) => {
         if (activeRequestId.current !== requestId) return;
         if (result.ok) {
-          setState({ status: 'done', text: result.content });
+          setState({ status: 'done', text: result.content, usage: result.usage });
         } else {
-          setState({ status: 'error', text: '', error: describeAiError(result.error) });
+          setState({
+            status: 'error',
+            text: '',
+            error: describeAiError(result.error),
+            usage: result.usage,
+          });
         }
       })
       .catch((err: unknown) => {
@@ -100,6 +106,7 @@ export function useAiSummary(): UseAiSummary {
           status: 'error',
           text: '',
           error: err instanceof Error ? err.message : 'Could not summarize this note.',
+          usage: undefined,
         });
       });
   }, []);
