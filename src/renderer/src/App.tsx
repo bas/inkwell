@@ -64,7 +64,12 @@ export function App(): JSX.Element {
               gap: 2,
               pl: 'var(--ink-titlebar-inset)',
               pr: 3,
-              py: 2,
+              // The macOS traffic lights sit near the window top in the
+              // `hiddenInset` title bar. A small top padding aligns the first
+              // toolbar control's center with the lights' center without
+              // pushing it down into a floating position.
+              pt: 1,
+              pb: 2,
               bg: 'canvas.subtle',
               // A filled surface plus a single inset bottom edge reads as a
               // contained bar rather than two floating hairlines.
