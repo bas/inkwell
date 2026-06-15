@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Box, Button, Dialog, Flash, Spinner, Text } from '@primer/react';
 import { ArrowUpIcon, CheckIcon, CopyIcon, SyncIcon, XIcon } from '@primer/octicons-react';
 import type { AiSummaryState } from '../../state/useAiSummary';
+import { AiUsageSummary } from './AiUsageSummary';
 
 interface AiSummaryDialogProps {
   state: AiSummaryState;
@@ -81,6 +82,8 @@ export function AiSummaryDialog({
             )}
           </Box>
         )}
+
+        <AiUsageSummary usage={state.usage} pending={state.status === 'streaming'} />
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
           {state.status === 'streaming' ? (

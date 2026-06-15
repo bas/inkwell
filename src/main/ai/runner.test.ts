@@ -80,6 +80,57 @@ describe('runGeneration', () => {
     expect(outcome).toEqual({ ok: true, content: 'Streamed only' });
   });
 
+  it('captures request usage and maps shutdown nano-AIU to AI Credits', async () => {
+    const session = makeSession();
+    createSession.mockResolvedValue(session);
+    session.sendAndWait.mockImplementation(async () => {
+      session.emit('assistant.usage', {
+        model: 'gpt-5',
+        inputTokens: 120,
+        outputTokens: 45,
+        cacheReadTokens: 20,
+        reasoningTokens: 12,
+        duration: 320,
+      });
+      session.emit('session.usage_info', {
+        currentTokens: 640,
+        tokenLimit: 4096,
+        messagesLength: 7,
+      });
+      return { data: { content: 'Usage-aware response' } };
+    });
+    session.disconnect.mockImplementation(async () => {
+      session.emit('session.shutdown', {
+        modelMetrics: {},
+        sessionStartTime: Date.now(),
+        shutdownType: 'normal',
+        codeChanges: { filesModified: [], linesAdded: 0, linesRemoved: 0 },
+        totalApiDurationMs: 320,
+        totalNanoAiu: 2_500_000_000,
+      });
+    });
+
+    const outcome = await runGeneration({ prompt: 'p' });
+
+    expect(outcome).toEqual({
+      ok: true,
+      content: 'Usage-aware response',
+      usage: {
+        creditsSource: 'exact',
+        aiCredits: 2.5,
+        model: 'gpt-5',
+        inputTokens: 120,
+        outputTokens: 45,
+        cacheReadTokens: 20,
+        reasoningTokens: 12,
+        durationMs: 320,
+        contextTokens: 640,
+        contextTokenLimit: 4096,
+        contextMessageCount: 7,
+      },
+    });
+  });
+
   it('reports the session error type and message on failure', async () => {
     const session = makeSession();
     createSession.mockResolvedValue(session);

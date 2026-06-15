@@ -96,9 +96,10 @@ async function summarizeNote(
       ok: false,
       requestId,
       error: { code: classifyErrorType(outcome.errorType), message: outcome.message },
+      usage: outcome.usage,
     };
   }
-  return { ok: true, requestId, content: outcome.content };
+  return { ok: true, requestId, content: outcome.content, usage: outcome.usage };
 }
 
 /** Register the summarize and TL;DR-insert IPC handlers. */
