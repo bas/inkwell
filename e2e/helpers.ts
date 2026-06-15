@@ -52,7 +52,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
   child.stderr?.on('data', (chunk) => process.stderr.write(`[electron stderr] ${chunk}`));
 
   const page = await app.firstWindow();
-  await page.waitForSelector('[data-testid="new-note-button"]');
+  await page.waitForSelector('[data-testid="toggle-sidebar"]');
 
   return {
     app,
