@@ -265,7 +265,14 @@ export function EditorPane({
 
   const applySuggestion = useCallback(
     async (suggestion: UiReviewSuggestion): Promise<boolean> => {
-      const result = await window.api.applyReviewSuggestion(reviewNoteId, suggestion);
+      let result: Awaited<ReturnType<typeof window.api.applyReviewSuggestion>>;
+      try {
+        result = await window.api.applyReviewSuggestion(reviewNoteId, suggestion);
+      } catch (err) {
+        setError(describeError(err));
+        markOutdated(suggestion.id);
+        return false;
+      }
       if (!result.apply.ok) {
         markOutdated(suggestion.id);
         return false;
@@ -290,9 +297,7 @@ export function EditorPane({
       const suggestion = reviewState.suggestions.find((s) => s.id === id);
       if (!suggestion) return;
       setApplyingId(id);
-      void applySuggestion(suggestion)
-        .catch(() => undefined)
-        .finally(() => setApplyingId(undefined));
+      void applySuggestion(suggestion).finally(() => setApplyingId(undefined));
     },
     [reviewState.suggestions, applySuggestion],
   );
@@ -307,7 +312,7 @@ export function EditorPane({
       setBatchApplying(true);
       void (async () => {
         for (const suggestion of ordered) {
-          await applySuggestion(suggestion).catch(() => undefined);
+          await applySuggestion(suggestion);
         }
       })().finally(() => setBatchApplying(false));
     },

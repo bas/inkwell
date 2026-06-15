@@ -11,6 +11,12 @@ import {
   Textarea,
 } from '@primer/react';
 import { CheckIcon, SyncIcon, XIcon } from '@primer/octicons-react';
+import {
+  CheckCircleFillIcon,
+  XCircleFillIcon,
+  AlertIcon,
+  DotFillIcon,
+} from '@primer/octicons-react';
 import type { AiReviewCategory, AiReviewSeverity } from '@shared/ai';
 import type {
   AiReviewState,
@@ -48,6 +54,36 @@ const STATUS_VARIANT: Record<
   rejected: 'secondary',
   outdated: 'attention',
 };
+
+const STATUS_LABEL: Record<AiSuggestionStatus, string> = {
+  pending: 'Pending',
+  applied: 'Applied',
+  rejected: 'Rejected',
+  outdated: 'Outdated',
+};
+
+const STATUS_ICON_COLOR: Record<AiSuggestionStatus, string> = {
+  pending: 'fg.muted',
+  applied: 'success.fg',
+  rejected: 'fg.muted',
+  outdated: 'attention.fg',
+};
+
+function StatusIcon({ status }: { status: AiSuggestionStatus }): JSX.Element {
+  const Icon =
+    status === 'applied'
+      ? CheckCircleFillIcon
+      : status === 'rejected'
+        ? XCircleFillIcon
+        : status === 'outdated'
+          ? AlertIcon
+          : DotFillIcon;
+  return (
+    <Box sx={{ color: STATUS_ICON_COLOR[status], display: 'flex', mt: 1 }} aria-hidden>
+      <Icon size={14} />
+    </Box>
+  );
+}
 
 function categoryLabel(category: AiReviewCategory): string {
   return category.charAt(0).toUpperCase() + category.slice(1);
@@ -122,6 +158,25 @@ export function AiReviewPanel({
     [state.suggestions, state.selectedSuggestionId],
   );
 
+  // Show unresolved suggestions first; resolved ones sink to the bottom so the
+  // active work is always at the top without losing the reviewed history.
+  const orderedSuggestions = useMemo(() => {
+    const indexed = state.suggestions.map((s, i) => ({ s, i }));
+    return indexed
+      .sort((a, b) => {
+        const ap = a.s.status === 'pending' ? 0 : 1;
+        const bp = b.s.status === 'pending' ? 0 : 1;
+        return ap - bp || a.i - b.i;
+      })
+      .map((entry) => entry.s);
+  }, [state.suggestions]);
+
+  const pendingCount = useMemo(
+    () => state.suggestions.filter((s) => s.status === 'pending').length,
+    [state.suggestions],
+  );
+  const resolvedCount = state.suggestions.length - pendingCount;
+
   const pendingCheckedIds = useMemo(
     () =>
       state.suggestions.filter((s) => s.status === 'pending' && checked.has(s.id)).map((s) => s.id),
@@ -179,13 +234,33 @@ export function AiReviewPanel({
 
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
-        {state.summary && (
-          <Box sx={{ px: 3, py: 2, boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: 2,
+            px: 3,
+            py: 2,
+            boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
+          }}
+        >
+          {state.summary ? (
             <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="review-summary">
               {state.summary}
             </Text>
-          </Box>
-        )}
+          ) : (
+            <Box />
+          )}
+          <Text
+            sx={{ fontSize: 0, color: 'fg.muted', whiteSpace: 'nowrap', flexShrink: 0 }}
+            data-testid="review-progress"
+          >
+            {pendingCount > 0
+              ? `${pendingCount} pending · ${resolvedCount} reviewed`
+              : `All ${state.suggestions.length} reviewed`}
+          </Text>
+        </Box>
         <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
           {/* Suggestions list */}
           <Box
@@ -197,50 +272,67 @@ export function AiReviewPanel({
             }}
             data-testid="review-list"
           >
-            {state.suggestions.map((s) => (
-              <Box
-                key={s.id}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 2,
-                  px: 2,
-                  py: 2,
-                  cursor: 'pointer',
-                  bg: s.id === state.selectedSuggestionId ? 'accent.subtle' : 'transparent',
-                  boxShadow: 'inset 0 -1px 0 0 var(--borderColor-muted)',
-                }}
-                data-testid={`review-item-${s.id}`}
-                onClick={() => onSelect(s.id)}
-              >
+            {orderedSuggestions.map((s) => {
+              const resolved = s.status !== 'pending';
+              return (
                 <Box
-                  as="input"
-                  type="checkbox"
-                  aria-label={`Select ${s.title}`}
-                  data-testid={`review-check-${s.id}`}
-                  checked={checked.has(s.id)}
-                  disabled={s.status !== 'pending'}
-                  onClick={(event: React.MouseEvent) => event.stopPropagation()}
-                  onChange={() => toggleChecked(s.id)}
-                  sx={{ mt: 1 }}
-                />
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Text sx={{ fontSize: 1, fontWeight: 'bold', display: 'block' }}>{s.title}</Text>
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                    <Label size="small" variant={SEVERITY_VARIANT[s.severity]}>
-                      {categoryLabel(s.category)}
-                    </Label>
-                    <Label
-                      size="small"
-                      variant={STATUS_VARIANT[s.status]}
-                      data-testid={`review-status-${s.id}`}
+                  key={s.id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 2,
+                    px: 2,
+                    py: 2,
+                    cursor: 'pointer',
+                    opacity: resolved ? 0.55 : 1,
+                    bg: s.id === state.selectedSuggestionId ? 'accent.subtle' : 'transparent',
+                    boxShadow: 'inset 0 -1px 0 0 var(--borderColor-muted)',
+                  }}
+                  data-testid={`review-item-${s.id}`}
+                  onClick={() => onSelect(s.id)}
+                >
+                  {resolved ? (
+                    <StatusIcon status={s.status} />
+                  ) : (
+                    <Box
+                      as="input"
+                      type="checkbox"
+                      aria-label={`Select ${s.title}`}
+                      data-testid={`review-check-${s.id}`}
+                      checked={checked.has(s.id)}
+                      onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                      onChange={() => toggleChecked(s.id)}
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Text
+                      sx={{
+                        fontSize: 1,
+                        fontWeight: 'bold',
+                        display: 'block',
+                        textDecoration: resolved ? 'line-through' : 'none',
+                        color: resolved ? 'fg.muted' : 'fg.default',
+                      }}
                     >
-                      {s.status}
-                    </Label>
+                      {s.title}
+                    </Text>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                      <Label size="small" variant={SEVERITY_VARIANT[s.severity]}>
+                        {categoryLabel(s.category)}
+                      </Label>
+                      <Label
+                        size="small"
+                        variant={STATUS_VARIANT[s.status]}
+                        data-testid={`review-status-${s.id}`}
+                      >
+                        {STATUS_LABEL[s.status]}
+                      </Label>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-            ))}
+              );
+            })}
           </Box>
 
           {/* Detail pane */}
@@ -256,29 +348,48 @@ export function AiReviewPanel({
                   </Text>
                 </Box>
                 <SuggestionDiff suggestion={selected} />
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="primary"
-                    leadingVisual={CheckIcon}
-                    disabled={selected.status !== 'pending' || applyingId === selected.id}
-                    onClick={() => onApply(selected.id)}
-                    data-testid="review-apply"
-                  >
-                    {applyingId === selected.id ? 'Applying…' : 'Apply'}
-                  </Button>
-                  <Button
-                    leadingVisual={XIcon}
-                    disabled={selected.status !== 'pending'}
-                    onClick={() => onReject(selected.id)}
-                    data-testid="review-reject"
-                  >
-                    Reject
-                  </Button>
-                </Box>
-                {selected.status === 'outdated' && (
+                {selected.status === 'pending' ? (
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="primary"
+                      leadingVisual={CheckIcon}
+                      disabled={applyingId === selected.id}
+                      onClick={() => onApply(selected.id)}
+                      data-testid="review-apply"
+                    >
+                      {applyingId === selected.id ? 'Applying…' : 'Apply'}
+                    </Button>
+                    <Button
+                      leadingVisual={XIcon}
+                      disabled={applyingId === selected.id}
+                      onClick={() => onReject(selected.id)}
+                      data-testid="review-reject"
+                    >
+                      Reject
+                    </Button>
+                  </Box>
+                ) : selected.status === 'outdated' ? (
                   <Flash variant="warning" data-testid="review-outdated">
                     This suggestion no longer matches the note. Re-run review to refresh it.
                   </Flash>
+                ) : (
+                  <Box
+                    data-testid="review-resolved"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      color: selected.status === 'applied' ? 'success.fg' : 'fg.muted',
+                      fontSize: 1,
+                    }}
+                  >
+                    <StatusIcon status={selected.status} />
+                    <Text>
+                      {selected.status === 'applied'
+                        ? 'Applied to your note.'
+                        : 'Rejected — your note is unchanged.'}
+                    </Text>
+                  </Box>
                 )}
                 <Box
                   as="form"

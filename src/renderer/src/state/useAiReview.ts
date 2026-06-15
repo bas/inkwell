@@ -64,6 +64,35 @@ function updateSuggestionStatus(
   return suggestions.map((s) => (s.id === id ? { ...s, status } : s));
 }
 
+/**
+ * Pick the suggestion to focus after `resolvedId` becomes non-pending: prefer
+ * the next still-pending suggestion (wrapping around), so the reviewer is moved
+ * forward instead of left staring at a resolved item.
+ */
+export function nextSelection(
+  suggestions: UiReviewSuggestion[],
+  resolvedId: string,
+): string | undefined {
+  const order = suggestions.map((s) => s.id);
+  const from = order.indexOf(resolvedId);
+  for (let i = 1; i <= order.length; i += 1) {
+    const candidate = suggestions[(from + i) % suggestions.length];
+    if (candidate && candidate.status === 'pending') return candidate.id;
+  }
+  return resolvedId;
+}
+
+function resolveSuggestion(
+  prev: AiReviewState,
+  id: string,
+  status: AiSuggestionStatus,
+): AiReviewState {
+  const suggestions = updateSuggestionStatus(prev.suggestions, id, status);
+  const selectedSuggestionId =
+    prev.selectedSuggestionId === id ? nextSelection(suggestions, id) : prev.selectedSuggestionId;
+  return { ...prev, suggestions, selectedSuggestionId };
+}
+
 export function useAiReview(): UseAiReview {
   const [state, setState] = useState<AiReviewState>(IDLE);
   const activeRequestId = useRef<string | undefined>(undefined);
@@ -147,24 +176,15 @@ export function useAiReview(): UseAiReview {
   }, []);
 
   const markRejected = useCallback((id: string) => {
-    setState((prev) => ({
-      ...prev,
-      suggestions: updateSuggestionStatus(prev.suggestions, id, 'rejected'),
-    }));
+    setState((prev) => resolveSuggestion(prev, id, 'rejected'));
   }, []);
 
   const markApplied = useCallback((id: string) => {
-    setState((prev) => ({
-      ...prev,
-      suggestions: updateSuggestionStatus(prev.suggestions, id, 'applied'),
-    }));
+    setState((prev) => resolveSuggestion(prev, id, 'applied'));
   }, []);
 
   const markOutdated = useCallback((id: string) => {
-    setState((prev) => ({
-      ...prev,
-      suggestions: updateSuggestionStatus(prev.suggestions, id, 'outdated'),
-    }));
+    setState((prev) => resolveSuggestion(prev, id, 'outdated'));
   }, []);
 
   return {

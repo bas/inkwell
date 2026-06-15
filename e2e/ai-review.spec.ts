@@ -74,7 +74,7 @@ test.describe('AI review', () => {
 
     await page.getByTestId('review-apply').click();
 
-    await expect(page.getByTestId('review-status-s1')).toHaveText('applied');
+    await expect(page.getByTestId('review-status-s1')).toHaveText('Applied');
 
     await expect.poll(() => readSingleNote(vaultDir)).toContain('Improved body text.');
     const note = readSingleNote(vaultDir);
@@ -93,7 +93,7 @@ test.describe('AI review', () => {
     await expect(page.getByTestId('review-item-s1')).toBeVisible();
 
     await page.getByTestId('review-reject').click();
-    await expect(page.getByTestId('review-status-s1')).toHaveText('rejected');
+    await expect(page.getByTestId('review-status-s1')).toHaveText('Rejected');
 
     const note = readSingleNote(vaultDir);
     expect(note).toContain('Original body text.');
