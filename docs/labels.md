@@ -45,14 +45,14 @@ Click **+ New label** at the bottom of the dialog, enter a name, choose a colour
 ## Label colours reference
 
 | Colour token | Appearance |
-|---|---|
-| `default` | Grey |
-| `primary` | Blue |
-| `secondary` | Purple |
-| `accent` | Teal |
-| `success` | Green |
-| `attention` | Yellow |
-| `severe` | Orange |
-| `danger` | Red |
+| ------------ | ---------- |
+| `default`    | Grey       |
+| `primary`    | Blue       |
+| `secondary`  | Purple     |
+| `accent`     | Teal       |
+| `success`    | Green      |
+| `attention`  | Yellow     |
+| `severe`     | Orange     |
+| `danger`     | Red        |
 
 Colours adapt automatically to light and dark mode.

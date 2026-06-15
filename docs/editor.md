@@ -6,10 +6,10 @@ Inkwell includes a rich WYSIWYG Markdown editor. You can also switch to a raw-te
 
 The segmented control at the left of the toolbar switches between the two views:
 
-| View | Description |
-|---|---|
+| View       | Description                                                                          |
+| ---------- | ------------------------------------------------------------------------------------ |
 | **Editor** | WYSIWYG. Text renders with live formatting. Use the toolbar buttons to apply styles. |
-| **Source** | Raw Markdown text. Edit the underlying `.md` syntax directly. |
+| **Source** | Raw Markdown text. Edit the underlying `.md` syntax directly.                        |
 
 Switching views flushes any unsaved changes and keeps the content in sync.
 
@@ -21,21 +21,21 @@ When the **Editor** view is active, the formatting toolbar provides one-click co
 
 The leftmost control in the toolbar is a drop-down labelled with the current block type (**Text**, **H1**, **H2**, or **H3**). Click it to change the paragraph style of the current block.
 
-| Option | Markdown equivalent |
-|---|---|
-| Body text | Normal paragraph |
-| Heading 1 | `# …` |
-| Heading 2 | `## …` |
-| Heading 3 | `### …` |
+| Option    | Markdown equivalent |
+| --------- | ------------------- |
+| Body text | Normal paragraph    |
+| Heading 1 | `# …`               |
+| Heading 2 | `## …`              |
+| Heading 3 | `### …`             |
 
 ### Inline styles
 
-| Button | Shortcut | Markdown |
-|---|---|---|
-| **Bold** | ⌘ B | `**text**` |
-| *Italic* | ⌘ I | `*text*` |
-| `Inline code` | — | `` `text` `` |
-| Link | — | `[text](url)` |
+| Button        | Shortcut | Markdown      |
+| ------------- | -------- | ------------- |
+| **Bold**      | ⌘ B      | `**text**`    |
+| _Italic_      | ⌘ I      | `*text*`      |
+| `Inline code` | —        | `` `text` ``  |
+| Link          | —        | `[text](url)` |
 
 Selecting text first, then clicking a button, wraps the selection. Clicking again removes the style.
 
@@ -48,11 +48,11 @@ Selecting text first, then clicking a button, wraps the selection. Clicking agai
 
 ### Lists
 
-| Button | Description | Markdown |
-|---|---|---|
-| Bulleted list | Unordered list | `- item` |
-| Numbered list | Ordered list | `1. item` |
-| Task list | Checkboxes | `- [ ] item` |
+| Button        | Description    | Markdown     |
+| ------------- | -------------- | ------------ |
+| Bulleted list | Unordered list | `- item`     |
+| Numbered list | Ordered list   | `1. item`    |
+| Task list     | Checkboxes     | `- [ ] item` |
 
 Task-list checkboxes are interactive in the editor — click one to mark it done.
 
@@ -65,11 +65,11 @@ With the cursor inside a list item:
 
 ### Block elements
 
-| Button | Description | Markdown |
-|---|---|---|
-| Quote | Block quote | `> text` |
-| Code block | Fenced code block | ` ``` ` |
-| Table | 3 × 3 table (with header row) | GFM table syntax |
+| Button     | Description                   | Markdown         |
+| ---------- | ----------------------------- | ---------------- |
+| Quote      | Block quote                   | `> text`         |
+| Code block | Fenced code block             | ` ``` `          |
+| Table      | 3 × 3 table (with header row) | GFM table syntax |
 
 After inserting a table you can click in any cell to edit it. Use **Tab** to move between cells and add new rows.
 

@@ -26,7 +26,7 @@ Search and label filter work together. When both are active the note list shows 
 
 When no notes match the current query or filter, the note list shows:
 
-> *No matching notes*
+> _No matching notes_
 > Try a different search or label filter.
 
 Clear the search field and/or the label filter to broaden the results.

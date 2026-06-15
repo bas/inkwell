@@ -1,17 +1,17 @@
 # Inkwell — User Guide
 
-Inkwell is a macOS desktop app for writing and organising notes in Markdown. Notes are stored as plain `.md` files in a folder on your Mac (your *vault*), so they are always readable outside the app and easy to back up or sync.
+Inkwell is a macOS desktop app for writing and organising notes in Markdown. Notes are stored as plain `.md` files in a folder on your Mac (your _vault_), so they are always readable outside the app and easy to back up or sync.
 
 ## Contents
 
-| Guide | What it covers |
-|---|---|
-| [Notes](notes.md) | Creating, opening, saving, pinning, and deleting notes |
-| [Editor](editor.md) | The WYSIWYG editor, formatting toolbar, and raw-Markdown source view |
-| [Labels](labels.md) | Tagging notes with coloured labels and filtering by label |
-| [Search](search.md) | Full-text search and combined search + label filtering |
-| [AI features](ai.md) | Summarise a note and get writing suggestions with Copilot |
-| [Appearance](appearance.md) | Light, dark, and system-adaptive colour modes |
+| Guide                       | What it covers                                                       |
+| --------------------------- | -------------------------------------------------------------------- |
+| [Notes](notes.md)           | Creating, opening, saving, pinning, and deleting notes               |
+| [Editor](editor.md)         | The WYSIWYG editor, formatting toolbar, and raw-Markdown source view |
+| [Labels](labels.md)         | Tagging notes with coloured labels and filtering by label            |
+| [Search](search.md)         | Full-text search and combined search + label filtering               |
+| [AI features](ai.md)        | Summarise a note and get writing suggestions with Copilot            |
+| [Appearance](appearance.md) | Light, dark, and system-adaptive colour modes                        |
 
 ## Quick start
 
@@ -41,8 +41,8 @@ You can open, edit, and rename these files with any text editor. Inkwell picks u
 
 ## Native menu
 
-| Menu | Item | Shortcut | Action |
-|---|---|---|---|
-| File | New Note | ⌘ N | Create a new note |
-| File | Reveal Vault in Finder | — | Open the vault folder in Finder |
-| File | Rebuild Index | — | Rebuild the search index from the files on disk |
+| Menu | Item                   | Shortcut | Action                                          |
+| ---- | ---------------------- | -------- | ----------------------------------------------- |
+| File | New Note               | ⌘ N      | Create a new note                               |
+| File | Reveal Vault in Finder | —        | Open the vault folder in Finder                 |
+| File | Rebuild Index          | —        | Rebuild the search index from the files on disk |

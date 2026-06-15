@@ -25,9 +25,9 @@ Generates a concise summary of the current note.
 
 You have two options:
 
-| Button | What it does |
-|---|---|
-| **Copy** | Copies the summary text to the clipboard. |
+| Button              | What it does                                                         |
+| ------------------- | -------------------------------------------------------------------- |
+| **Copy**            | Copies the summary text to the clipboard.                            |
 | **Insert as TL;DR** | Prepends a `> **TL;DR:** …` block-quote to the top of the note body. |
 
 Click **Close** to dismiss the dialog without making any changes.
@@ -55,25 +55,25 @@ The panel lists each suggestion returned by Copilot. Each suggestion shows:
 - A **category** (e.g. Clarity, Grammar, Style).
 - The **suggested replacement text**.
 - The **original text** that would be replaced.
-- A status badge: *Pending* · *Applied* · *Rejected* · *Outdated*.
+- A status badge: _Pending_ · _Applied_ · _Rejected_ · _Outdated_.
 
 ### Applying suggestions
 
-**One at a time** — Click **Apply** on a suggestion to apply it. The note body is updated in place and the suggestion status changes to *Applied*.
+**One at a time** — Click **Apply** on a suggestion to apply it. The note body is updated in place and the suggestion status changes to _Applied_.
 
 **All at once** — Click **Apply all** (or **Apply selected**) to apply multiple pending suggestions in a single action. Suggestions are applied bottom-up so earlier changes do not shift the line positions of later ones.
 
-**Rejecting** — Click the **✕** button on a suggestion to mark it as *Rejected*. This keeps it visible for reference but excludes it from batch operations.
+**Rejecting** — Click the **✕** button on a suggestion to mark it as _Rejected_. This keeps it visible for reference but excludes it from batch operations.
 
 ### Outdated suggestions
 
-If you edit the note while the review panel is open, some suggestions may become *Outdated* (the original text they targeted no longer exists). You can close the panel and start a new review at any time.
+If you edit the note while the review panel is open, some suggestions may become _Outdated_ (the original text they targeted no longer exists). You can close the panel and start a new review at any time.
 
 ### Refining the review
 
 The text field at the bottom of the Review panel lets you give Copilot additional instructions:
 
-- Type a refinement instruction (e.g. *"Focus only on grammar"* or *"Make the tone more formal"*).
+- Type a refinement instruction (e.g. _"Focus only on grammar"_ or _"Make the tone more formal"_).
 - Press **↵** or click the **Send** button.
 - A new review is generated with that instruction in scope.
 
@@ -81,7 +81,7 @@ If a suggestion is selected when you submit a refinement, Copilot scopes the new
 
 ### Closing the review
 
-Click **✕** at the top of the Review panel to close it. Any *Applied* changes are already saved to the note.
+Click **✕** at the top of the Review panel to close it. Any _Applied_ changes are already saved to the note.
 
 ---
 

@@ -18,13 +18,13 @@ If you leave the title blank, the note is saved as **Untitled**.
 
 Inkwell saves changes automatically. There is no manual save step. The save state indicator beneath the title shows:
 
-| Indicator | Meaning |
-|---|---|
-| *Updated X ago* | The note is saved. Time is relative to the last save. |
-| *Unsaved changes* | A save is pending (starts within a second of your last keystroke). |
-| *Saving…* | The save is in progress. |
-| *Saved* | The most recent save succeeded. |
-| *Save failed* | An error occurred. A red banner appears with the error message. |
+| Indicator         | Meaning                                                            |
+| ----------------- | ------------------------------------------------------------------ |
+| _Updated X ago_   | The note is saved. Time is relative to the last save.              |
+| _Unsaved changes_ | A save is pending (starts within a second of your last keystroke). |
+| _Saving…_         | The save is in progress.                                           |
+| _Saved_           | The most recent save succeeded.                                    |
+| _Save failed_     | An error occurred. A red banner appears with the error message.    |
 
 ## Pinning a note
 
@@ -41,7 +41,7 @@ To unpin, open the same menu and select **Unpin note**.
 1. Open the **⋯** menu in the toolbar.
 2. Select **Copy as Markdown**.
 
-The full note (heading + body) is copied to the clipboard as plain Markdown text. The indicator beneath the title briefly shows *Copied to clipboard*.
+The full note (heading + body) is copied to the clipboard as plain Markdown text. The indicator beneath the title briefly shows _Copied to clipboard_.
 
 ## Deleting a note
 
@@ -55,7 +55,7 @@ Deletion is permanent — the `.md` file is removed from the vault. There is no 
 
 The sidebar lists all notes in the vault. Each entry shows:
 
-- **Title** (or *Untitled* if the title is blank)
+- **Title** (or _Untitled_ if the title is blank)
 - **Snippet** — the first line or two of the body
 - **Labels** attached to the note
 - A **pin icon** if the note is pinned
