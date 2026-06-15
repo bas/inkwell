@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSummarizePrompt } from './prompts';
+import { buildReviewPrompt, buildSummarizePrompt } from './prompts';
 
 describe('buildSummarizePrompt', () => {
   it('embeds the trimmed note body between explicit delimiters', () => {
@@ -17,5 +17,19 @@ describe('buildSummarizePrompt', () => {
     const prompt = buildSummarizePrompt('SECRET');
     const [firstLine] = prompt.split('\n');
     expect(firstLine).not.toContain('SECRET');
+  });
+});
+
+describe('buildReviewPrompt', () => {
+  it('includes strict JSON schema instructions and note delimiters', () => {
+    const prompt = buildReviewPrompt('Body text');
+    expect(prompt).toContain('Return strict JSON');
+    expect(prompt).toContain('"suggestions"');
+    expect(prompt).toContain('--- BEGIN NOTE ---\nBody text\n--- END NOTE ---');
+  });
+
+  it('embeds scoped line-range instruction when provided', () => {
+    const prompt = buildReviewPrompt('Line 1\nLine 2', { scope: { startLine: 1, endLine: 1 } });
+    expect(prompt).toContain('Focus only on lines 1-1.');
   });
 });

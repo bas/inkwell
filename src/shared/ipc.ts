@@ -1,7 +1,15 @@
 import type { AppSettings, ColorModePreference } from './types';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note';
 import type { Label } from './note-labels';
-import type { AiAvailability, AiResult, AiStreamChunk } from './ai';
+import type {
+  AiAvailability,
+  AiResult,
+  AiReviewApplyResult,
+  AiReviewOptions,
+  AiReviewResult,
+  AiReviewSuggestion,
+  AiStreamChunk,
+} from './ai';
 
 /** IPC channel names. Keep in sync between main handlers and the preload bridge. */
 export const IpcChannels = {
@@ -34,6 +42,12 @@ export const IpcChannels = {
   aiCancel: 'ai:cancel',
   /** AI: insert/replace a regenerable TL;DR block at the top of a note. */
   aiInsertTldr: 'ai:insertTldr',
+  /** AI: review a note and return structured suggestions. */
+  aiReview: 'ai:review',
+  /** AI: cancel an in-flight review request by id. */
+  aiReviewCancel: 'ai:reviewCancel',
+  /** AI: apply a single review suggestion to a note body. */
+  aiApplyReviewSuggestion: 'ai:applyReviewSuggestion',
   /** Main → renderer: a streamed chunk of an in-progress AI response. */
   aiStreamDelta: 'ai:streamDelta',
 
@@ -76,6 +90,15 @@ export interface InkwellApi {
   cancelSummarize(requestId: string): Promise<void>;
   /** Insert/replace a regenerable TL;DR block at the top of a note. Returns the saved note. */
   insertTldr(noteId: string, summary: string): Promise<Note>;
+  /** Review a note with Copilot and return typed suggestions. */
+  reviewNote(noteId: string, requestId: string, options?: AiReviewOptions): Promise<AiReviewResult>;
+  /** Cancel an in-flight review request by id. */
+  cancelReview(requestId: string): Promise<void>;
+  /** Apply a single review suggestion and return the saved note or stale-target status. */
+  applyReviewSuggestion(
+    noteId: string,
+    suggestion: AiReviewSuggestion,
+  ): Promise<{ note: Note; apply: AiReviewApplyResult }>;
   /** Subscribe to streamed AI response chunks. Returns an unsubscribe function. */
   onAiStreamDelta(listener: (chunk: AiStreamChunk) => void): () => void;
 

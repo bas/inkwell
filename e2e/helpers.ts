@@ -131,3 +131,10 @@ export async function openSummary(page: Page): Promise<void> {
   await page.getByTestId('action-summarize').click();
   await expect(page.getByTestId('ai-summary-dialog')).toBeVisible();
 }
+
+/** Open the note overflow menu and choose "Review with Copilot". */
+export async function openReview(page: Page): Promise<void> {
+  await page.getByTestId('note-actions').click();
+  await page.getByTestId('action-review').click();
+  await expect(page.getByTestId('ai-review-dialog')).toBeVisible();
+}

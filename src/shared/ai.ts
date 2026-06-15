@@ -58,3 +58,59 @@ export interface AiStreamChunk {
 export type AiResult =
   | { ok: true; requestId: string; content: string }
   | { ok: false; requestId: string; error: AiError };
+
+/** Categories supported by the first AI review release. */
+export type AiReviewCategory = 'grammar' | 'clarity' | 'style';
+
+/** Severity hint used to order and label review findings. */
+export type AiReviewSeverity = 'low' | 'medium' | 'high';
+
+/** Stable target for a suggested edit. */
+export interface AiReviewTarget {
+  /** 1-based inclusive start line in the markdown source. */
+  startLine: number;
+  /** 1-based inclusive end line in the markdown source. */
+  endLine: number;
+  /** Optional exact anchor fallback when line ranges drift after edits. */
+  anchorText?: string;
+  /** Optional expected preimage for stale-target detection. */
+  before?: string;
+}
+
+/** One actionable review suggestion. */
+export interface AiReviewSuggestion {
+  id: string;
+  title: string;
+  category: AiReviewCategory;
+  severity: AiReviewSeverity;
+  rationale: string;
+  target: AiReviewTarget;
+  replacement: string;
+  /** 0..1 confidence hint shown to users. */
+  confidence: number;
+}
+
+/** Optional scope/instruction for scoped refinement regeneration. */
+export interface AiReviewOptions {
+  instruction?: string;
+  scope?: {
+    startLine: number;
+    endLine: number;
+    suggestionId?: string;
+  };
+}
+
+/** Structured output from a review request. */
+export type AiReviewResult =
+  | {
+      ok: true;
+      requestId: string;
+      summary: string;
+      suggestions: AiReviewSuggestion[];
+    }
+  | { ok: false; requestId: string; error: AiError };
+
+/** Outcome of applying a single suggestion to a note body. */
+export type AiReviewApplyResult =
+  | { ok: true; noteId: string; suggestionId: string; updatedBody: string }
+  | { ok: false; noteId: string; suggestionId: string; reason: 'outdated' | 'invalid-target' };

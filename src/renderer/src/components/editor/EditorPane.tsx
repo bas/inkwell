@@ -7,12 +7,14 @@ import type { Label } from '@shared/note-labels';
 import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { AiSummaryDialog } from './AiSummaryDialog';
+import { AiReviewPanel } from './AiReviewPanel';
 import { LabelChip } from '../common/LabelChip';
 import { LabelPicker } from '../labels/LabelPicker';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
 import { useAiSummary } from '../../state/useAiSummary';
+import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
 
 interface EditorPaneProps {
   noteId: string | undefined;
@@ -61,6 +63,21 @@ export function EditorPane({
     stop: stopSummary,
     reset: resetSummary,
   } = useAiSummary();
+  const {
+    state: reviewState,
+    startReview,
+    cancelReview,
+    reset: resetReview,
+    selectSuggestion,
+    markRejected,
+    markApplied,
+    markOutdated,
+  } = useAiReview();
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewNoteId, setReviewNoteId] = useState('');
+  const [reviewNoteTitle, setReviewNoteTitle] = useState('');
+  const [applyingId, setApplyingId] = useState<string | undefined>(undefined);
+  const [batchApplying, setBatchApplying] = useState(false);
 
   // Latest editable data, read by the debounced/flush save without re-binding.
   const dataRef = useRef({ id: '', title: '', markdown: '' });
@@ -120,6 +137,8 @@ export function EditorPane({
     flush();
     setSummaryOpen(false);
     cancelSummary();
+    setReviewOpen(false);
+    cancelReview();
     setViewSource(false);
     if (!noteId) {
       setNote(undefined);
@@ -219,6 +238,99 @@ export function EditorPane({
       setInserting(false);
     }
   }, [summaryNoteId, summaryState.text, save, resetSummary, onAfterChange]);
+
+  const handleReview = useCallback(() => {
+    const { id, title: currentTitle } = dataRef.current;
+    if (!id) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    resetReview();
+    setReviewNoteId(id);
+    setReviewNoteTitle(currentTitle);
+    setReviewOpen(true);
+    void (async () => {
+      await save();
+      if (dirtyRef.current) {
+        setReviewOpen(false);
+        setError('Could not save the note before reviewing. Please try again.');
+        return;
+      }
+      startReview(id);
+    })();
+  }, [save, startReview, resetReview]);
+
+  const handleCloseReview = useCallback(() => {
+    setReviewOpen(false);
+    cancelReview();
+  }, [cancelReview]);
+
+  const applySuggestion = useCallback(
+    async (suggestion: UiReviewSuggestion): Promise<boolean> => {
+      const result = await window.api.applyReviewSuggestion(reviewNoteId, suggestion);
+      if (!result.apply.ok) {
+        markOutdated(suggestion.id);
+        return false;
+      }
+      const updated = result.note;
+      setNote(updated);
+      setTitle(updated.title);
+      setMarkdown(updated.body);
+      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dirtyRef.current = false;
+      setSaveState('saved');
+      setReloadNonce((nonce) => nonce + 1);
+      markApplied(suggestion.id);
+      onAfterChange();
+      return true;
+    },
+    [reviewNoteId, markApplied, markOutdated, onAfterChange],
+  );
+
+  const handleApply = useCallback(
+    (id: string) => {
+      const suggestion = reviewState.suggestions.find((s) => s.id === id);
+      if (!suggestion) return;
+      setApplyingId(id);
+      void applySuggestion(suggestion)
+        .catch(() => undefined)
+        .finally(() => setApplyingId(undefined));
+    },
+    [reviewState.suggestions, applySuggestion],
+  );
+
+  const handleApplyBatch = useCallback(
+    (ids: string[]) => {
+      // Apply bottom-up so earlier edits don't shift the line targets of later ones.
+      const ordered = reviewState.suggestions
+        .filter((s) => ids.includes(s.id))
+        .sort((a, b) => b.target.startLine - a.target.startLine);
+      if (ordered.length === 0) return;
+      setBatchApplying(true);
+      void (async () => {
+        for (const suggestion of ordered) {
+          await applySuggestion(suggestion).catch(() => undefined);
+        }
+      })().finally(() => setBatchApplying(false));
+    },
+    [reviewState.suggestions, applySuggestion],
+  );
+
+  const handleRefine = useCallback(
+    (instruction: string) => {
+      if (!reviewNoteId) return;
+      const selected = reviewState.suggestions.find(
+        (s) => s.id === reviewState.selectedSuggestionId,
+      );
+      const scope = selected
+        ? {
+            startLine: selected.target.startLine,
+            endLine: selected.target.endLine,
+            suggestionId: selected.id,
+          }
+        : undefined;
+      startReview(reviewNoteId, { instruction, scope });
+    },
+    [reviewNoteId, reviewState.suggestions, reviewState.selectedSuggestionId, startReview],
+  );
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
@@ -440,6 +552,7 @@ export function EditorPane({
             onSelectSource={() => setViewSource(true)}
             pinned={note.pinned}
             onSummarize={handleSummarize}
+            onReview={handleReview}
             onTogglePin={handleTogglePin}
             onCopyMarkdown={() => void handleCopyMarkdown()}
             onDelete={() => setConfirmDelete(true)}
@@ -483,6 +596,23 @@ export function EditorPane({
           onStop={stopSummary}
           onRetry={() => runSummarize(summaryNoteId)}
           onInsert={() => void handleInsertTldr()}
+        />
+      )}
+
+      {reviewOpen && (
+        <AiReviewPanel
+          state={reviewState}
+          noteTitle={reviewNoteTitle}
+          applyingId={applyingId}
+          batchApplying={batchApplying}
+          onClose={handleCloseReview}
+          onCancel={cancelReview}
+          onRetry={() => startReview(reviewNoteId)}
+          onSelect={selectSuggestion}
+          onApply={handleApply}
+          onReject={markRejected}
+          onApplyBatch={handleApplyBatch}
+          onRefine={handleRefine}
         />
       )}
     </Box>
