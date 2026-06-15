@@ -33,16 +33,17 @@ npm run dev
 
 ## Scripts
 
-| Script              | Description                                  |
-| ------------------- | -------------------------------------------- |
-| `npm run dev`       | Run the app in development                   |
-| `npm run build`     | Typecheck and build the production bundles   |
-| `npm run package`   | Build and package an arm64 `.dmg`            |
-| `npm run typecheck` | Typecheck main, preload, and renderer        |
-| `npm run lint`      | Lint with ESLint                             |
-| `npm run format`    | Format with Prettier                         |
-| `npm test`          | Run unit tests (Vitest)                      |
-| `npm run test:e2e`  | Run end-to-end tests (Playwright + Electron) |
+| Script                    | Description                                           |
+| ------------------------- | ----------------------------------------------------- |
+| `npm run dev`             | Run the app in development                            |
+| `npm run build`           | Typecheck and build the production bundles            |
+| `npm run package`         | Build and package an arm64 `.dmg`                     |
+| `npm run typecheck`       | Typecheck main, preload, and renderer                 |
+| `npm run lint`            | Lint with ESLint                                      |
+| `npm run format`          | Format with Prettier                                  |
+| `npm test`                | Run unit tests (Vitest)                               |
+| `npm run test:e2e`        | Run end-to-end tests headless (Playwright + Electron) |
+| `npm run test:e2e:headed` | Run end-to-end tests with the app window visible      |
 
 ## Contributing
 
