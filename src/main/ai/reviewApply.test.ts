@@ -88,7 +88,7 @@ describe('applyReviewSuggestionToBody', () => {
     }
   });
 
-  it('reports outdated when an anchor is provided but not found', () => {
+  it('reports invalid-target when an anchor is provided but not found', () => {
     const result = applyReviewSuggestionToBody(
       'n1',
       BODY,
@@ -96,7 +96,41 @@ describe('applyReviewSuggestionToBody', () => {
     );
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.reason).toBe('outdated');
+      expect(result.reason).toBe('invalid-target');
+    }
+  });
+
+  it('reports invalid-target when an anchor matches multiple places', () => {
+    const result = applyReviewSuggestionToBody(
+      'n1',
+      ['Repeat.', 'Middle.', 'Repeat.'].join('\n'),
+      suggestion({ target: { startLine: 99, endLine: 99, anchorText: 'Repeat.' } }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('invalid-target');
+    }
+  });
+
+  it('normalizes line endings when applying via anchor fallback', () => {
+    const result = applyReviewSuggestionToBody(
+      'n1',
+      ['First line.', 'Second line.', 'Third line.'].join('\r\n'),
+      suggestion({
+        replacement: 'Renamed\r\nline.',
+        target: {
+          startLine: 2,
+          endLine: 2,
+          before: 'Different content.',
+          anchorText: 'Second line.',
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.updatedBody).toBe(
+        ['First line.', 'Renamed', 'line.', 'Third line.'].join('\n'),
+      );
     }
   });
 

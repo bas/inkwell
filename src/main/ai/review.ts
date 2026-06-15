@@ -50,7 +50,7 @@ function clampConfidence(value: unknown): number {
   return value;
 }
 
-function parseReviewResponse(raw: string): ParsedReviewPayload {
+export function parseReviewResponse(raw: string): ParsedReviewPayload {
   const parsed = JSON.parse(raw) as Record<string, unknown>;
   const summary = typeof parsed['summary'] === 'string' ? parsed['summary'].trim() : '';
   const sourceSuggestions = Array.isArray(parsed['suggestions']) ? parsed['suggestions'] : [];
@@ -68,7 +68,7 @@ function parseReviewResponse(raw: string): ParsedReviewPayload {
         !Number.isInteger(startLine) ||
         !Number.isInteger(endLine) ||
         startLine < 1 ||
-        endLine < 1
+        endLine < startLine
       ) {
         return undefined;
       }

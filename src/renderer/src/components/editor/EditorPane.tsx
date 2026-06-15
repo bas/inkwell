@@ -270,7 +270,6 @@ export function EditorPane({
         result = await window.api.applyReviewSuggestion(reviewNoteId, suggestion);
       } catch (err) {
         setError(describeError(err));
-        markOutdated(suggestion.id);
         return false;
       }
       if (!result.apply.ok) {
