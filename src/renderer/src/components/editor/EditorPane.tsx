@@ -521,68 +521,98 @@ export function EditorPane({
       )}
 
       <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          px: 4,
-          py: 4,
-          overflow: 'hidden',
-        }}
+        sx={{ flex: 1, minHeight: 0, display: 'flex', minWidth: 0 }}
+        data-testid="editor-content-row"
       >
         <Box
-          data-testid="editor-card"
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
+            flex: 1,
+            minWidth: 0,
             minHeight: 0,
-            width: '100%',
-            maxWidth: 'var(--ink-editor-column-max-width)',
-            bg: 'canvas.default',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
+            display: 'flex',
+            justifyContent: 'center',
+            px: 4,
+            py: 4,
             overflow: 'hidden',
           }}
         >
-          <EditorToolbar
-            editor={editor}
-            viewSource={viewSource}
-            onSelectEditor={() => {
-              flush();
-              setViewSource(false);
-            }}
-            onSelectSource={() => setViewSource(true)}
-            pinned={note.pinned}
-            onSummarize={handleSummarize}
-            onReview={handleReview}
-            onTogglePin={handleTogglePin}
-            onCopyMarkdown={() => void handleCopyMarkdown()}
-            onDelete={() => setConfirmDelete(true)}
-          />
-
           <Box
-            sx={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}
-            data-testid="editor-body"
+            data-testid="editor-card"
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: 0,
+              width: '100%',
+              maxWidth: 'var(--ink-editor-column-max-width)',
+              bg: 'canvas.default',
+              border: '1px solid',
+              borderColor: 'border.default',
+              borderRadius: 2,
+              overflow: 'hidden',
+            }}
           >
-            {viewSource ? (
-              <Box
-                sx={{ display: 'flex', height: '100%', minHeight: 0, width: '100%', px: 4, py: 3 }}
-              >
-                <SourceEditor value={markdown} onChange={handleBodyChange} />
-              </Box>
-            ) : (
-              <MarkdownEditor
-                key={`${note.id}:${reloadNonce}`}
-                initialMarkdown={markdown}
-                onChange={handleBodyChange}
-                onEditorReady={setEditor}
-              />
-            )}
+            <EditorToolbar
+              editor={editor}
+              viewSource={viewSource}
+              onSelectEditor={() => {
+                flush();
+                setViewSource(false);
+              }}
+              onSelectSource={() => setViewSource(true)}
+              pinned={note.pinned}
+              onSummarize={handleSummarize}
+              onReview={handleReview}
+              onTogglePin={handleTogglePin}
+              onCopyMarkdown={() => void handleCopyMarkdown()}
+              onDelete={() => setConfirmDelete(true)}
+            />
+
+            <Box
+              sx={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}
+              data-testid="editor-body"
+            >
+              {viewSource ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    height: '100%',
+                    minHeight: 0,
+                    width: '100%',
+                    px: 4,
+                    py: 3,
+                  }}
+                >
+                  <SourceEditor value={markdown} onChange={handleBodyChange} />
+                </Box>
+              ) : (
+                <MarkdownEditor
+                  key={`${note.id}:${reloadNonce}`}
+                  initialMarkdown={markdown}
+                  onChange={handleBodyChange}
+                  onEditorReady={setEditor}
+                />
+              )}
+            </Box>
           </Box>
         </Box>
+
+        {reviewOpen && (
+          <AiReviewPanel
+            state={reviewState}
+            noteTitle={reviewNoteTitle}
+            applyingId={applyingId}
+            batchApplying={batchApplying}
+            onClose={handleCloseReview}
+            onCancel={cancelReview}
+            onRetry={() => startReview(reviewNoteId)}
+            onSelect={selectSuggestion}
+            onApply={handleApply}
+            onReject={markRejected}
+            onApplyBatch={handleApplyBatch}
+            onRefine={handleRefine}
+          />
+        )}
       </Box>
 
       <DeleteNoteDialog
@@ -601,23 +631,6 @@ export function EditorPane({
           onStop={stopSummary}
           onRetry={() => runSummarize(summaryNoteId)}
           onInsert={() => void handleInsertTldr()}
-        />
-      )}
-
-      {reviewOpen && (
-        <AiReviewPanel
-          state={reviewState}
-          noteTitle={reviewNoteTitle}
-          applyingId={applyingId}
-          batchApplying={batchApplying}
-          onClose={handleCloseReview}
-          onCancel={cancelReview}
-          onRetry={() => startReview(reviewNoteId)}
-          onSelect={selectSuggestion}
-          onApply={handleApply}
-          onReject={markRejected}
-          onApplyBatch={handleApplyBatch}
-          onRefine={handleRefine}
         />
       )}
     </Box>

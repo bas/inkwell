@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
-  Dialog,
   Flash,
   FormControl,
+  Heading,
+  IconButton,
   Label,
   Spinner,
   Text,
@@ -261,14 +262,14 @@ export function AiReviewPanel({
               : `All ${state.suggestions.length} reviewed`}
           </Text>
         </Box>
-        <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           {/* Suggestions list */}
           <Box
             sx={{
-              width: 240,
               flexShrink: 0,
+              maxHeight: 220,
               overflowY: 'auto',
-              boxShadow: 'inset -1px 0 0 0 var(--borderColor-default)',
+              boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
             }}
             data-testid="review-list"
           >
@@ -442,42 +443,81 @@ export function AiReviewPanel({
   };
 
   return (
-    <Dialog title="Review with Copilot" subtitle={subtitle} onClose={onClose} width="xlarge">
+    <Box
+      data-testid="ai-review-dialog"
+      aria-label="Review with Copilot"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        width: 'var(--ink-review-panel-width, 380px)',
+        flexShrink: 0,
+        bg: 'canvas.default',
+        boxShadow: 'inset 1px 0 0 0 var(--borderColor-default)',
+      }}
+    >
       <Box
-        data-testid="ai-review-dialog"
-        sx={{ display: 'flex', flexDirection: 'column', height: 460, minHeight: 0 }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          px: 3,
+          py: 2,
+          bg: 'canvas.subtle',
+          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
+        }}
       >
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{renderBody()}</Box>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-            px: 3,
-            py: 2,
-            boxShadow: 'inset 0 1px 0 0 var(--borderColor-default)',
-          }}
-        >
-          <Button
-            disabled={pendingCheckedIds.length === 0 || batchApplying}
-            onClick={() => onApplyBatch(pendingCheckedIds)}
-            data-testid="review-apply-batch"
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Heading as="h2" sx={{ fontSize: 1, fontWeight: 'bold' }}>
+            Review with Copilot
+          </Heading>
+          <Text
+            sx={{
+              fontSize: 0,
+              color: 'fg.muted',
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
           >
-            {batchApplying ? 'Applying…' : `Apply selected (${pendingCheckedIds.length})`}
-          </Button>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            {state.status === 'reviewing' && (
-              <Button leadingVisual={XIcon} onClick={onCancel} data-testid="review-cancel">
-                Stop
-              </Button>
-            )}
-            <Button variant="primary" onClick={onClose} data-testid="review-close">
-              Close
-            </Button>
-          </Box>
+            {subtitle}
+          </Text>
         </Box>
+        <IconButton
+          icon={XIcon}
+          aria-label="Close review"
+          variant="invisible"
+          onClick={onClose}
+          data-testid="review-close"
+        />
       </Box>
-    </Dialog>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{renderBody()}</Box>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          px: 3,
+          py: 2,
+          boxShadow: 'inset 0 1px 0 0 var(--borderColor-default)',
+        }}
+      >
+        <Button
+          disabled={pendingCheckedIds.length === 0 || batchApplying}
+          onClick={() => onApplyBatch(pendingCheckedIds)}
+          data-testid="review-apply-batch"
+        >
+          {batchApplying ? 'Applying…' : `Apply selected (${pendingCheckedIds.length})`}
+        </Button>
+        {state.status === 'reviewing' && (
+          <Button leadingVisual={XIcon} onClick={onCancel} data-testid="review-cancel">
+            Stop
+          </Button>
+        )}
+      </Box>
+    </Box>
   );
 }

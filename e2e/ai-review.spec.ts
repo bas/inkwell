@@ -54,6 +54,8 @@ test.describe('AI review', () => {
 
     await openReview(page);
 
+    // The review panel is a side panel, so the note stays visible alongside it.
+    await expect(page.getByTestId('editor-card')).toBeVisible();
     await expect(page.getByTestId('review-summary')).toContainText(
       'One clarity improvement found.',
     );
