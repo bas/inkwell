@@ -1,4 +1,5 @@
 import type { PermissionHandler } from '@github/copilot-sdk';
+import type { AiUsage } from '../../shared/ai';
 import { getCopilotClient } from './copilotClient';
 
 /** Hard ceiling for a single generation turn, after which we give up. */
@@ -28,6 +29,9 @@ export interface GenerationRequest {
 
 /** Outcome of a generation turn. Model/runtime errors are returned, not thrown. */
 export type GenerationOutcome =
+  | { ok: true; content: string; usage?: AiUsage }
+  | { ok: false; canceled?: boolean; errorType?: string; message: string; usage?: AiUsage };
+type GenerationOutcomeBase =
   | { ok: true; content: string }
   | { ok: false; canceled?: boolean; errorType?: string; message: string };
 
@@ -37,6 +41,17 @@ function errorText(err: unknown): string {
 
 /** Sentinel resolved by the timeout race when the model takes too long. */
 const TIMED_OUT = Symbol('timed-out');
+const NANO_AI_UNITS_PER_CREDIT = 1_000_000_000;
+
+function addMetric(current: number | undefined, next: number | undefined): number | undefined {
+  if (typeof next !== 'number' || !Number.isFinite(next)) return current;
+  return (current ?? 0) + next;
+}
+
+function toAiCredits(nanoAiu: number): number {
+  // Runtime costs are reported as nano-AI units; AI Credits are the user-facing unit.
+  return Math.round((nanoAiu / NANO_AI_UNITS_PER_CREDIT) * 10_000) / 10_000;
+}
 
 /**
  * Run a single, tool-free generation turn against the shared Copilot client and
@@ -56,7 +71,7 @@ export async function runGeneration({
   if (faked) {
     onStart?.(() => {});
     for (const chunk of faked.match(/.{1,8}/g) ?? [faked]) onDelta?.(chunk);
-    return { ok: true, content: faked };
+    return { ok: true, content: faked, usage: { creditsSource: 'unavailable' } };
   }
 
   let session: Awaited<ReturnType<Awaited<ReturnType<typeof getCopilotClient>>['createSession']>>;
@@ -77,6 +92,18 @@ export async function runGeneration({
   let errorType: string | undefined;
   let canceled = false;
   let disconnected = false;
+  let sawUsageSignal = false;
+  let shutdownNanoAiu: number | undefined;
+  const usage: AiUsage = { creditsSource: 'unavailable' };
+
+  const finalizeUsage = (): AiUsage | undefined => {
+    if (!sawUsageSignal && shutdownNanoAiu === undefined) return undefined;
+    if (shutdownNanoAiu !== undefined) {
+      usage.creditsSource = 'exact';
+      usage.aiCredits = toAiCredits(shutdownNanoAiu);
+    }
+    return usage;
+  };
 
   const disconnect = async (): Promise<void> => {
     if (disconnected) return;
@@ -96,6 +123,45 @@ export async function runGeneration({
     errorMessage = event.data.message;
     errorType = event.data.errorType;
   });
+  const offUsage = session.on('assistant.usage', (event) => {
+    sawUsageSignal = true;
+    usage.model = event.data.model || usage.model;
+    const inputTokens = addMetric(usage.inputTokens, event.data.inputTokens);
+    if (inputTokens !== undefined) usage.inputTokens = inputTokens;
+    const outputTokens = addMetric(usage.outputTokens, event.data.outputTokens);
+    if (outputTokens !== undefined) usage.outputTokens = outputTokens;
+    const cacheReadTokens = addMetric(usage.cacheReadTokens, event.data.cacheReadTokens);
+    if (cacheReadTokens !== undefined) usage.cacheReadTokens = cacheReadTokens;
+    const cacheWriteTokens = addMetric(usage.cacheWriteTokens, event.data.cacheWriteTokens);
+    if (cacheWriteTokens !== undefined) usage.cacheWriteTokens = cacheWriteTokens;
+    const reasoningTokens = addMetric(usage.reasoningTokens, event.data.reasoningTokens);
+    if (reasoningTokens !== undefined) usage.reasoningTokens = reasoningTokens;
+    const durationMs = addMetric(usage.durationMs, event.data.duration);
+    if (durationMs !== undefined) usage.durationMs = durationMs;
+  });
+  const offUsageInfo = session.on('session.usage_info', (event) => {
+    sawUsageSignal = true;
+    usage.contextTokens = event.data.currentTokens;
+    usage.contextTokenLimit = event.data.tokenLimit;
+    usage.contextMessageCount = event.data.messagesLength;
+  });
+  const offShutdown = session.on('session.shutdown', (event) => {
+    sawUsageSignal = true;
+    if (typeof event.data.totalNanoAiu === 'number' && Number.isFinite(event.data.totalNanoAiu)) {
+      shutdownNanoAiu = event.data.totalNanoAiu;
+      return;
+    }
+
+    let sum = 0;
+    let found = false;
+    for (const metrics of Object.values(event.data.modelMetrics)) {
+      const nano = metrics?.totalNanoAiu;
+      if (typeof nano !== 'number' || !Number.isFinite(nano)) continue;
+      found = true;
+      sum += nano;
+    }
+    if (found) shutdownNanoAiu = sum;
+  });
 
   // Expose cancellation: disconnecting the session aborts the pending turn.
   onStart?.(() => {
@@ -104,8 +170,13 @@ export async function runGeneration({
   });
 
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let outcome: GenerationOutcomeBase = {
+    ok: false,
+    message: 'Copilot could not summarize this note. Please try again.',
+  };
   try {
-    let final;
+    let final: { data?: { content?: string } } | typeof TIMED_OUT | undefined = TIMED_OUT;
+    let sendError: unknown;
     try {
       final = await Promise.race([
         session.sendAndWait({ prompt }),
@@ -114,32 +185,41 @@ export async function runGeneration({
         }),
       ]);
     } catch (err) {
-      if (canceled) return { ok: false, canceled: true, message: 'Summary canceled.' };
-      return { ok: false, errorType, message: errorMessage ?? errorText(err) };
+      sendError = err;
     }
 
-    if (canceled) return { ok: false, canceled: true, message: 'Summary canceled.' };
-    if (final === TIMED_OUT) {
-      return {
+    if (sendError !== undefined) {
+      outcome = canceled
+        ? { ok: false, canceled: true, message: 'Summary canceled.' }
+        : { ok: false, errorType, message: errorMessage ?? errorText(sendError) };
+    } else if (canceled) outcome = { ok: false, canceled: true, message: 'Summary canceled.' };
+    else if (final === TIMED_OUT) {
+      outcome = {
         ok: false,
         errorType: 'timeout',
         message: `Copilot timed out after ${GENERATION_TIMEOUT_MS / 1000}s.`,
       };
+    } else {
+      const content = (final?.data?.content || streamed).trim();
+      outcome = content
+        ? { ok: true, content }
+        : {
+            ok: false,
+            errorType,
+            message: errorMessage ?? 'Copilot returned an empty response.',
+          };
     }
-
-    const content = (final?.data.content || streamed).trim();
-    if (!content) {
-      return {
-        ok: false,
-        errorType,
-        message: errorMessage ?? 'Copilot returned an empty response.',
-      };
-    }
-    return { ok: true, content };
   } finally {
     if (timer) clearTimeout(timer);
+    await disconnect();
     offDelta();
     offError();
-    await disconnect();
+    offUsage();
+    offUsageInfo();
+    offShutdown();
   }
+
+  const finalizedUsage = finalizeUsage();
+  if (finalizedUsage) return { ...outcome, usage: finalizedUsage };
+  return outcome;
 }
