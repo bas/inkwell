@@ -26,6 +26,33 @@ test.describe('Theme', () => {
     await expect(ctx.page.getByTestId('editor-empty')).toBeVisible();
   });
 
+  test('toggles the notes list sidebar from the header', async () => {
+    const { page } = ctx;
+
+    await expect(page.getByTestId('new-note-button')).toBeVisible();
+
+    await page.getByTestId('toggle-sidebar').click();
+    await expect(page.getByTestId('new-note-button')).toHaveCount(0);
+
+    await page.getByTestId('toggle-sidebar').click();
+    await expect(page.getByTestId('new-note-button')).toBeVisible();
+  });
+
+  test('remembers the hidden sidebar after a relaunch', async () => {
+    const { page } = ctx;
+
+    await page.getByTestId('toggle-sidebar').click();
+    await expect(page.getByTestId('new-note-button')).toHaveCount(0);
+
+    const { vaultDir, userDataDir } = ctx;
+    await ctx.close({ keepDirs: true });
+    ctx = await launchApp({ reuse: { vaultDir, userDataDir } });
+
+    await expect(ctx.page.getByTestId('new-note-button')).toHaveCount(0);
+    await ctx.page.getByTestId('toggle-sidebar').click();
+    await expect(ctx.page.getByTestId('new-note-button')).toBeVisible();
+  });
+
   test('switches between light and dark color modes', async () => {
     const { page } = ctx;
 
