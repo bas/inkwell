@@ -14,6 +14,8 @@ import {
 import { CheckIcon, SyncIcon, XIcon } from '@primer/octicons-react';
 import {
   CheckCircleFillIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   XCircleFillIcon,
   AlertIcon,
   DotFillIcon,
@@ -154,11 +156,6 @@ export function AiReviewPanel({
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [instruction, setInstruction] = useState('');
 
-  const selected = useMemo(
-    () => state.suggestions.find((s) => s.id === state.selectedSuggestionId),
-    [state.suggestions, state.selectedSuggestionId],
-  );
-
   // Show unresolved suggestions first; resolved ones sink to the bottom so the
   // active work is always at the top without losing the reviewed history.
   const orderedSuggestions = useMemo(() => {
@@ -262,35 +259,40 @@ export function AiReviewPanel({
               : `All ${state.suggestions.length} reviewed`}
           </Text>
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          {/* Suggestions list */}
-          <Box
-            sx={{
-              flexShrink: 0,
-              maxHeight: 220,
-              overflowY: 'auto',
-              boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
-            }}
-            data-testid="review-list"
-          >
-            {orderedSuggestions.map((s) => {
-              const resolved = s.status !== 'pending';
-              return (
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }} data-testid="review-list">
+          {orderedSuggestions.map((s) => {
+            const resolved = s.status !== 'pending';
+            const expanded = s.id === state.selectedSuggestionId;
+            return (
+              <Box
+                key={s.id}
+                data-testid={`review-item-${s.id}`}
+                sx={{
+                  opacity: resolved && !expanded ? 0.55 : 1,
+                  boxShadow: 'inset 0 -1px 0 0 var(--borderColor-muted)',
+                  bg: expanded ? 'canvas.subtle' : 'transparent',
+                }}
+              >
+                {/* Finding header — click to expand/collapse its detail */}
                 <Box
-                  key={s.id}
+                  role="button"
+                  aria-expanded={expanded}
+                  tabIndex={0}
+                  onClick={() => onSelect(expanded ? '' : s.id)}
+                  onKeyDown={(event: React.KeyboardEvent) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onSelect(expanded ? '' : s.id);
+                    }
+                  }}
                   sx={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 2,
-                    px: 2,
+                    px: 3,
                     py: 2,
                     cursor: 'pointer',
-                    opacity: resolved ? 0.55 : 1,
-                    bg: s.id === state.selectedSuggestionId ? 'accent.subtle' : 'transparent',
-                    boxShadow: 'inset 0 -1px 0 0 var(--borderColor-muted)',
                   }}
-                  data-testid={`review-item-${s.id}`}
-                  onClick={() => onSelect(s.id)}
                 >
                   {resolved ? (
                     <StatusIcon status={s.status} />
@@ -331,112 +333,107 @@ export function AiReviewPanel({
                       </Label>
                     </Box>
                   </Box>
-                </Box>
-              );
-            })}
-          </Box>
-
-          {/* Detail pane */}
-          <Box sx={{ flex: 1, minWidth: 0, overflowY: 'auto', p: 3 }} data-testid="review-detail">
-            {selected ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Box>
-                  <Text sx={{ fontSize: 2, fontWeight: 'bold', display: 'block' }}>
-                    {selected.title}
-                  </Text>
-                  <Text sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}>
-                    {selected.rationale}
-                  </Text>
-                </Box>
-                <SuggestionDiff suggestion={selected} />
-                {selected.status === 'pending' ? (
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                      variant="primary"
-                      leadingVisual={CheckIcon}
-                      disabled={applyingId === selected.id}
-                      onClick={() => onApply(selected.id)}
-                      data-testid="review-apply"
-                    >
-                      {applyingId === selected.id ? 'Applying…' : 'Apply'}
-                    </Button>
-                    <Button
-                      leadingVisual={XIcon}
-                      disabled={applyingId === selected.id}
-                      onClick={() => onReject(selected.id)}
-                      data-testid="review-reject"
-                    >
-                      Reject
-                    </Button>
+                  <Box sx={{ color: 'fg.muted', display: 'flex', mt: 1 }} aria-hidden>
+                    {expanded ? <ChevronDownIcon size={16} /> : <ChevronRightIcon size={16} />}
                   </Box>
-                ) : selected.status === 'outdated' ? (
-                  <Flash variant="warning" data-testid="review-outdated">
-                    This suggestion no longer matches the note. Re-run review to refresh it.
-                  </Flash>
-                ) : (
+                </Box>
+
+                {/* Detail for the selected finding, inline under its header. */}
+                {expanded && (
                   <Box
-                    data-testid="review-resolved"
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      color: selected.status === 'applied' ? 'success.fg' : 'fg.muted',
-                      fontSize: 1,
-                    }}
+                    data-testid="review-detail"
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 3, px: 3, pb: 3, pt: 1 }}
                   >
-                    <StatusIcon status={selected.status} />
-                    <Text>
-                      {selected.status === 'applied'
-                        ? 'Applied to your note.'
-                        : 'Rejected — your note is unchanged.'}
-                    </Text>
+                    <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{s.rationale}</Text>
+                    <SuggestionDiff suggestion={s} />
+                    {s.status === 'pending' ? (
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                          variant="primary"
+                          leadingVisual={CheckIcon}
+                          disabled={applyingId === s.id}
+                          onClick={() => onApply(s.id)}
+                          data-testid="review-apply"
+                        >
+                          {applyingId === s.id ? 'Applying…' : 'Apply'}
+                        </Button>
+                        <Button
+                          leadingVisual={XIcon}
+                          disabled={applyingId === s.id}
+                          onClick={() => onReject(s.id)}
+                          data-testid="review-reject"
+                        >
+                          Reject
+                        </Button>
+                      </Box>
+                    ) : s.status === 'outdated' ? (
+                      <Flash variant="warning" data-testid="review-outdated">
+                        This suggestion no longer matches the note. Re-run review to refresh it.
+                      </Flash>
+                    ) : (
+                      <Box
+                        data-testid="review-resolved"
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          color: s.status === 'applied' ? 'success.fg' : 'fg.muted',
+                          fontSize: 1,
+                        }}
+                      >
+                        <StatusIcon status={s.status} />
+                        <Text>
+                          {s.status === 'applied'
+                            ? 'Applied to your note.'
+                            : 'Rejected — your note is unchanged.'}
+                        </Text>
+                      </Box>
+                    )}
+                    <Box
+                      as="form"
+                      onSubmit={(event: React.FormEvent) => {
+                        event.preventDefault();
+                        const trimmed = instruction.trim();
+                        if (!trimmed) return;
+                        onRefine(trimmed);
+                        setInstruction('');
+                      }}
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        mt: 1,
+                        pt: 3,
+                        boxShadow: 'inset 0 1px 0 0 var(--borderColor-default)',
+                      }}
+                    >
+                      <FormControl>
+                        <FormControl.Label>Refine this finding</FormControl.Label>
+                        <Textarea
+                          value={instruction}
+                          onChange={(event) => setInstruction(event.target.value)}
+                          placeholder="e.g. only fix grammar, keep my tone"
+                          rows={2}
+                          data-testid="review-refine-input"
+                          sx={{ width: '100%' }}
+                        />
+                      </FormControl>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          type="submit"
+                          leadingVisual={SyncIcon}
+                          disabled={!instruction.trim()}
+                          data-testid="review-refine-submit"
+                        >
+                          Regenerate
+                        </Button>
+                      </Box>
+                    </Box>
                   </Box>
                 )}
-                <Box
-                  as="form"
-                  onSubmit={(event: React.FormEvent) => {
-                    event.preventDefault();
-                    const trimmed = instruction.trim();
-                    if (!trimmed) return;
-                    onRefine(trimmed);
-                    setInstruction('');
-                  }}
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    mt: 2,
-                    pt: 3,
-                    boxShadow: 'inset 0 1px 0 0 var(--borderColor-default)',
-                  }}
-                >
-                  <FormControl>
-                    <FormControl.Label>Refine this finding</FormControl.Label>
-                    <Textarea
-                      value={instruction}
-                      onChange={(event) => setInstruction(event.target.value)}
-                      placeholder="e.g. only fix grammar, keep my tone"
-                      rows={2}
-                      data-testid="review-refine-input"
-                      sx={{ width: '100%' }}
-                    />
-                  </FormControl>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                      type="submit"
-                      leadingVisual={SyncIcon}
-                      disabled={!instruction.trim()}
-                      data-testid="review-refine-submit"
-                    >
-                      Regenerate
-                    </Button>
-                  </Box>
-                </Box>
               </Box>
-            ) : (
-              <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Select a suggestion to review it.</Text>
-            )}
-          </Box>
+            );
+          })}
         </Box>
       </Box>
     );

@@ -103,11 +103,12 @@ describe('AiReviewPanel status updates', () => {
         ]}
       />,
     );
-    // s1 is selected first; rejecting it should move focus to s2's detail.
+    // s1 is expanded first; rejecting it should expand s2's detail instead.
     fireEvent.click(screen.getByTestId('review-reject'));
-    expect(screen.getByTestId('review-detail').textContent).toContain('Second');
-    // s2 is still actionable.
-    expect(screen.getByTestId('review-apply')).toBeTruthy();
+    // The detail (with its Apply action) now lives inline under s2's header.
+    const apply = screen.getByTestId('review-apply');
+    expect(screen.getByTestId('review-item-s2').contains(apply)).toBe(true);
+    expect(screen.getByTestId('review-item-s1').contains(apply)).toBe(false);
   });
 
   it('shows reviewed progress in the header', () => {
