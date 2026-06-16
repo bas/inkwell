@@ -52,11 +52,19 @@ body {
 /*
  * Tighten the vertical rhythm between list items. TipTap wraps each item's
  * content in a paragraph, so Primer's `li > p { margin-top: 16px }` adds a wide
- * gap between items; collapse it and use a smaller, consistent inter-item gap.
+ * gap between items; collapse the first paragraph while keeping consecutive
+ * paragraphs within the same item spaced apart.
  */
 .markdown-body.ink-markdown-aligned li > p {
-  margin-top: 0;
   margin-bottom: 0;
+}
+
+.markdown-body.ink-markdown-aligned li > p:first-child {
+  margin-top: 0;
+}
+
+.markdown-body.ink-markdown-aligned li > p + p {
+  margin-top: var(--base-size-16, 1rem);
 }
 
 .markdown-body.ink-markdown-aligned li + li {
