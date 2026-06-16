@@ -34,3 +34,40 @@ body {
   background-color: var(--bgColor-default);
   color: var(--fgColor-default);
 }
+
+/*
+ * Shared markdown layout overrides for surfaces that should align list markers
+ * and blockquote bars to the paragraph start edge.
+ */
+.markdown-body.ink-markdown-aligned > ul,
+.markdown-body.ink-markdown-aligned > ol {
+  padding-left: var(--base-size-16, 1rem);
+}
+
+.markdown-body.ink-markdown-aligned > blockquote {
+  margin-left: 0;
+  padding-left: var(--base-size-16, 1rem);
+}
+
+/*
+ * Tighten the vertical rhythm between list items. TipTap wraps each item's
+ * content in a paragraph, so Primer's `li > p { margin-top: 16px }` adds a wide
+ * gap between items; collapse it and use a smaller, consistent inter-item gap.
+ */
+.markdown-body.ink-markdown-aligned li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.markdown-body.ink-markdown-aligned li + li {
+  margin-top: var(--base-size-8, 0.5rem);
+}
+
+/*
+ * Inside nested lists the first item sits flush under its parent (line-height
+ * only), so keep subsequent nested items equally tight for a consistent rhythm.
+ * Top-level items keep their small gap above.
+ */
+.markdown-body.ink-markdown-aligned li li + li {
+  margin-top: 0;
+}

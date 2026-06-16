@@ -64,7 +64,7 @@ export function AiSummaryDialog({
         ) : (
           <Box
             data-testid="ai-summary-text"
-            className="markdown-body"
+            className="markdown-body ink-markdown-aligned"
             sx={{
               whiteSpace: 'pre-wrap',
               maxHeight: 320,
