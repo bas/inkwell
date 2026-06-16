@@ -30,7 +30,7 @@ export function MarkdownEditor({
     content: initialMarkdown,
     editorProps: {
       attributes: {
-        class: 'markdown-body',
+        class: 'markdown-body ink-markdown-aligned',
         'data-testid': 'editor-content',
         spellcheck: 'true',
       },
