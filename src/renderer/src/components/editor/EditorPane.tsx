@@ -71,8 +71,15 @@ function collectDocTextSegments(editor: Editor): { fullText: string; segments: D
   const segments: DocTextSegment[] = [];
   const parts: string[] = [];
   let start = 0;
+  let lastTextblockPos: number | undefined;
   editor.state.doc.descendants((node, pos) => {
     if (!node.isText || !node.text || node.text.length === 0) return;
+    const textblockPos = editor.state.doc.resolve(pos).start();
+    if (lastTextblockPos !== undefined && textblockPos !== lastTextblockPos) {
+      parts.push('\n');
+      start += 1;
+    }
+    lastTextblockPos = textblockPos;
     const text = node.text;
     const end = start + text.length;
     segments.push({ from: pos, to: pos + text.length, start, end });
@@ -160,7 +167,6 @@ export function EditorPane({
   const [findQuery, setFindQuery] = useState('');
   const [replaceQuery, setReplaceQuery] = useState('');
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(-1);
-  const [suppressFindNav, setSuppressFindNav] = useState(false);
   const [matchRefreshNonce, setMatchRefreshNonce] = useState(0);
   const findInputRef = useRef<HTMLInputElement | null>(null);
   const sourceEditorRef = useRef<HTMLTextAreaElement | null>(null);
@@ -230,7 +236,6 @@ export function EditorPane({
     setFindQuery('');
     setReplaceQuery('');
     setSelectedMatchIndex(-1);
-    setSuppressFindNav(false);
     if (!noteId) {
       setNote(undefined);
       return;
@@ -277,19 +282,14 @@ export function EditorPane({
     },
     [clearSelection, handleBodyChange, refreshMatches],
   );
-  const getWysiwygMatches = useCallback(() => {
+  const validWysiwygMatches = useMemo(() => {
     // Force refresh after programmatic editor mutations where React state may lag.
     void matchRefreshNonce;
-    return !viewSource && editor ? findWysiwygMatches(editor, findQuery) : [];
+    if (viewSource || !editor || !findQuery) return [];
+    return findWysiwygMatches(editor, findQuery).filter((match) =>
+      isExactDocRangeMatch(editor, match, findQuery),
+    );
   }, [editor, findQuery, matchRefreshNonce, viewSource]);
-  const wysiwygMatches = getWysiwygMatches();
-  const validWysiwygMatches = useMemo(
-    () =>
-      !viewSource && editor
-        ? wysiwygMatches.filter((match) => isExactDocRangeMatch(editor, match, findQuery))
-        : [],
-    [editor, findQuery, viewSource, wysiwygMatches],
-  );
   const activeMatches = useMemo(
     () => (viewSource ? sourceMatches : validWysiwygMatches),
     [sourceMatches, viewSource, validWysiwygMatches],
@@ -315,7 +315,6 @@ export function EditorPane({
   const closeFindReplace = useCallback(() => {
     setFindOpen(false);
     setSelectedMatchIndex(-1);
-    setSuppressFindNav(false);
   }, []);
 
   const selectMatch = useCallback(
@@ -333,28 +332,27 @@ export function EditorPane({
         element.setSelectionRange(match.start, match.end);
         return;
       }
-      const matches = editor
-        ? getWysiwygMatches().filter((match) => isExactDocRangeMatch(editor, match, findQuery))
-        : [];
-      if (matches.length === 0 || !editor) return;
-      const normalized = ((index % matches.length) + matches.length) % matches.length;
+      if (validWysiwygMatches.length === 0 || !editor) return;
+      const normalized =
+        ((index % validWysiwygMatches.length) + validWysiwygMatches.length) %
+        validWysiwygMatches.length;
       setSelectedMatchIndex(normalized);
-      const match = matches[normalized];
+      const match = validWysiwygMatches[normalized];
       if (!match) return;
       editor.chain().focus().setTextSelection({ from: match.from, to: match.to }).run();
     },
-    [editor, findQuery, getWysiwygMatches, sourceMatches, viewSource],
+    [editor, sourceMatches, validWysiwygMatches, viewSource],
   );
 
   const handleFindNext = useCallback(() => {
-    if (!hasMatches || suppressFindNav || selectedMatchIndex < 0) return;
-    selectMatch(activeIndex + 1);
-  }, [activeIndex, hasMatches, selectMatch, selectedMatchIndex, suppressFindNav]);
+    if (!hasMatches) return;
+    selectMatch(selectedMatchIndex < 0 ? 0 : activeIndex + 1);
+  }, [activeIndex, hasMatches, selectMatch, selectedMatchIndex]);
 
   const handleFindPrevious = useCallback(() => {
-    if (!hasMatches || suppressFindNav || selectedMatchIndex < 0) return;
-    selectMatch(activeIndex - 1);
-  }, [activeIndex, hasMatches, selectMatch, selectedMatchIndex, suppressFindNav]);
+    if (!hasMatches) return;
+    selectMatch(selectedMatchIndex < 0 ? activeMatches.length - 1 : activeIndex - 1);
+  }, [activeIndex, activeMatches.length, hasMatches, selectMatch, selectedMatchIndex]);
 
   const handleReplaceOne = useCallback(() => {
     if (!findQuery || !hasMatches) return;
@@ -371,21 +369,16 @@ export function EditorPane({
         element.setSelectionRange(cursor, cursor);
       }, 0);
       setSelectedMatchIndex(-1);
-      setSuppressFindNav(true);
       focusFindInput();
       clearSelection();
       return;
     }
     if (!editor) return;
-    const matches = getWysiwygMatches().filter((entry) =>
-      isExactDocRangeMatch(editor, entry, findQuery),
-    );
-    const match = matches[activeIndex];
+    const match = validWysiwygMatches[activeIndex];
     if (!match) return;
     editor.chain().focus().insertContentAt({ from: match.from, to: match.to }, replaceQuery).run();
     syncMarkdownFromEditor(editor);
     setSelectedMatchIndex(-1);
-    setSuppressFindNav(true);
     focusFindInput();
     clearSelection();
   }, [
@@ -397,12 +390,11 @@ export function EditorPane({
     markdown,
     replaceQuery,
     sourceMatches,
-    viewSource,
-    getWysiwygMatches,
+    validWysiwygMatches,
     syncMarkdownFromEditor,
     focusFindInput,
     clearSelection,
-    setSuppressFindNav,
+    viewSource,
   ]);
 
   const handleReplaceAll = useCallback(() => {
@@ -410,17 +402,13 @@ export function EditorPane({
     if (viewSource) {
       handleBodyChange(markdown.split(findQuery).join(replaceQuery));
       setSelectedMatchIndex(-1);
-      setSuppressFindNav(true);
       focusFindInput();
       clearSelection();
       return;
     }
     if (!editor) return;
-    const matches = getWysiwygMatches().filter((entry) =>
-      isExactDocRangeMatch(editor, entry, findQuery),
-    );
-    for (let index = matches.length - 1; index >= 0; index -= 1) {
-      const match = matches[index];
+    for (let index = validWysiwygMatches.length - 1; index >= 0; index -= 1) {
+      const match = validWysiwygMatches[index];
       if (!match) continue;
       editor
         .chain()
@@ -430,28 +418,25 @@ export function EditorPane({
     }
     syncMarkdownFromEditor(editor);
     setSelectedMatchIndex(-1);
-    setSuppressFindNav(true);
     focusFindInput();
     clearSelection();
   }, [
     editor,
     findQuery,
-    getWysiwygMatches,
     handleBodyChange,
     hasMatches,
     markdown,
     replaceQuery,
+    validWysiwygMatches,
     syncMarkdownFromEditor,
     focusFindInput,
     clearSelection,
-    setSuppressFindNav,
     viewSource,
   ]);
 
   useEffect(() => {
     if (!findOpen) return;
     setSelectedMatchIndex(-1);
-    setSuppressFindNav(false);
   }, [findOpen, findQuery, viewSource, noteId]);
 
   useEffect(() => {
@@ -891,15 +876,8 @@ export function EditorPane({
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
                       event.preventDefault();
-                      setSuppressFindNav(false);
-                      if (!hasMatches) return;
-                      if (event.shiftKey) {
-                        selectMatch(
-                          selectedMatchIndex < 0 ? activeMatches.length - 1 : activeIndex - 1,
-                        );
-                      } else {
-                        selectMatch(selectedMatchIndex < 0 ? 0 : activeIndex + 1);
-                      }
+                      if (event.shiftKey) handleFindPrevious();
+                      else handleFindNext();
                     } else if (event.key === 'Escape') {
                       event.preventDefault();
                       closeFindReplace();
@@ -923,18 +901,10 @@ export function EditorPane({
                   placeholder="Replace"
                   sx={{ minWidth: 180, flexGrow: 1, maxWidth: 360 }}
                 />
-                <Button
-                  data-testid="find-prev"
-                  onClick={handleFindPrevious}
-                  disabled={!hasMatches || suppressFindNav || selectedMatchIndex < 0}
-                >
+                <Button data-testid="find-prev" onClick={handleFindPrevious} disabled={!hasMatches}>
                   Prev
                 </Button>
-                <Button
-                  data-testid="find-next"
-                  onClick={handleFindNext}
-                  disabled={!hasMatches || suppressFindNav || selectedMatchIndex < 0}
-                >
+                <Button data-testid="find-next" onClick={handleFindNext} disabled={!hasMatches}>
                   Next
                 </Button>
                 <Button data-testid="replace-one" onClick={handleReplaceOne} disabled={!hasMatches}>
