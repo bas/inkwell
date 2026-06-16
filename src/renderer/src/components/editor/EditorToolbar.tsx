@@ -1,4 +1,5 @@
-import { Box, SegmentedControl } from '@primer/react';
+import { Box, SegmentedControl, IconButton } from '@primer/react';
+import { SearchIcon } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import { FormatControls } from '../../editor/FormatControls';
 import { Separator } from '../common/Separator';
@@ -15,6 +16,7 @@ interface EditorToolbarProps {
   onTogglePin: () => void;
   onCopyMarkdown: () => void;
   onDelete: () => void;
+  onOpenFindReplace: () => void;
 }
 
 /**
@@ -32,6 +34,7 @@ export function EditorToolbar({
   onTogglePin,
   onCopyMarkdown,
   onDelete,
+  onOpenFindReplace,
 }: EditorToolbarProps): JSX.Element {
   return (
     <Box
@@ -74,6 +77,16 @@ export function EditorToolbar({
       )}
 
       <Box sx={{ ml: 'auto' }}>
+        <IconButton
+          icon={SearchIcon}
+          aria-label="Find and replace"
+          variant="invisible"
+          onClick={onOpenFindReplace}
+          data-testid="open-find-replace"
+        />
+      </Box>
+
+      <Box>
         <NoteActionsMenu
           pinned={pinned}
           onSummarize={onSummarize}
