@@ -1,0 +1,149 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  nightly-release:
+    name: Build and publish nightly DMG
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+
+      - name: Package DMG (arm64)
+        run: npm run package
+
+      - name: Prepare nightly artifacts and metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          COMMIT_SHA="${GITHUB_SHA}"
+          COMMIT_SHORT="${COMMIT_SHA:0:7}"
+          COMMIT_DATE="$(git log -1 --format=%cI "${GITHUB_SHA}")"
+          RUN_NUMBER="${GITHUB_RUN_NUMBER}"
+          DMG_SOURCE="$(find release -maxdepth 1 -type f -name '*.dmg' | head -n 1)"
+          DMG_STABLE_PATH="release/Inkwell-nightly-arm64.dmg"
+          INFO_PATH="release/nightly-build-info.json"
+
+          if [[ -z "${DMG_SOURCE}" ]]; then
+            echo "No DMG found in release/ after packaging." >&2
+            exit 1
+          fi
+
+          cp "${DMG_SOURCE}" "${DMG_STABLE_PATH}"
+
+          cat > "${INFO_PATH}" <<EOF
+          {
+            "tag": "nightly",
+            "artifact": "Inkwell-nightly-arm64.dmg",
+            "commitSha": "${COMMIT_SHA}",
+            "commitShortSha": "${COMMIT_SHORT}",
+            "commitDate": "${COMMIT_DATE}",
+            "workflowRunNumber": ${RUN_NUMBER},
+            "workflowRunId": "${GITHUB_RUN_ID}",
+            "workflowRunUrl": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+            "buildTimestamp": "${BUILD_TIMESTAMP}"
+          }
+          EOF
+
+          {
+            echo "release_name=Nightly build (${BUILD_TIMESTAMP})"
+            echo "dmg_path=${DMG_STABLE_PATH}"
+            echo "info_path=${INFO_PATH}"
+            echo "release_body<<EOF"
+            echo "Automated nightly build of Inkwell."
+            echo
+            echo "- Commit: \`${COMMIT_SHA}\`"
+            echo "- Commit date: ${COMMIT_DATE}"
+            echo "- Workflow run number: ${RUN_NUMBER}"
+            echo "- Build timestamp (UTC): ${BUILD_TIMESTAMP}"
+            echo
+            echo "Includes:"
+            echo "- \`Inkwell-nightly-arm64.dmg\`"
+            echo "- \`nightly-build-info.json\`"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Ensure nightly release exists and remove previous assets
+        uses: actions/github-script@v7
+        env:
+          TAG_NAME: nightly
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = process.env.TAG_NAME;
+            const assetsToDelete = new Set([
+              "Inkwell-nightly-arm64.dmg",
+              "nightly-build-info.json"
+            ]);
+
+            let release;
+            try {
+              const response = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              release = response.data;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+
+              const created = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tag,
+                name: "Nightly build",
+                body: "Automated nightly build of Inkwell.",
+                prerelease: true,
+                make_latest: "false"
+              });
+              release = created.data;
+            }
+
+            for (const asset of release.assets) {
+              if (!assetsToDelete.has(asset.name)) {
+                continue;
+              }
+
+              await github.rest.repos.deleteReleaseAsset({
+                owner,
+                repo,
+                asset_id: asset.id
+              });
+            }
+
+      - name: Publish nightly prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: ${{ steps.metadata.outputs.release_name }}
+          body: ${{ steps.metadata.outputs.release_body }}
+          prerelease: true
+          make_latest: false
+          files: |
+            ${{ steps.metadata.outputs.dmg_path }}
+            ${{ steps.metadata.outputs.info_path }}
