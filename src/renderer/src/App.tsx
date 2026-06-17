@@ -77,7 +77,7 @@ export function App(): JSX.Element {
             }}
           >
             <Box
-              sx={{ transform: 'translateY(calc(var(--base-size-2) * -1))' }}
+              sx={{ transform: 'translateY(calc(0px - var(--base-size-2)))' }}
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
               <IconButton
