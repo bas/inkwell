@@ -76,7 +76,10 @@ export function App(): JSX.Element {
               boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
             }}
           >
-            <Box style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <Box
+              sx={{ transform: 'translateY(calc(0px - var(--base-size-2)))' }}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
               <IconButton
                 icon={sidebarVisible ? SidebarCollapseIcon : SidebarExpandIcon}
                 aria-label={sidebarVisible ? 'Hide notes list' : 'Show notes list'}
