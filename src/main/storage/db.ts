@@ -1,13 +1,19 @@
-import Database from 'better-sqlite3';
+import { createRequire } from 'node:module';
 import type { Database as DB } from 'better-sqlite3';
 import type { NoteSummary } from '../../shared/note';
 import type { Label } from '../../shared/note-labels';
 import { makeSnippet } from './snippet';
 
 const SCHEMA_VERSION = 1;
+const require = createRequire(import.meta.url);
+
+function loadDatabaseConstructor(): typeof import('better-sqlite3') {
+  return require('better-sqlite3') as typeof import('better-sqlite3');
+}
 
 /** Open the index database and run migrations. */
 export function openDatabase(path: string): DB {
+  const Database = loadDatabaseConstructor();
   const db = new Database(path);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');

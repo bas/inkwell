@@ -1,13 +1,14 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { readSettings, setColorMode, setWindowBounds } from './settings';
-import { NotesService } from './storage/notesService';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { IpcChannels } from '../shared/ipc';
 import type { ColorModePreference } from '../shared/types';
+import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
 // even in development, where the name otherwise defaults to Electron's.
@@ -93,13 +94,49 @@ function registerIpcHandlers(): void {
   });
 }
 
-app.whenReady().then(() => {
+function isBetterSqliteAbiMismatch(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes('better_sqlite3.node') && error.message.includes('NODE_MODULE_VERSION')
+  );
+}
+
+function rebuildBetterSqliteForElectron(): void {
+  const result = spawnSync('npm', ['run', 'rebuild'], {
+    cwd: app.getAppPath(),
+    encoding: 'utf8',
+  });
+  if (result.status === 0) return;
+
+  const details = [result.error?.message, result.stdout, result.stderr]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+  throw new Error(
+    details
+      ? `Automatic native module rebuild failed.\n\n${details}`
+      : 'Automatic native module rebuild failed.',
+  );
+}
+
+async function createNotesService(vaultDir: string, dbPath: string): Promise<NotesService> {
+  const { NotesService } = await import('./storage/notesService');
+  try {
+    return new NotesService(vaultDir, dbPath);
+  } catch (error) {
+    if (!isDev || !isBetterSqliteAbiMismatch(error)) throw error;
+    rebuildBetterSqliteForElectron();
+    return new NotesService(vaultDir, dbPath);
+  }
+}
+
+app.whenReady().then(async () => {
   registerIpcHandlers();
 
   const vaultDir = process.env['INKWELL_VAULT_DIR'] ?? join(app.getPath('documents'), 'Inkwell');
   const dbPath = join(app.getPath('userData'), 'index.sqlite');
   try {
-    notesService = new NotesService(vaultDir, dbPath);
+    notesService = await createNotesService(vaultDir, dbPath);
     registerNoteHandlers(notesService);
     registerAiHandlers(notesService);
   } catch (err) {
