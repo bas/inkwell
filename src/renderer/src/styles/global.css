@@ -8,7 +8,7 @@
    * control sits just to the right of the lights without floating far from
    * them. Kept as a variable so the value is explicit and overridable rather
    * than scattered as a magic number in component code. */
-  --ink-titlebar-inset: var(--base-size-64);
+  --ink-titlebar-inset: calc(var(--base-size-64) + var(--base-size-8));
 
   /* Maximum width of the centered reading/editing column in both the WYSIWYG
    * and source-editor views. Defined here as a deliberate layout constant so
