@@ -108,7 +108,10 @@ function rebuildBetterSqliteForElectron(): void {
   });
   if (result.status === 0) return;
 
-  const details = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
+  const details = [result.error?.message, result.stdout, result.stderr]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
   throw new Error(
     details
       ? `Automatic native module rebuild failed.\n\n${details}`
