@@ -2,6 +2,10 @@
 
 Inkwell is a macOS desktop app for writing and organising notes in Markdown. Notes are stored as plain `.md` files in a folder on your Mac (your _vault_), so they are always readable outside the app and easy to back up or sync.
 
+## Why the editor matters
+
+The editor gives you the speed and clarity of a rich writing experience without locking you into a proprietary format. You can write with live formatting in **Editor** view, switch to raw Markdown in **Source** view when needed, and keep full ownership of your notes as plain `.md` files.
+
 ## Contents
 
 | Guide                       | What it covers                                                       |
