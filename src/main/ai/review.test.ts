@@ -51,4 +51,28 @@ describe('parseReviewResponse', () => {
     expect(result.suggestions).toHaveLength(1);
     expect(result.suggestions[0]?.id).toBe('valid-range');
   });
+
+  it('parses a response wrapped in a json code fence', () => {
+    const payload = {
+      summary: 'Review complete.',
+      suggestions: [],
+    };
+
+    const result = parseReviewResponse(`\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``);
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('parses json when additional prose surrounds the fenced payload', () => {
+    const payload = {
+      summary: 'Review complete.',
+      suggestions: [],
+    };
+
+    const result = parseReviewResponse(
+      ['Here is the result:', '```json', JSON.stringify(payload), '```', 'Done.'].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
 });
