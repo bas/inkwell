@@ -50,8 +50,44 @@ function clampConfidence(value: unknown): number {
   return value;
 }
 
+function parseJsonObject(raw: string): Record<string, unknown> {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error('Copilot review response was empty.');
+
+  const candidates = new Set<string>([trimmed]);
+  const wholeFence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (wholeFence?.[1]) candidates.add(wholeFence[1].trim());
+
+  const fencePattern = /```(?:json)?\s*([\s\S]*?)\s*```/gi;
+  for (const match of trimmed.matchAll(fencePattern)) {
+    const candidate = match[1]?.trim();
+    if (candidate) candidates.add(candidate);
+  }
+
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.add(trimmed.slice(firstBrace, lastBrace + 1).trim());
+  }
+
+  let parseError: Error | undefined;
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      parseError = new Error('Copilot review response must be a JSON object.');
+    } catch (error) {
+      parseError = error instanceof Error ? error : new Error('Could not parse review response.');
+    }
+  }
+
+  throw parseError ?? new Error('Could not parse review response.');
+}
+
 export function parseReviewResponse(raw: string): ParsedReviewPayload {
-  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const parsed = parseJsonObject(raw);
   const summary = typeof parsed['summary'] === 'string' ? parsed['summary'].trim() : '';
   const sourceSuggestions = Array.isArray(parsed['suggestions']) ? parsed['suggestions'] : [];
   const suggestions: AiReviewSuggestion[] = sourceSuggestions
