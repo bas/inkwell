@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import {
 } from '@playwright/test';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const APP_ENTRY = join(ROOT, 'out/main/index.js');
 
 export interface LaunchOptions {
   /** Reuse existing directories instead of creating fresh ones (for persistence/relaunch tests). */
@@ -32,11 +33,17 @@ export interface LaunchedApp {
  * so E2E runs never touch the real notes vault.
  */
 export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedApp> {
+  if (!existsSync(APP_ENTRY)) {
+    throw new Error(
+      `Built Electron app not found at ${APP_ENTRY}. Run "npm run build" in this worktree before launching E2E tests.`,
+    );
+  }
+
   const vaultDir = options.reuse?.vaultDir ?? mkdtempSync(join(tmpdir(), 'inkwell-vault-'));
   const userDataDir = options.reuse?.userDataDir ?? mkdtempSync(join(tmpdir(), 'inkwell-data-'));
 
   const app = await electron.launch({
-    args: [join(ROOT, 'out/main/index.js'), `--user-data-dir=${userDataDir}`],
+    args: [APP_ENTRY, `--user-data-dir=${userDataDir}`],
     env: {
       ...process.env,
       INKWELL_VAULT_DIR: vaultDir,
@@ -95,7 +102,7 @@ export function readSingleNote(vaultDir: string): string {
 /** Create a fresh note and wait for the editor to be ready. */
 export async function createNote(page: Page): Promise<void> {
   await page.getByTestId('new-note-button').click();
-  await expect(page.getByTestId('editor-title')).toBeVisible();
+  await expect(page.getByTestId('editor-title')).toHaveValue('Untitled');
 }
 
 /** Replace the note title. */
@@ -110,9 +117,39 @@ export async function typeBody(page: Page, text: string): Promise<void> {
   await page.keyboard.type(text);
 }
 
-/** Wait for autosave to settle (save-state shows "Saved"). */
+/** Wait for autosave to settle into the saved/clean UI state. */
 export async function waitSaved(page: Page): Promise<void> {
-  await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 15_000 });
+  let sawPending = false;
+  await expect
+    .poll(
+      async () => {
+        const text = (await page.getByTestId('save-state').textContent())?.trim() ?? '';
+        if (text === 'Saving…' || text === 'Unsaved changes') {
+          sawPending = true;
+          return '__pending__';
+        }
+        return sawPending ? text : '__waiting_for_save__';
+      },
+      { timeout: 15_000 },
+    )
+    .toMatch(/^(Saved|Updated )/);
+}
+
+/** Assert whether the note list includes a note title, ignoring snippets and timestamps. */
+export async function expectNoteListTitle(
+  page: Page,
+  title: string,
+  present: boolean,
+): Promise<void> {
+  const titleLocator = page
+    .getByTestId('note-list')
+    .getByTestId('note-title')
+    .filter({ hasText: new RegExp(`^${escapeRegExp(title)}$`) });
+  await expect(titleLocator).toHaveCount(present ? 1 : 0);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** Switch the editor between the WYSIWYG and Markdown source views. */
