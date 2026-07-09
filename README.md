@@ -33,17 +33,17 @@ npm run dev
 
 ## Scripts
 
-| Script                    | Description                                           |
-| ------------------------- | ----------------------------------------------------- |
-| `npm run dev`             | Run the app in development                            |
-| `npm run build`           | Typecheck and build the production bundles            |
-| `npm run package`         | Build and package an arm64 `.dmg`                     |
-| `npm run typecheck`       | Typecheck main, preload, and renderer                 |
-| `npm run lint`            | Lint with ESLint                                      |
-| `npm run format`          | Format with Prettier                                  |
-| `npm test`                | Run unit tests (Vitest)                               |
-| `npm run test:e2e`        | Run end-to-end tests headless (Playwright + Electron) |
-| `npm run test:e2e:headed` | Run end-to-end tests with the app window visible      |
+| Script                    | Description                                                              |
+| ------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`             | Run the app in development                                               |
+| `npm run build`           | Typecheck and build the production bundles                               |
+| `npm run package`         | Build and package an arm64 `.dmg`                                        |
+| `npm run typecheck`       | Typecheck main, preload, and renderer                                    |
+| `npm run lint`            | Lint with ESLint                                                         |
+| `npm run format`          | Format with Prettier                                                     |
+| `npm test`                | Run unit tests (Vitest)                                                  |
+| `npm run test:e2e`        | Run headless E2E against the built app in `out/` (`npm run build` first) |
+| `npm run test:e2e:headed` | Run visible E2E against the built app in `out/` (`npm run build` first)  |
 
 ## Contributing
 

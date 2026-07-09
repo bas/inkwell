@@ -41,6 +41,7 @@ function NoteRow({
           sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'center' }}
         >
           <Text
+            data-testid="note-title"
             sx={{
               fontWeight: 'bold',
               overflow: 'hidden',

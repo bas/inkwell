@@ -5,6 +5,7 @@ import {
   setTitle,
   typeBody,
   waitSaved,
+  expectNoteListTitle,
   readVaultMarkdown,
   readSingleNote,
   countVaultNotes,
@@ -28,7 +29,7 @@ test.describe('Notes CRUD', () => {
 
     await createNote(page);
     await expect(page.getByTestId('editor-title')).toHaveValue('Untitled');
-    await expect(page.getByTestId('note-list')).toContainText('Untitled');
+    await expectNoteListTitle(page, 'Untitled', true);
 
     await expect.poll(() => countVaultNotes(vaultDir)).toBe(1);
   });
@@ -59,8 +60,8 @@ test.describe('Notes CRUD', () => {
     await waitSaved(page);
 
     await expect.poll(() => countVaultNotes(vaultDir)).toBe(2);
-    await expect(page.getByTestId('note-list')).toContainText('First Note');
-    await expect(page.getByTestId('note-list')).toContainText('Second Note');
+    await expectNoteListTitle(page, 'First Note', true);
+    await expectNoteListTitle(page, 'Second Note', true);
   });
 
   test('pins and unpins a note, reflecting the state in the list and on disk', async () => {
@@ -73,13 +74,13 @@ test.describe('Notes CRUD', () => {
     // Pin.
     await page.getByTestId('note-actions').click();
     await page.getByTestId('action-toggle-pin').click();
-    await expect(page.getByTestId('note-list')).toContainText('Pinned');
+    await expect(page.getByRole('heading', { name: 'Pinned' })).toBeVisible();
     await expect.poll(() => readVaultMarkdown(vaultDir)).toContain('pinned: true');
 
     // Unpin.
     await page.getByTestId('note-actions').click();
     await page.getByTestId('action-toggle-pin').click();
-    await expect(page.getByTestId('note-list')).not.toContainText('Pinned');
+    await expect(page.getByRole('heading', { name: 'Pinned' })).toHaveCount(0);
     await expect.poll(() => readVaultMarkdown(vaultDir)).toContain('pinned: false');
   });
 

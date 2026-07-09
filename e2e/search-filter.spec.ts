@@ -1,5 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
-import { launchApp, createNote, setTitle, typeBody, waitSaved, type LaunchedApp } from './helpers';
+import {
+  launchApp,
+  createNote,
+  setTitle,
+  typeBody,
+  waitSaved,
+  expectNoteListTitle,
+  type LaunchedApp,
+} from './helpers';
 
 /** Create a label through the manager dialog. */
 async function createLabel(page: Page, name: string): Promise<void> {
@@ -42,13 +50,13 @@ test.describe('Search and filter', () => {
     await waitSaved(page);
 
     await page.getByTestId('search-input').fill('apple');
-    await expect(page.getByTestId('note-list')).toContainText('Alpha');
-    await expect(page.getByTestId('note-list')).not.toContainText('Beta');
+    await expectNoteListTitle(page, 'Alpha', true);
+    await expectNoteListTitle(page, 'Beta', false);
 
     // Clearing the search restores the full list.
     await page.getByRole('button', { name: 'Clear search' }).click();
-    await expect(page.getByTestId('note-list')).toContainText('Alpha');
-    await expect(page.getByTestId('note-list')).toContainText('Beta');
+    await expectNoteListTitle(page, 'Alpha', true);
+    await expectNoteListTitle(page, 'Beta', true);
   });
 
   test('searches notes by title', async () => {
@@ -63,8 +71,8 @@ test.describe('Search and filter', () => {
     await waitSaved(page);
 
     await page.getByTestId('search-input').fill('Grocer');
-    await expect(page.getByTestId('note-list')).toContainText('Groceries');
-    await expect(page.getByTestId('note-list')).not.toContainText('Meeting');
+    await expectNoteListTitle(page, 'Groceries', true);
+    await expectNoteListTitle(page, 'Meeting', false);
   });
 
   test('shows an empty list when nothing matches', async () => {
@@ -95,14 +103,14 @@ test.describe('Search and filter', () => {
     // Filter by the label.
     await page.getByTestId('label-filter').click();
     await page.getByTestId('label-filter-option-work').click();
-    await expect(page.getByTestId('note-list')).toContainText('Work Note');
-    await expect(page.getByTestId('note-list')).not.toContainText('Personal Note');
+    await expectNoteListTitle(page, 'Work Note', true);
+    await expectNoteListTitle(page, 'Personal Note', false);
 
     // Reset to all notes.
     await page.getByTestId('label-filter').click();
     await page.getByText('All notes', { exact: true }).click();
-    await expect(page.getByTestId('note-list')).toContainText('Work Note');
-    await expect(page.getByTestId('note-list')).toContainText('Personal Note');
+    await expectNoteListTitle(page, 'Work Note', true);
+    await expectNoteListTitle(page, 'Personal Note', true);
   });
 
   test('search overrides the active label filter', async () => {
@@ -124,10 +132,10 @@ test.describe('Search and filter', () => {
     // Apply the label filter (only the work note matches).
     await page.getByTestId('label-filter').click();
     await page.getByTestId('label-filter-option-work').click();
-    await expect(page.getByTestId('note-list')).not.toContainText('Personal Note');
+    await expectNoteListTitle(page, 'Personal Note', false);
 
     // Searching ignores the label filter and finds the unlabeled note.
     await page.getByTestId('search-input').fill('grocery');
-    await expect(page.getByTestId('note-list')).toContainText('Personal Note');
+    await expectNoteListTitle(page, 'Personal Note', true);
   });
 });
