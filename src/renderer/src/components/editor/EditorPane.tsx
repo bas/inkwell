@@ -9,7 +9,6 @@ import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { AiSummaryDialog } from './AiSummaryDialog';
 import { AiReviewPanel } from './AiReviewPanel';
 import { LabelChip } from '../common/LabelChip';
-import { LabelPicker } from '../labels/LabelPicker';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
@@ -787,14 +786,6 @@ export function EditorPane({
             ))}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <LabelPicker
-            noteLabels={note.labels}
-            allLabels={labels}
-            onChange={(next) => void applyLabels(next)}
-            onCreateAndAssign={(name) => void createAndAssign(name)}
-          />
-        </Box>
       </Box>
 
       {error && (
@@ -850,6 +841,10 @@ export function EditorPane({
               onCopyMarkdown={() => void handleCopyMarkdown()}
               onDelete={() => setConfirmDelete(true)}
               onOpenFindReplace={openFindReplace}
+              noteLabels={note.labels}
+              allLabels={labels}
+              onLabelsChange={(next) => void applyLabels(next)}
+              onCreateAndAssign={(name) => void createAndAssign(name)}
             />
 
             {findOpen && (
