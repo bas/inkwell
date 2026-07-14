@@ -90,7 +90,7 @@ export function useNotes(): NotesState & NotesActions {
 
   const createNote = useCallback(async () => {
     try {
-      const note: Note = await window.api.createNote({ title: 'Untitled', body: '' });
+      const note: Note = await window.api.createNote({ body: '' });
       await refresh();
       setSelectedId(note.id);
     } catch (err) {

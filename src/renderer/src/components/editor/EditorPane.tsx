@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Text, Heading, Button, Spinner, Flash, TextInput } from '@primer/react';
-import { NoteIcon } from '@primer/octicons-react';
+import { Box, Text, Button, Spinner, Flash, TextInput } from '@primer/react';
 import type { Editor } from '@tiptap/react';
 import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
@@ -14,6 +13,7 @@ import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
 import { useAiSummary } from '../../state/useAiSummary';
 import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
+import { deriveNoteTitle } from '@shared/noteTitle';
 
 interface EditorPaneProps {
   noteId: string | undefined;
@@ -126,7 +126,6 @@ export function EditorPane({
   onAfterDelete,
 }: EditorPaneProps): JSX.Element {
   const [note, setNote] = useState<Note | undefined>(undefined);
-  const [title, setTitle] = useState('');
   const [markdown, setMarkdown] = useState('');
   const [viewSource, setViewSource] = useState(false);
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -171,18 +170,18 @@ export function EditorPane({
   const sourceEditorRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Latest editable data, read by the debounced/flush save without re-binding.
-  const dataRef = useRef({ id: '', title: '', markdown: '' });
+  const dataRef = useRef({ id: '', markdown: '' });
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const save = useCallback(async () => {
     if (!dirtyRef.current) return;
-    const { id, title: t, markdown: body } = dataRef.current;
+    const { id, markdown: body } = dataRef.current;
     if (!id) return;
     dirtyRef.current = false;
     setSaveState('saving');
     try {
-      await window.api.updateNote({ id, title: t.trim() || 'Untitled', body });
+      await window.api.updateNote({ id, body });
       setSaveState('saved');
       onAfterChange();
     } catch (err) {
@@ -209,9 +208,8 @@ export function EditorPane({
     try {
       const loaded = await window.api.getNote(id);
       setNote(loaded);
-      setTitle(loaded.title);
       setMarkdown(loaded.body);
-      dataRef.current = { id: loaded.id, title: loaded.title, markdown: loaded.body };
+      dataRef.current = { id: loaded.id, markdown: loaded.body };
       dirtyRef.current = false;
       setSaveState('idle');
       setError(undefined);
@@ -249,12 +247,6 @@ export function EditorPane({
   const colorOf = (name: string): string =>
     labels.find((label) => label.name === name)?.color ?? 'default';
 
-  const handleTitleChange = (value: string): void => {
-    setTitle(value);
-    dataRef.current = { ...dataRef.current, title: value };
-    scheduleSave();
-  };
-
   const handleBodyChange = useCallback(
     (value: string): void => {
       setMarkdown(value);
@@ -263,6 +255,8 @@ export function EditorPane({
     },
     [scheduleSave],
   );
+
+  const draftTitle = useMemo(() => deriveNoteTitle(markdown), [markdown]);
 
   const sourceMatches = useMemo(() => findExactMatches(markdown, findQuery), [markdown, findQuery]);
   const clearSelection = useCallback(() => {
@@ -461,10 +455,9 @@ export function EditorPane({
   }, [note, onAfterChange]);
 
   const handleCopyMarkdown = useCallback(async () => {
-    const { title: t, markdown: body } = dataRef.current;
-    const heading = t.trim() ? `# ${t.trim()}\n\n` : '';
+    const { markdown: body } = dataRef.current;
     try {
-      await window.api.writeClipboard(`${heading}${body}`.trimEnd() + '\n');
+      await window.api.writeClipboard(body.trimEnd() + '\n');
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
@@ -473,12 +466,12 @@ export function EditorPane({
   }, []);
 
   const handleSummarize = useCallback(() => {
-    const { id, title } = dataRef.current;
+    const { id, markdown: body } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     resetSummary();
     setSummaryNoteId(id);
-    setSummaryNoteTitle(title);
+    setSummaryNoteTitle(deriveNoteTitle(body));
     setSummaryOpen(true);
     void (async () => {
       await save();
@@ -506,9 +499,8 @@ export function EditorPane({
     try {
       const updated = await window.api.insertTldr(summaryNoteId, summaryState.text);
       setNote(updated);
-      setTitle(updated.title);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dataRef.current = { id: updated.id, markdown: updated.body };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -523,12 +515,12 @@ export function EditorPane({
   }, [summaryNoteId, summaryState.text, save, resetSummary, onAfterChange]);
 
   const handleReview = useCallback(() => {
-    const { id, title: currentTitle } = dataRef.current;
+    const { id, markdown: body } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     resetReview();
     setReviewNoteId(id);
-    setReviewNoteTitle(currentTitle);
+    setReviewNoteTitle(deriveNoteTitle(body));
     setReviewOpen(true);
     void (async () => {
       await save();
@@ -561,9 +553,8 @@ export function EditorPane({
       }
       const updated = result.note;
       setNote(updated);
-      setTitle(updated.title);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dataRef.current = { id: updated.id, markdown: updated.body };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -683,12 +674,9 @@ export function EditorPane({
             px: 4,
           }}
         >
-          <Box sx={{ color: 'fg.muted', mb: 3 }}>
-            <NoteIcon size={32} />
-          </Box>
-          <Heading as="h2" sx={{ fontSize: 4, mb: 2 }}>
+          <Text as="h2" sx={{ fontSize: 4, fontWeight: 'bold', mb: 2 }}>
             No note selected
-          </Heading>
+          </Text>
           <Text sx={{ color: 'fg.muted', mb: 4 }}>
             Select a note from the list, or create a new one to start writing.
           </Text>
@@ -750,42 +738,25 @@ export function EditorPane({
         bg: 'canvas.default',
       }}
     >
-      <Box
-        as="header"
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 2,
-          px: 4,
-          py: 3,
-          bg: 'canvas.default',
-          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
-        }}
-      >
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <TextInput
-            aria-label="Note title"
-            data-testid="editor-title"
-            value={title}
-            onChange={(event) => handleTitleChange(event.target.value)}
-            sx={{
-              width: '100%',
-              border: 'none',
-              boxShadow: 'none',
-              px: 0,
-              '& input': { fontSize: 4, fontWeight: 'bold', px: 0 },
-            }}
-          />
-          {note.labels.length > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
-              {note.labels.map((name) => (
-                <LabelChip key={name} name={name} color={colorOf(name)} />
-              ))}
-            </Box>
-          )}
+      {note.labels.length > 0 && (
+        <Box
+          as="header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            px: 4,
+            py: 2,
+            bg: 'canvas.default',
+            boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            {note.labels.map((name) => (
+              <LabelChip key={name} name={name} color={colorOf(name)} />
+            ))}
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {error && (
         <Box sx={{ px: 4, pt: 3 }}>
@@ -993,7 +964,7 @@ export function EditorPane({
 
       <DeleteNoteDialog
         open={confirmDelete}
-        title={note.title || 'Untitled'}
+        title={draftTitle}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={handleConfirmDelete}
       />

@@ -19,7 +19,6 @@ function validateCreateInput(value: unknown): CreateNoteInput {
   if (typeof value !== 'object' || value === null) throw new Error('Invalid note input');
   const v = value as Record<string, unknown>;
   return {
-    title: typeof v['title'] === 'string' ? v['title'] : undefined,
     body: typeof v['body'] === 'string' ? v['body'] : undefined,
     labels: Array.isArray(v['labels'])
       ? v['labels'].filter((l): l is string => typeof l === 'string')
@@ -32,7 +31,6 @@ function validateUpdateInput(value: unknown): UpdateNoteInput {
   const v = value as Record<string, unknown>;
   return {
     id: assertString(v['id'], 'id'),
-    title: typeof v['title'] === 'string' ? v['title'] : undefined,
     body: typeof v['body'] === 'string' ? v['body'] : undefined,
     labels: Array.isArray(v['labels'])
       ? v['labels'].filter((l): l is string => typeof l === 'string')

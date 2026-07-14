@@ -1,6 +1,8 @@
+import { getBodyAfterTitle } from '../../shared/noteTitle';
+
 /** Derive a short, plain-text preview from a markdown body for the notes list. */
 export function makeSnippet(body: string, maxLength = 160): string {
-  const plain = body
+  const plain = getBodyAfterTitle(body)
     .replace(/^---\n[\s\S]*?\n---\n/, '') // any stray frontmatter
     .replace(/```[\s\S]*?```/g, ' ') // fenced code blocks
     .replace(/`([^`]*)`/g, '$1') // inline code
