@@ -48,8 +48,9 @@
   margin-bottom: var(--base-size-16, 1rem);
 }
 
-/* Placeholder text for an empty document. */
-.ink-editor .ProseMirror p.is-editor-empty:first-child::before {
+/* Placeholder text for an empty document. The first node may be a heading
+ * (new notes start as an H1) or a paragraph, so match either. */
+.ink-editor .ProseMirror .is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--fgColor-muted);
   float: left;
