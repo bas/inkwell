@@ -28,8 +28,8 @@ test.describe('Notes CRUD', () => {
     const { page, vaultDir } = ctx;
 
     await createNote(page);
-    await expect(page.getByTestId('editor-title')).toHaveValue('Untitled');
-    await expectNoteListTitle(page, 'Untitled', true);
+    await expect(page.getByTestId('editor-content')).toBeVisible();
+    await expectNoteListTitle(page, 'Start writing', true);
 
     await expect.poll(() => countVaultNotes(vaultDir)).toBe(1);
   });
@@ -42,7 +42,7 @@ test.describe('Notes CRUD', () => {
     await typeBody(page, 'Hello from Playwright');
     await waitSaved(page);
 
-    await expect.poll(() => readSingleNote(vaultDir)).toContain('title: My E2E Note');
+    await expect.poll(() => readSingleNote(vaultDir)).toContain('# My E2E Note');
     expect(readSingleNote(vaultDir)).toContain('Hello from Playwright');
   });
 
