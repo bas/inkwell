@@ -964,7 +964,7 @@ export function EditorPane({
 
       <DeleteNoteDialog
         open={confirmDelete}
-        title={draftTitle || note.title || 'Untitled'}
+        title={draftTitle}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={handleConfirmDelete}
       />

@@ -5,8 +5,11 @@
  * prefixes are stripped so a line like `# Shopping list` or `- Grocery` still
  * yields a clean title projection.
  */
-function getTitleStartIndex(body: string): number {
-  const lines = body.replace(/\r\n/g, '\n').split('\n');
+function splitBodyLines(body: string): string[] {
+  return body.split(/\r?\n/);
+}
+
+function getTitleStartIndex(lines: string[]): number {
   let start = 0;
   while (start < lines.length && (lines[start] ?? '').trim().length === 0) start++;
 
@@ -22,8 +25,8 @@ function getTitleStartIndex(body: string): number {
 }
 
 export function getTitleSourceLine(body: string): string | undefined {
-  const lines = body.replace(/\r\n/g, '\n').split('\n');
-  const start = getTitleStartIndex(body);
+  const lines = splitBodyLines(body);
+  const start = getTitleStartIndex(lines);
 
   return lines
     .slice(start)
@@ -33,8 +36,8 @@ export function getTitleSourceLine(body: string): string | undefined {
 
 /** Return the body with the first visible title line removed. */
 export function getBodyAfterTitle(body: string): string {
-  const lines = body.replace(/\r\n/g, '\n').split('\n');
-  let start = getTitleStartIndex(body);
+  const lines = splitBodyLines(body);
+  let start = getTitleStartIndex(lines);
 
   if (start < lines.length) {
     start += 1;
@@ -50,10 +53,10 @@ export function deriveNoteTitle(body: string): string {
   if (!line) return 'Untitled';
 
   const plain = line
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/^>\s+/, '')
-    .replace(/^(?:[-*+]\s+|\d+[.)]\s+)/, '')
-    .replace(/^\[[ xX]\]\s+/, '')
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^>\s*/, '')
+    .replace(/^(?:[-*+]\s*|\d+[.)]\s*)/, '')
+    .replace(/^\[[ xX]\]\s*/, '')
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/`([^`]*)`/g, '$1')
