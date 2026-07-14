@@ -4,7 +4,6 @@ import {
   BoldIcon,
   ItalicIcon,
   CodeIcon,
-  HeadingIcon,
   ListUnorderedIcon,
   ListOrderedIcon,
   TasklistIcon,
@@ -131,7 +130,6 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
       <ControlGroup label="Text style">
         <ActionMenu>
           <ActionMenu.Button
-            leadingVisual={HeadingIcon}
             variant="invisible"
             disabled={disabled}
             data-testid="heading-menu"
