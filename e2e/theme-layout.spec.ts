@@ -68,18 +68,24 @@ test.describe('Theme', () => {
 
     await page.getByRole('button', { name: 'Auto' }).click();
 
+    // Headless Electron applies `themeSource` but does not auto-fire the
+    // `updated` event the OS emits on a real appearance change, so emit it
+    // explicitly to exercise the app's main→IPC→renderer reactive path.
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'dark';
+      nativeTheme.emit('updated');
     });
     await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
 
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'light';
+      nativeTheme.emit('updated');
     });
     await expect(page.locator('html[data-color-mode="light"]')).toHaveCount(1);
 
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'system';
+      nativeTheme.emit('updated');
     });
   });
 
