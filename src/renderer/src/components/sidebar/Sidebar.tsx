@@ -68,7 +68,6 @@ export function Sidebar({
           flexDirection: 'column',
           gap: 2,
           p: 3,
-          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-muted)',
         }}
       >
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>

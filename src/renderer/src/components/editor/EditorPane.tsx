@@ -776,7 +776,8 @@ export function EditorPane({
             display: 'flex',
             justifyContent: 'center',
             px: 4,
-            py: 4,
+            pt: 3,
+            pb: 4,
             overflow: 'hidden',
           }}
         >
