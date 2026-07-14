@@ -18,7 +18,7 @@ describe('deriveNoteTitle', () => {
     );
   });
 
-  it('falls back to Untitled for empty content', () => {
-    expect(deriveNoteTitle('')).toBe('Untitled');
+  it('falls back to Start writing for empty content', () => {
+    expect(deriveNoteTitle('')).toBe('Start writing');
   });
 });

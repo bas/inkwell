@@ -48,7 +48,7 @@ export function AiSummaryDialog({
     }
   };
 
-  const subtitle = noteTitle.trim() || 'Untitled';
+  const subtitle = noteTitle.trim() || 'Start writing';
   const canCopy = (state.status === 'done' || state.status === 'stopped') && Boolean(state.text);
 
   return (
