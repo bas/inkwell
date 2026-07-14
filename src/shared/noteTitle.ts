@@ -18,7 +18,10 @@ export function deriveNoteTitle(body: string): string {
     start = i;
   }
 
-  const line = lines.slice(start).map((value) => value.trim()).find((value) => value.length > 0);
+  const line = lines
+    .slice(start)
+    .map((value) => value.trim())
+    .find((value) => value.length > 0);
 
   if (!line) return 'Untitled';
 

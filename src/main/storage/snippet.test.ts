@@ -3,7 +3,9 @@ import { makeSnippet } from './snippet';
 
 describe('makeSnippet', () => {
   it('skips the title line and strips formatting from the body preview', () => {
-    expect(makeSnippet('Title\n\nSome **bold** and _italic_ text.')).toBe('Some bold and italic text.');
+    expect(makeSnippet('Title\n\nSome **bold** and _italic_ text.')).toBe(
+      'Some bold and italic text.',
+    );
   });
 
   it('converts links to their text', () => {

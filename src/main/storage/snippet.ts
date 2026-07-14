@@ -15,7 +15,9 @@ export function makeSnippet(body: string, maxLength = 160): string {
     while (start < lines.length && (lines[start] ?? '').trim().length === 0) start++;
   }
 
-  const plain = lines.slice(start).join('\n')
+  const plain = lines
+    .slice(start)
+    .join('\n')
     .replace(/^---\n[\s\S]*?\n---\n/, '') // any stray frontmatter
     .replace(/```[\s\S]*?```/g, ' ') // fenced code blocks
     .replace(/`([^`]*)`/g, '$1') // inline code

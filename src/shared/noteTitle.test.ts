@@ -13,9 +13,9 @@ describe('deriveNoteTitle', () => {
   });
 
   it('skips inserted TL;DR blocks when deriving the title', () => {
-    expect(
-      deriveNoteTitle('> **TL;DR** — Quick summary\n> of the note\n\nShopping list'),
-    ).toBe('Shopping list');
+    expect(deriveNoteTitle('> **TL;DR** — Quick summary\n> of the note\n\nShopping list')).toBe(
+      'Shopping list',
+    );
   });
 
   it('falls back to Untitled for empty content', () => {
