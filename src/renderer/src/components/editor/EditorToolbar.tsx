@@ -3,6 +3,7 @@ import { SearchIcon } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import type { Label } from '@shared/note-labels';
 import { FormatControls } from '../../editor/FormatControls';
+import { Separator } from '../common/Separator';
 import { LabelPicker } from '../labels/LabelPicker';
 import { NoteActionsMenu } from './NoteActionsMenu';
 
@@ -95,6 +96,8 @@ export function EditorToolbar({
         </SegmentedControl>
       </ToolbarGroup>
 
+      <Separator />
+
       {!viewSource && (
         <Box
           role="group"
@@ -107,12 +110,10 @@ export function EditorToolbar({
             flex: '1 1 auto',
             flexWrap: 'wrap',
             minWidth: 0,
-            pl: 2,
-            borderLeft: '1px solid',
-            borderColor: 'border.muted',
           }}
         >
           <FormatControls editor={editor} />
+          <Separator />
           <ToolbarGroup label="Note organization">
             <LabelPicker
               noteLabels={noteLabels}
@@ -124,6 +125,8 @@ export function EditorToolbar({
           </ToolbarGroup>
         </Box>
       )}
+
+      <Separator />
 
       <Box
         role="group"

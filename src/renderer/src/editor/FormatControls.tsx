@@ -16,6 +16,7 @@ import {
   ChevronLeftIcon,
 } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
+import { Separator } from '../components/common/Separator';
 import { canIndentList, canOutdentList, indentList, outdentList } from './extensions/listIndent';
 
 interface FormatControlsProps {
@@ -168,6 +169,8 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
         </ActionMenu>
       </ControlGroup>
 
+      <Separator />
+
       <ControlGroup label="Inline formatting">
         <ToolbarButton
           icon={BoldIcon}
@@ -202,6 +205,8 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
           onClick={openLinkDialog}
         />
       </ControlGroup>
+
+      <Separator />
 
       <ControlGroup label="Lists and indentation">
         <ToolbarButton
@@ -243,6 +248,8 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
           onClick={() => editor && indentList(editor)}
         />
       </ControlGroup>
+
+      <Separator />
 
       <ControlGroup label="Blocks and inserts">
         <ToolbarButton
