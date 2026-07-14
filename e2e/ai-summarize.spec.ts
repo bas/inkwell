@@ -55,8 +55,9 @@ test.describe('AI summarize', () => {
 
     // Panel closes after a successful insert.
     await expect(page.getByTestId('ai-summary-dialog')).toBeHidden();
-    await waitSaved(page);
 
+    // The insert persists immediately without a visible pending state, so poll
+    // the file directly rather than waiting on a save-state transition.
     await expect.poll(() => readSingleNote(vaultDir)).toContain('**TL;DR**');
     const note = readSingleNote(vaultDir);
     expect(note).not.toContain('<!--');

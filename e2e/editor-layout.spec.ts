@@ -52,6 +52,10 @@ test.describe('Editor layout', () => {
     await setTitle(page, 'Long scrolling note');
 
     await page.getByTestId('editor-content').click();
+    // Body-first notes keep the title on the first line, so drop to a new line
+    // before filling the body — otherwise the paragraphs corrupt the title.
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
     for (let i = 0; i < 160; i++) {
       await page.keyboard.type(`Paragraph ${i} of a note that must stay scrollable after reopen.`);
       await page.keyboard.press('Enter');
@@ -65,7 +69,7 @@ test.describe('Editor layout', () => {
     });
     await ctx.page.getByText('Long scrolling note', { exact: true }).click();
 
-    await expect(ctx.page.getByTestId('editor-title')).toBeVisible();
+    await expect(ctx.page.getByTestId('editor-content')).toBeVisible();
     await expect(ctx.page.getByTestId('editor-toolbar')).toBeInViewport();
 
     const wysiwygScroll = await ctx.page.getByTestId('editor-content').evaluate((element) => {
