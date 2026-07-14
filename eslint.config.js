@@ -7,7 +7,16 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['out/**', 'dist/**', 'release/**', 'node_modules/**', 'coverage/**'],
+    ignores: [
+      'out/**',
+      'dist/**',
+      'release/**',
+      'node_modules/**',
+      'coverage/**',
+      '.github/skills/**',
+      '.github/hooks/**',
+      '.impeccable/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

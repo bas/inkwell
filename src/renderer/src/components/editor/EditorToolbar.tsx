@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/react';
 import type { Label } from '@shared/note-labels';
 import { FormatControls } from '../../editor/FormatControls';
 import { Separator } from '../common/Separator';
+import { LabelPicker } from '../labels/LabelPicker';
 import { NoteActionsMenu } from './NoteActionsMenu';
 
 interface EditorToolbarProps {
@@ -24,10 +25,24 @@ interface EditorToolbarProps {
   onCreateAndAssign: (name: string) => void;
 }
 
-/**
- * Single muted toolbar combining the Editor/Markdown view tabs (left),
- * formatting controls (centre, WYSIWYG only), and the note actions menu (right).
- */
+interface ToolbarGroupProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+function ToolbarGroup({ label, children }: ToolbarGroupProps): JSX.Element {
+  return (
+    <Box
+      role="group"
+      aria-label={label}
+      sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+/** Single muted toolbar with semantic command groups from left to right. */
 export function EditorToolbar({
   editor,
   viewSource,
@@ -53,7 +68,8 @@ export function EditorToolbar({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 2,
+        gap: 3,
+        rowGap: 1,
         flexWrap: 'wrap',
         px: 3,
         py: 2,
@@ -61,37 +77,62 @@ export function EditorToolbar({
         boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
       }}
     >
-      <SegmentedControl aria-label="Editor view" size="small">
-        <SegmentedControl.Button
-          selected={!viewSource}
-          onClick={onSelectEditor}
-          data-testid="view-wysiwyg"
-        >
-          Editor
-        </SegmentedControl.Button>
-        <SegmentedControl.Button
-          selected={viewSource}
-          onClick={onSelectSource}
-          data-testid="view-source"
-        >
-          Source
-        </SegmentedControl.Button>
-      </SegmentedControl>
+      <ToolbarGroup label="Editor view">
+        <SegmentedControl aria-label="Editor view" size="small">
+          <SegmentedControl.Button
+            selected={!viewSource}
+            onClick={onSelectEditor}
+            data-testid="view-wysiwyg"
+          >
+            Editor
+          </SegmentedControl.Button>
+          <SegmentedControl.Button
+            selected={viewSource}
+            onClick={onSelectSource}
+            data-testid="view-source"
+          >
+            Source
+          </SegmentedControl.Button>
+        </SegmentedControl>
+      </ToolbarGroup>
+
+      <Separator />
 
       {!viewSource && (
-        <>
+        <Box
+          role="group"
+          aria-label="Writing tools"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+            rowGap: 1,
+            flex: '1 1 auto',
+            flexWrap: 'wrap',
+            minWidth: 0,
+          }}
+        >
+          <FormatControls editor={editor} />
           <Separator />
-          <FormatControls
-            editor={editor}
-            noteLabels={noteLabels}
-            allLabels={allLabels}
-            onLabelsChange={onLabelsChange}
-            onCreateAndAssign={onCreateAndAssign}
-          />
-        </>
+          <ToolbarGroup label="Note organization">
+            <LabelPicker
+              noteLabels={noteLabels}
+              allLabels={allLabels}
+              onChange={onLabelsChange}
+              onCreateAndAssign={onCreateAndAssign}
+              iconOnly
+            />
+          </ToolbarGroup>
+        </Box>
       )}
 
-      <Box sx={{ ml: 'auto' }}>
+      <Separator />
+
+      <Box
+        role="group"
+        aria-label="Note utilities"
+        sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}
+      >
         <IconButton
           icon={SearchIcon}
           aria-label="Find and replace"
@@ -99,9 +140,6 @@ export function EditorToolbar({
           onClick={onOpenFindReplace}
           data-testid="open-find-replace"
         />
-      </Box>
-
-      <Box>
         <NoteActionsMenu
           pinned={pinned}
           onSummarize={onSummarize}

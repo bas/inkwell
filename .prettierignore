@@ -6,6 +6,9 @@ coverage
 playwright-report
 test-results
 package-lock.json
+.github/skills
+.github/hooks
+.impeccable
 
 # Golden markdown round-trip fixtures must stay byte-exact.
 src/renderer/src/editor/__fixtures__/
