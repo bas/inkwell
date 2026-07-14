@@ -13,9 +13,11 @@ vi.mock('../../editor/MarkdownEditor', () => ({
 
 vi.mock('./EditorToolbar', () => ({
   EditorToolbar: ({ onReview }: { onReview: () => void }): JSX.Element => (
-    <button type="button" data-testid="action-review" onClick={onReview}>
-      Review with Copilot
-    </button>
+    <div data-testid="editor-toolbar">
+      <button type="button" data-testid="action-review" onClick={onReview}>
+        Review with Copilot
+      </button>
+    </div>
   ),
 }));
 
@@ -199,5 +201,20 @@ describe('EditorPane AI review apply errors', () => {
     await waitFor(() =>
       expect(screen.getByTestId('review-status-s1').textContent).toBe('outdated'),
     );
+  });
+
+  it('renders save-state below the toolbar and above the editor body', async () => {
+    renderEditor();
+    const toolbar = await screen.findByTestId('editor-toolbar');
+    const saveState = await screen.findByTestId('save-state');
+    const editorBody = await screen.findByTestId('editor-body');
+
+    expect(saveState.textContent?.startsWith('Updated ')).toBe(true);
+    expect(
+      toolbar.compareDocumentPosition(saveState) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      saveState.compareDocumentPosition(editorBody) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
