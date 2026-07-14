@@ -46,8 +46,9 @@ function asIsoDate(value: unknown, fallback: string): string {
 export function normalizeFrontmatter(
   data: Record<string, unknown>,
   now: string = new Date().toISOString(),
+  fallbackId?: string,
 ): NoteFrontmatter {
-  const id = asString(data['id']) ?? randomUUID();
+  const id = asString(data['id']) ?? fallbackId ?? randomUUID();
   const createdAt = asIsoDate(data['createdAt'], now);
   return {
     id,
@@ -59,9 +60,9 @@ export function normalizeFrontmatter(
 }
 
 /** Parse and normalize a raw `.md` file into a full `Note`. */
-export function readNote(raw: string, now?: string): Note {
+export function readNote(raw: string, now?: string, fallbackId?: string): Note {
   const { data, body } = parseNoteFile(raw);
-  return { ...normalizeFrontmatter(data, now), title: deriveNoteTitle(body), body };
+  return { ...normalizeFrontmatter(data, now, fallbackId), title: deriveNoteTitle(body), body };
 }
 
 /** Serialize a note to `.md` text with frontmatter in a stable key order. */

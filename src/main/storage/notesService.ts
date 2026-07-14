@@ -29,6 +29,19 @@ export class NoteNotFoundError extends Error {
   }
 }
 
+export function allocateNoteFile(
+  vaultDir: string,
+  generateId: () => string = randomUUID,
+): { id: string; path: string } {
+  let id = generateId();
+  let path = join(vaultDir, noteFilename(id));
+  while (existsSync(path)) {
+    id = generateId();
+    path = join(vaultDir, noteFilename(id));
+  }
+  return { id, path };
+}
+
 function indexInput(note: Note, path: string): Parameters<typeof upsertNote>[1] {
   return {
     id: note.id,
@@ -124,8 +137,8 @@ export class NotesService {
 
   createNote(input: CreateNoteInput): Note {
     const now = new Date().toISOString();
-    const id = randomUUID();
     const body = input.body ?? '';
+    const { id, path } = allocateNoteFile(this.vaultDir);
     const title = deriveNoteTitle(body);
     const note: Note = {
       id,
@@ -136,7 +149,6 @@ export class NotesService {
       updatedAt: now,
       body,
     };
-    const path = join(this.vaultDir, noteFilename(id));
     this.selfWritePaths.add(path);
     writeNoteToPath(path, note);
     this.idToPath.set(id, path);

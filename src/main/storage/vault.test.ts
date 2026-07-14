@@ -75,7 +75,7 @@ describe('scanVault', () => {
   it('generates ids for notes missing frontmatter id', () => {
     writeFileSync(join(dir, 'plain.md'), 'Shopping list\n\nNo frontmatter here.');
     const stored = scanVault(dir);
-    expect(stored[0]?.note.id).toMatch(/[0-9a-f-]{36}/);
+    expect(stored[0]?.note.id).toBe('plain');
     expect(stored[0]?.note.title).toBe('Shopping list');
   });
 });

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { NotesService } from './notesService';
+import { allocateNoteFile, NotesService } from './notesService';
 
 let dir: string;
 let dbPath: string;
@@ -33,5 +33,13 @@ describe('NotesService', () => {
     } finally {
       await service.dispose();
     }
+  });
+
+  it('generates a fresh id when the chosen filename already exists', async () => {
+    writeFileSync(join(dir, 'collision-id.md'), '---\nid: collision-id\n---\nExisting');
+    const ids = ['collision-id', 'fresh-id'];
+    const { id, path } = allocateNoteFile(dir, () => ids.shift() ?? 'fresh-id');
+    expect(id).toBe('fresh-id');
+    expect(path).toBe(join(dir, 'fresh-id.md'));
   });
 });
