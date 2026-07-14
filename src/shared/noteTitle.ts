@@ -5,7 +5,7 @@
  * prefixes are stripped so a line like `# Shopping list` or `- Grocery` still
  * yields a clean title projection.
  */
-export function getTitleSourceLine(body: string): string | undefined {
+function getTitleStartIndex(body: string): number {
   const lines = body.replace(/\r\n/g, '\n').split('\n');
   let start = 0;
   while (start < lines.length && (lines[start] ?? '').trim().length === 0) start++;
@@ -17,6 +17,13 @@ export function getTitleSourceLine(body: string): string | undefined {
     while (i < lines.length && (lines[i] ?? '').trim().length === 0) i++;
     start = i;
   }
+
+  return start;
+}
+
+export function getTitleSourceLine(body: string): string | undefined {
+  const lines = body.replace(/\r\n/g, '\n').split('\n');
+  const start = getTitleStartIndex(body);
 
   return lines
     .slice(start)
@@ -27,16 +34,7 @@ export function getTitleSourceLine(body: string): string | undefined {
 /** Return the body with the first visible title line removed. */
 export function getBodyAfterTitle(body: string): string {
   const lines = body.replace(/\r\n/g, '\n').split('\n');
-  let start = 0;
-  while (start < lines.length && (lines[start] ?? '').trim().length === 0) start++;
-
-  const leadingLine = lines[start] ?? '';
-  if (/^>\s*\*\*TL;DR\*\*/.test(leadingLine)) {
-    let i = start;
-    while (i < lines.length && (lines[i] ?? '').startsWith('>')) i++;
-    while (i < lines.length && (lines[i] ?? '').trim().length === 0) i++;
-    start = i;
-  }
+  let start = getTitleStartIndex(body);
 
   if (start < lines.length) {
     start += 1;
