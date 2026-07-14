@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Box, Spinner, IconButton, SegmentedControl } from '@primer/react';
+import { Box, Spinner, SegmentedControl } from '@primer/react';
 import { Blankslate } from '@primer/react/experimental';
-import { PlusIcon, GearIcon, SearchIcon, NoteIcon } from '@primer/octicons-react';
+import { SearchIcon, NoteIcon } from '@primer/octicons-react';
 import type { NoteSummary } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { SearchBar } from './SearchBar';
 import { NoteList } from './NoteList';
-import { LabelManagerDialog } from '../labels/LabelManagerDialog';
 import type { GroupBy } from '../../utils/groupNotes';
 
 const GROUP_BY_KEY = 'inkwell-group-by';
@@ -29,7 +28,6 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onCreateNote: () => void;
   onTogglePin: (summary: NoteSummary) => void;
-  onLabelsChanged: () => void;
 }
 
 export function Sidebar({
@@ -42,9 +40,7 @@ export function Sidebar({
   onSelect,
   onCreateNote,
   onTogglePin,
-  onLabelsChanged,
 }: SidebarProps): JSX.Element {
-  const [managingLabels, setManagingLabels] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupBy>(loadGroupBy);
   const searching = query.trim().length > 0;
 
@@ -79,46 +75,23 @@ export function Sidebar({
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <SearchBar value={query} onChange={onQueryChange} />
           </Box>
-          <IconButton
-            icon={PlusIcon}
-            aria-label="New note"
-            variant="primary"
-            size="small"
-            onClick={onCreateNote}
-            data-testid="new-note-button"
-          />
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <SegmentedControl
-            aria-label="Group notes by"
-            size="small"
-            fullWidth
-            sx={{ flex: 1, minWidth: 0 }}
+        <SegmentedControl aria-label="Group notes by" size="small" fullWidth>
+          <SegmentedControl.Button
+            selected={groupBy === 'date'}
+            onClick={() => setGroupBy('date')}
+            data-testid="group-by-date"
           >
-            <SegmentedControl.Button
-              selected={groupBy === 'date'}
-              onClick={() => setGroupBy('date')}
-              data-testid="group-by-date"
-            >
-              Date
-            </SegmentedControl.Button>
-            <SegmentedControl.Button
-              selected={groupBy === 'label'}
-              onClick={() => setGroupBy('label')}
-              data-testid="group-by-label"
-            >
-              Labels
-            </SegmentedControl.Button>
-          </SegmentedControl>
-          <IconButton
-            icon={GearIcon}
-            aria-label="Manage labels"
-            variant="invisible"
-            size="small"
-            data-testid="manage-labels"
-            onClick={() => queueMicrotask(() => setManagingLabels(true))}
-          />
-        </Box>
+            Date
+          </SegmentedControl.Button>
+          <SegmentedControl.Button
+            selected={groupBy === 'label'}
+            onClick={() => setGroupBy('label')}
+            data-testid="group-by-label"
+          >
+            Labels
+          </SegmentedControl.Button>
+        </SegmentedControl>
       </Box>
 
       <Box
@@ -158,14 +131,6 @@ export function Sidebar({
           />
         )}
       </Box>
-
-      {managingLabels && (
-        <LabelManagerDialog
-          labels={labels}
-          onClose={() => setManagingLabels(false)}
-          onChanged={onLabelsChanged}
-        />
-      )}
     </Box>
   );
 }

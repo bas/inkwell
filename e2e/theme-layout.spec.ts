@@ -29,28 +29,32 @@ test.describe('Theme', () => {
   test('toggles the notes list sidebar from the header', async () => {
     const { page } = ctx;
 
+    // The new-note button lives in the always-visible app header, so it stays
+    // put; toggling only shows/hides the notes list pane itself.
+    await expect(page.getByTestId('new-note-button')).toBeVisible();
+    await expect(page.getByTestId('note-list-scroll')).toBeVisible();
+
+    await page.getByTestId('toggle-sidebar').click();
+    await expect(page.getByTestId('note-list-scroll')).toHaveCount(0);
     await expect(page.getByTestId('new-note-button')).toBeVisible();
 
     await page.getByTestId('toggle-sidebar').click();
-    await expect(page.getByTestId('new-note-button')).toHaveCount(0);
-
-    await page.getByTestId('toggle-sidebar').click();
-    await expect(page.getByTestId('new-note-button')).toBeVisible();
+    await expect(page.getByTestId('note-list-scroll')).toBeVisible();
   });
 
   test('remembers the hidden sidebar after a relaunch', async () => {
     const { page } = ctx;
 
     await page.getByTestId('toggle-sidebar').click();
-    await expect(page.getByTestId('new-note-button')).toHaveCount(0);
+    await expect(page.getByTestId('note-list-scroll')).toHaveCount(0);
 
     const { vaultDir, userDataDir } = ctx;
     await ctx.close({ keepDirs: true });
     ctx = await launchApp({ reuse: { vaultDir, userDataDir } });
 
-    await expect(ctx.page.getByTestId('new-note-button')).toHaveCount(0);
+    await expect(ctx.page.getByTestId('note-list-scroll')).toHaveCount(0);
     await ctx.page.getByTestId('toggle-sidebar').click();
-    await expect(ctx.page.getByTestId('new-note-button')).toBeVisible();
+    await expect(ctx.page.getByTestId('note-list-scroll')).toBeVisible();
   });
 
   test('switches between light and dark color modes', async () => {

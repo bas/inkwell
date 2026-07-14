@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, IconButton } from '@primer/react';
-import { SidebarCollapseIcon, SidebarExpandIcon } from '@primer/octicons-react';
+import { SidebarCollapseIcon, SidebarExpandIcon, TagIcon, PlusIcon } from '@primer/octicons-react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
 import { useNotes } from './state/useNotes';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Sidebar } from './components/sidebar/Sidebar';
+import { LabelManagerDialog } from './components/labels/LabelManagerDialog';
 import { EditorPane } from './components/editor/EditorPane';
 
 const SIDEBAR_VISIBLE_KEY = 'inkwell-sidebar-visible';
@@ -20,6 +21,7 @@ export function App(): JSX.Element {
       return true;
     }
   });
+  const [managingLabels, setManagingLabels] = useState(false);
 
   const toggleSidebar = (): void => {
     setSidebarVisible((prev) => {
@@ -77,7 +79,12 @@ export function App(): JSX.Element {
             }}
           >
             <Box
-              sx={{ transform: 'translateY(calc(0px - var(--base-size-2)))' }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                transform: 'translateY(calc(0px - var(--base-size-2)))',
+              }}
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
               <IconButton
@@ -87,6 +94,20 @@ export function App(): JSX.Element {
                 variant="invisible"
                 onClick={toggleSidebar}
                 data-testid="toggle-sidebar"
+              />
+              <IconButton
+                icon={TagIcon}
+                aria-label="Manage labels"
+                variant="invisible"
+                data-testid="manage-labels"
+                onClick={() => queueMicrotask(() => setManagingLabels(true))}
+              />
+              <IconButton
+                icon={PlusIcon}
+                aria-label="New note"
+                variant="invisible"
+                onClick={() => void notes.createNote()}
+                data-testid="new-note-button"
               />
             </Box>
             <Box sx={{ ml: 'auto' }} style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
@@ -147,10 +168,6 @@ export function App(): JSX.Element {
                   onSelect={notes.select}
                   onCreateNote={() => void notes.createNote()}
                   onTogglePin={(summary) => void notes.togglePin(summary)}
-                  onLabelsChanged={() => {
-                    void notes.refreshLabels();
-                    void notes.refresh();
-                  }}
                 />
               </SplitPageLayout.Pane>
             )}
@@ -176,6 +193,17 @@ export function App(): JSX.Element {
             </SplitPageLayout.Content>
           </SplitPageLayout>
         </Box>
+
+        {managingLabels && (
+          <LabelManagerDialog
+            labels={notes.labels}
+            onClose={() => setManagingLabels(false)}
+            onChanged={() => {
+              void notes.refreshLabels();
+              void notes.refresh();
+            }}
+          />
+        )}
       </BaseStyles>
     </ThemeProvider>
   );
