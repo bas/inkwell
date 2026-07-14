@@ -92,6 +92,7 @@ export function App(): JSX.Element {
                 aria-label={sidebarVisible ? 'Hide notes list' : 'Show notes list'}
                 aria-pressed={sidebarVisible}
                 variant="invisible"
+                size="small"
                 onClick={toggleSidebar}
                 data-testid="toggle-sidebar"
               />
@@ -99,6 +100,7 @@ export function App(): JSX.Element {
                 icon={TagIcon}
                 aria-label="Manage labels"
                 variant="invisible"
+                size="small"
                 data-testid="manage-labels"
                 onClick={() => queueMicrotask(() => setManagingLabels(true))}
               />
@@ -106,6 +108,7 @@ export function App(): JSX.Element {
                 icon={PlusIcon}
                 aria-label="New note"
                 variant="invisible"
+                size="small"
                 onClick={() => void notes.createNote()}
                 data-testid="new-note-button"
               />
