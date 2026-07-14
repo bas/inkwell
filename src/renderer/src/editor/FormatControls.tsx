@@ -126,7 +126,7 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
     <Box
       role="group"
       aria-label="Formatting"
-      sx={{ display: 'flex', alignItems: 'center', gap: 3, rowGap: 1, flexWrap: 'wrap' }}
+      sx={{ display: 'flex', alignItems: 'center', gap: 1, rowGap: 1, flexWrap: 'wrap' }}
     >
       <ControlGroup label="Text style">
         <ActionMenu>
