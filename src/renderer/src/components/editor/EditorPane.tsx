@@ -777,14 +777,13 @@ export function EditorPane({
               '& input': { fontSize: 4, fontWeight: 'bold', px: 0 },
             }}
           />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
-            <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="save-state">
-              {copied ? 'Copied to clipboard' : saveLabel}
-            </Text>
-            {note.labels.map((name) => (
-              <LabelChip key={name} name={name} color={colorOf(name)} />
-            ))}
-          </Box>
+          {note.labels.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
+              {note.labels.map((name) => (
+                <LabelChip key={name} name={name} color={colorOf(name)} />
+              ))}
+            </Box>
+          )}
         </Box>
       </Box>
 
@@ -846,6 +845,23 @@ export function EditorPane({
               onLabelsChange={(next) => void applyLabels(next)}
               onCreateAndAssign={(name) => void createAndAssign(name)}
             />
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                px: 3,
+                py: 2,
+                bg: 'canvas.default',
+                boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
+              }}
+              data-testid="editor-status-row"
+            >
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="save-state">
+                {copied ? 'Copied to clipboard' : saveLabel}
+              </Text>
+            </Box>
 
             {findOpen && (
               <Box
