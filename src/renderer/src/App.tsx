@@ -82,8 +82,8 @@ export function App(): JSX.Element {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1,
-                transform: 'translateY(calc(0px - var(--base-size-2)))',
+                gap: 0,
+                transform: 'translateY(var(--base-size-2))',
               }}
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
