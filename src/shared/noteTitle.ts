@@ -50,7 +50,7 @@ export function getBodyAfterTitle(body: string): string {
 export function deriveNoteTitle(body: string): string {
   const line = getTitleSourceLine(body);
 
-  if (!line) return 'Untitled';
+  if (!line) return 'Start writing';
 
   const plain = line
     .replace(/^#{1,6}\s*/, '')
@@ -64,5 +64,5 @@ export function deriveNoteTitle(body: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 
-  return plain || 'Untitled';
+  return plain || 'Start writing';
 }

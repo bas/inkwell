@@ -49,7 +49,7 @@ function NoteRow({
               whiteSpace: 'nowrap',
             }}
           >
-            {summary.title || 'Untitled'}
+            {summary.title || 'Start writing'}
           </Text>
           <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
             {relativeTime(summary.updatedAt)}
