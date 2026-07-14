@@ -1,25 +1,34 @@
-import { useState } from 'react';
-import { Box, Button, Spinner, IconButton } from '@primer/react';
+import { useEffect, useState } from 'react';
+import { Box, Spinner, IconButton, SegmentedControl } from '@primer/react';
 import { Blankslate } from '@primer/react/experimental';
 import { PlusIcon, GearIcon, SearchIcon, NoteIcon } from '@primer/octicons-react';
 import type { NoteSummary } from '@shared/note';
 import type { Label } from '@shared/note-labels';
 import { SearchBar } from './SearchBar';
-import { LabelFilter } from './LabelFilter';
 import { NoteList } from './NoteList';
 import { LabelManagerDialog } from '../labels/LabelManagerDialog';
+import type { GroupBy } from '../../utils/groupNotes';
+
+const GROUP_BY_KEY = 'inkwell-group-by';
+
+function loadGroupBy(): GroupBy {
+  try {
+    return localStorage.getItem(GROUP_BY_KEY) === 'label' ? 'label' : 'date';
+  } catch {
+    return 'date';
+  }
+}
 
 interface SidebarProps {
   summaries: NoteSummary[];
   labels: Label[];
   selectedId: string | undefined;
   query: string;
-  labelFilter: string | undefined;
   loading: boolean;
   onQueryChange: (value: string) => void;
-  onLabelFilterChange: (value: string | undefined) => void;
   onSelect: (id: string) => void;
   onCreateNote: () => void;
+  onTogglePin: (summary: NoteSummary) => void;
   onLabelsChanged: () => void;
 }
 
@@ -28,15 +37,25 @@ export function Sidebar({
   labels,
   selectedId,
   query,
-  labelFilter,
   loading,
   onQueryChange,
-  onLabelFilterChange,
   onSelect,
   onCreateNote,
+  onTogglePin,
   onLabelsChanged,
 }: SidebarProps): JSX.Element {
   const [managingLabels, setManagingLabels] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupBy>(loadGroupBy);
+  const searching = query.trim().length > 0;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(GROUP_BY_KEY, groupBy);
+    } catch {
+      // Persistence is best-effort; grouping still works for this session.
+    }
+  }, [groupBy]);
+
   return (
     <Box
       sx={{
@@ -53,27 +72,49 @@ export function Sidebar({
           flexDirection: 'column',
           gap: 2,
           p: 3,
-          bg: 'canvas.subtle',
-          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
+          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-muted)',
         }}
       >
-        <Button
-          leadingVisual={PlusIcon}
-          variant="primary"
-          onClick={onCreateNote}
-          data-testid="new-note-button"
-          sx={{ width: '100%' }}
-        >
-          New note
-        </Button>
-        <SearchBar value={query} onChange={onQueryChange} />
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <LabelFilter labels={labels} selected={labelFilter} onSelect={onLabelFilterChange} />
+            <SearchBar value={query} onChange={onQueryChange} />
           </Box>
+          <IconButton
+            icon={PlusIcon}
+            aria-label="New note"
+            variant="primary"
+            size="small"
+            onClick={onCreateNote}
+            data-testid="new-note-button"
+          />
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <SegmentedControl
+            aria-label="Group notes by"
+            size="small"
+            fullWidth
+            sx={{ flex: 1, minWidth: 0 }}
+          >
+            <SegmentedControl.Button
+              selected={groupBy === 'date'}
+              onClick={() => setGroupBy('date')}
+              data-testid="group-by-date"
+            >
+              Date
+            </SegmentedControl.Button>
+            <SegmentedControl.Button
+              selected={groupBy === 'label'}
+              onClick={() => setGroupBy('label')}
+              data-testid="group-by-label"
+            >
+              Labels
+            </SegmentedControl.Button>
+          </SegmentedControl>
           <IconButton
             icon={GearIcon}
             aria-label="Manage labels"
+            variant="invisible"
+            size="small"
             data-testid="manage-labels"
             onClick={() => queueMicrotask(() => setManagingLabels(true))}
           />
@@ -91,17 +132,15 @@ export function Sidebar({
         ) : summaries.length === 0 ? (
           <Blankslate spacious={false} narrow>
             <Blankslate.Visual>
-              {query || labelFilter ? <SearchIcon size="medium" /> : <NoteIcon size="medium" />}
+              {searching ? <SearchIcon size="medium" /> : <NoteIcon size="medium" />}
             </Blankslate.Visual>
             <Blankslate.Heading as="h3">
-              {query || labelFilter ? 'No matching notes' : 'No notes yet'}
+              {searching ? 'No matching notes' : 'No notes yet'}
             </Blankslate.Heading>
             <Blankslate.Description>
-              {query || labelFilter
-                ? 'Try a different search or label filter.'
-                : 'Create your first note to start writing.'}
+              {searching ? 'Try a different search.' : 'Create your first note to start writing.'}
             </Blankslate.Description>
-            {!query && !labelFilter && (
+            {!searching && (
               <Blankslate.PrimaryAction onClick={onCreateNote} data-testid="empty-new-note">
                 New note
               </Blankslate.PrimaryAction>
@@ -112,7 +151,10 @@ export function Sidebar({
             summaries={summaries}
             labels={labels}
             selectedId={selectedId}
+            groupBy={groupBy}
+            searching={searching}
             onSelect={onSelect}
+            onTogglePin={onTogglePin}
           />
         )}
       </Box>

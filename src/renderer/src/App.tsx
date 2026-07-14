@@ -142,12 +142,11 @@ export function App(): JSX.Element {
                   labels={notes.labels}
                   selectedId={notes.selectedId}
                   query={notes.query}
-                  labelFilter={notes.labelFilter}
                   loading={notes.loading}
                   onQueryChange={notes.setQuery}
-                  onLabelFilterChange={notes.setLabelFilter}
                   onSelect={notes.select}
                   onCreateNote={() => void notes.createNote()}
+                  onTogglePin={(summary) => void notes.togglePin(summary)}
                   onLabelsChanged={() => {
                     void notes.refreshLabels();
                     void notes.refresh();
