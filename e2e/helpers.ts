@@ -102,18 +102,29 @@ export function readSingleNote(vaultDir: string): string {
 /** Create a fresh note and wait for the editor to be ready. */
 export async function createNote(page: Page): Promise<void> {
   await page.getByTestId('new-note-button').click();
-  await expect(page.getByTestId('editor-title')).toHaveValue('Untitled');
+  await expect(page.getByTestId('editor-content')).toBeVisible();
 }
 
-/** Replace the note title. */
+/**
+ * Set the note title. Notes are body-first: the title is the first line of the
+ * editor content (rendered as an H1), so this types into that leading line. Call
+ * it on a fresh note before typing the body.
+ */
 export async function setTitle(page: Page, text: string): Promise<void> {
-  await page.getByTestId('editor-title').fill(text);
+  const content = page.getByTestId('editor-content');
+  await content.click();
+  await page.keyboard.type(text);
 }
 
-/** Click into the WYSIWYG editor and type body text. */
+/**
+ * Click into the WYSIWYG editor and type body text on a new line below the
+ * title, so the body stays a distinct block from the leading title line.
+ */
 export async function typeBody(page: Page, text: string): Promise<void> {
   const body = page.getByTestId('editor-content');
   await body.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
   await page.keyboard.type(text);
 }
 
