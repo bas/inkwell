@@ -113,6 +113,10 @@ export async function createNote(page: Page): Promise<void> {
 export async function setTitle(page: Page, text: string): Promise<void> {
   const content = page.getByTestId('editor-content');
   await content.click();
+  // Move to the start of the first line (the title) and select its existing
+  // content so typing replaces the title instead of appending at the caret.
+  await page.keyboard.press('ControlOrMeta+ArrowUp');
+  await page.keyboard.press('Shift+End');
   await page.keyboard.type(text);
 }
 
