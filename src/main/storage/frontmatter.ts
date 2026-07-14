@@ -39,6 +39,11 @@ function asIsoDate(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function normalizeFallbackId(fallbackId: string | undefined): string | undefined {
+  const trimmed = fallbackId?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
 /**
  * Coerce parsed frontmatter into a complete, valid `NoteFrontmatter`,
  * filling in missing/invalid fields (id, timestamps, labels, pinned).
@@ -48,7 +53,7 @@ export function normalizeFrontmatter(
   now: string = new Date().toISOString(),
   fallbackId?: string,
 ): NoteFrontmatter {
-  const id = asString(data['id']) ?? fallbackId ?? randomUUID();
+  const id = asString(data['id']) ?? normalizeFallbackId(fallbackId) ?? randomUUID();
   const createdAt = asIsoDate(data['createdAt'], now);
   return {
     id,

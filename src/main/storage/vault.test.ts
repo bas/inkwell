@@ -72,7 +72,7 @@ describe('scanVault', () => {
     expect(scanVault(join(dir, 'does-not-exist'))).toEqual([]);
   });
 
-  it('generates ids for notes missing frontmatter id', () => {
+  it('falls back to the filename stem when frontmatter id is missing', () => {
     writeFileSync(join(dir, 'plain.md'), 'Shopping list\n\nNo frontmatter here.');
     const stored = scanVault(dir);
     expect(stored[0]?.note.id).toBe('plain');

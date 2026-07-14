@@ -48,6 +48,11 @@ describe('normalizeFrontmatter', () => {
     const fm = normalizeFrontmatter({ labels: ['a', 2, null, 'b'] });
     expect(fm.labels).toEqual(['a', 'b']);
   });
+
+  it('ignores blank fallback ids', () => {
+    const fm = normalizeFrontmatter({}, '2026-05-05T00:00:00.000Z', '   ');
+    expect(fm.id).toMatch(/[0-9a-f-]{36}/);
+  });
 });
 
 describe('readNote / serializeNote round-trip', () => {

@@ -7,7 +7,7 @@
 
 /** Frontmatter stored at the top of every note `.md` file. */
 export interface NoteFrontmatter {
-  /** Stable unique id (uuid). The source of truth for identity, not the filename. */
+  /** Stable unique id string. The source of truth for identity, not the filename. */
   id: string;
   labels: string[];
   pinned: boolean;
