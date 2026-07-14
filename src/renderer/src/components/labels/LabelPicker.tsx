@@ -9,6 +9,7 @@ interface LabelPickerProps {
   allLabels: Label[];
   onChange: (labels: string[]) => void;
   onCreateAndAssign: (name: string) => void;
+  iconOnly?: boolean;
 }
 
 /** Assign or remove labels on the current note, with inline label creation. */
@@ -17,6 +18,7 @@ export function LabelPicker({
   allLabels,
   onChange,
   onCreateAndAssign,
+  iconOnly = false,
 }: LabelPickerProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('');
@@ -38,16 +40,26 @@ export function LabelPicker({
   return (
     <SelectPanel
       title="Apply labels"
-      renderAnchor={({ children, ...anchorProps }) => (
-        <Button
-          leadingVisual={TagIcon}
-          trailingAction={TriangleDownIcon}
-          data-testid="label-picker"
-          {...anchorProps}
-        >
-          {children ?? 'Labels'}
-        </Button>
-      )}
+      renderAnchor={({ children, ...anchorProps }) =>
+        iconOnly ? (
+          <Button
+            leadingVisual={TagIcon}
+            aria-label="Labels"
+            variant="invisible"
+            data-testid="label-picker"
+            {...anchorProps}
+          />
+        ) : (
+          <Button
+            leadingVisual={TagIcon}
+            trailingAction={TriangleDownIcon}
+            data-testid="label-picker"
+            {...anchorProps}
+          >
+            {children ?? 'Labels'}
+          </Button>
+        )
+      }
       open={open}
       onOpenChange={(next) => setOpen(next)}
       items={items}

@@ -16,11 +16,17 @@ import {
   ChevronLeftIcon,
 } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
+import type { Label } from '@shared/note-labels';
 import { Separator } from '../components/common/Separator';
+import { LabelPicker } from '../components/labels/LabelPicker';
 import { canIndentList, canOutdentList, indentList, outdentList } from './extensions/listIndent';
 
 interface FormatControlsProps {
   editor: Editor | null;
+  noteLabels: string[];
+  allLabels: Label[];
+  onLabelsChange: (labels: string[]) => void;
+  onCreateAndAssign: (name: string) => void;
 }
 
 function ToolbarButton({
@@ -56,7 +62,13 @@ function ToolbarButton({
 
 /** Formatting controls for the Markdown editor. Renders inline (no own bar);
  * the host toolbar provides the surrounding container. */
-export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
+export function FormatControls({
+  editor,
+  noteLabels,
+  allLabels,
+  onLabelsChange,
+  onCreateAndAssign,
+}: FormatControlsProps): JSX.Element {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
@@ -248,6 +260,13 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
         onClick={() =>
           editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
         }
+      />
+      <LabelPicker
+        noteLabels={noteLabels}
+        allLabels={allLabels}
+        onChange={onLabelsChange}
+        onCreateAndAssign={onCreateAndAssign}
+        iconOnly
       />
 
       {linkOpen && (

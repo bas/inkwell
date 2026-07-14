@@ -1,6 +1,7 @@
 import { Box, SegmentedControl, IconButton } from '@primer/react';
 import { SearchIcon } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
+import type { Label } from '@shared/note-labels';
 import { FormatControls } from '../../editor/FormatControls';
 import { Separator } from '../common/Separator';
 import { NoteActionsMenu } from './NoteActionsMenu';
@@ -17,6 +18,10 @@ interface EditorToolbarProps {
   onCopyMarkdown: () => void;
   onDelete: () => void;
   onOpenFindReplace: () => void;
+  noteLabels: string[];
+  allLabels: Label[];
+  onLabelsChange: (labels: string[]) => void;
+  onCreateAndAssign: (name: string) => void;
 }
 
 /**
@@ -35,6 +40,10 @@ export function EditorToolbar({
   onCopyMarkdown,
   onDelete,
   onOpenFindReplace,
+  noteLabels,
+  allLabels,
+  onLabelsChange,
+  onCreateAndAssign,
 }: EditorToolbarProps): JSX.Element {
   return (
     <Box
@@ -72,7 +81,13 @@ export function EditorToolbar({
       {!viewSource && (
         <>
           <Separator />
-          <FormatControls editor={editor} />
+          <FormatControls
+            editor={editor}
+            noteLabels={noteLabels}
+            allLabels={allLabels}
+            onLabelsChange={onLabelsChange}
+            onCreateAndAssign={onCreateAndAssign}
+          />
         </>
       )}
 
