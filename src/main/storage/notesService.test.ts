@@ -1,8 +1,24 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { allocateNoteFile, NotesService } from './notesService';
+
+vi.mock('./db', () => {
+  const db = { close: vi.fn() };
+  return {
+    openDatabase: vi.fn(() => db),
+    rebuildIndex: vi.fn(),
+    upsertNote: vi.fn(),
+    deleteNote: vi.fn(),
+    listSummaries: vi.fn(() => []),
+    searchSummaries: vi.fn(() => []),
+    listLabels: vi.fn(() => []),
+    createLabel: vi.fn(),
+    setLabelColor: vi.fn(),
+    deleteLabel: vi.fn(),
+  };
+});
 
 let dir: string;
 let dbPath: string;
