@@ -68,11 +68,11 @@ export function EditorToolbar({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 3,
+        gap: 1,
         rowGap: 1,
         flexWrap: 'wrap',
-        px: 3,
-        py: 2,
+        px: 2,
+        py: 1,
         bg: 'canvas.subtle',
         boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
       }}
@@ -105,7 +105,7 @@ export function EditorToolbar({
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 3,
+            gap: 1,
             rowGap: 1,
             flex: '1 1 auto',
             flexWrap: 'wrap',
