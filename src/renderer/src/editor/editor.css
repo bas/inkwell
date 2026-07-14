@@ -49,7 +49,7 @@
 }
 
 /* Placeholder text for an empty document. */
-.ink-editor .ProseMirror p.is-editor-empty:first-child::before {
+.ink-editor .ProseMirror :is(p, h1, h2, h3).is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--fgColor-muted);
   float: left;
