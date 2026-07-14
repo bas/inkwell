@@ -18,10 +18,36 @@ const isSafeElement = (line) => /<(?:blockquote|nav[\s>]|pre[\s>]|code[\s>]|a\s|
 
 /** Strip HTML to plain text — drops script/style/comments/tags so
  *  content-text analyzers don't false-positive on code or CSS. */
+function stripElementContent(html, tagName) {
+  let stripped = '';
+  let index = 0;
+  const openPattern = new RegExp(`<${tagName}\\b`, 'i');
+  const closePattern = new RegExp(`</${tagName}\\b`, 'i');
+
+  while (index < html.length) {
+    const openMatch = openPattern.exec(html.slice(index));
+    if (!openMatch) {
+      stripped += html.slice(index);
+      break;
+    }
+
+    const openStart = index + openMatch.index;
+    stripped += html.slice(index, openStart);
+    const closeMatch = closePattern.exec(html.slice(openStart + 1));
+    if (!closeMatch) break;
+
+    const closeStart = openStart + 1 + closeMatch.index;
+    const closeEnd = html.indexOf('>', closeStart);
+    if (closeEnd === -1) break;
+    stripped += ' ';
+    index = closeEnd + 1;
+  }
+
+  return stripped;
+}
+
 function stripHtmlToText(html) {
-  return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ' ')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, ' ')
+  return stripElementContent(stripElementContent(html, 'script'), 'style')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ');
