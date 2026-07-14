@@ -12,4 +12,10 @@ describe('MarkdownEditor', () => {
     expect(content.className).toContain('markdown-body');
     expect(content.className).toContain('ink-markdown-aligned');
   });
+
+  it('defaults an empty note to an h1 first line', async () => {
+    render(<MarkdownEditor initialMarkdown="" onChange={vi.fn()} />);
+    const content = await screen.findByTestId('editor-content');
+    expect(content.firstElementChild?.tagName).toBe('H1');
+  });
 });

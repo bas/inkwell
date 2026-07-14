@@ -825,7 +825,6 @@ export function EditorPane({
                 px: 3,
                 py: 2,
                 bg: 'canvas.default',
-                boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
               }}
               data-testid="editor-status-row"
             >

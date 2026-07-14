@@ -46,6 +46,12 @@ export function MarkdownEditor({
     return () => onEditorReady?.(null);
   }, [editor, onEditorReady]);
 
+  useEffect(() => {
+    if (!editor) return;
+    if (initialMarkdown.trim() !== '') return;
+    editor.commands.setHeading({ level: 1 });
+  }, [editor, initialMarkdown]);
+
   // Make sure the editor releases ProseMirror resources on unmount.
   useEffect(() => () => editor?.destroy(), [editor]);
 
