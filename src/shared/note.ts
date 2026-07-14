@@ -9,7 +9,6 @@
 export interface NoteFrontmatter {
   /** Stable unique id (uuid). The source of truth for identity, not the filename. */
   id: string;
-  title: string;
   labels: string[];
   pinned: boolean;
   /** ISO-8601 timestamps. */
@@ -17,8 +16,9 @@ export interface NoteFrontmatter {
   updatedAt: string;
 }
 
-/** A full note: frontmatter plus the markdown body. */
+/** A full note: frontmatter plus the derived title and markdown body. */
 export interface Note extends NoteFrontmatter {
+  title: string;
   body: string;
 }
 
@@ -35,7 +35,6 @@ export interface NoteSummary {
 
 /** Fields a caller may set when creating a note. */
 export interface CreateNoteInput {
-  title?: string;
   body?: string;
   labels?: string[];
 }
@@ -43,7 +42,6 @@ export interface CreateNoteInput {
 /** Fields a caller may change when updating a note. */
 export interface UpdateNoteInput {
   id: string;
-  title?: string;
   body?: string;
   labels?: string[];
   pinned?: boolean;

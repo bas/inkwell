@@ -1,6 +1,7 @@
 import matter from 'gray-matter';
 import { randomUUID } from 'node:crypto';
 import type { Note, NoteFrontmatter } from '../../shared/note';
+import { deriveNoteTitle } from '../../shared/noteTitle';
 
 /** Result of parsing a note file: the (untyped) frontmatter and the markdown body. */
 export interface ParsedNoteFile {
@@ -50,7 +51,6 @@ export function normalizeFrontmatter(
   const createdAt = asIsoDate(data['createdAt'], now);
   return {
     id,
-    title: asString(data['title'])?.trim() || 'Untitled',
     labels: asStringArray(data['labels']),
     pinned: data['pinned'] === true,
     createdAt,
@@ -61,14 +61,13 @@ export function normalizeFrontmatter(
 /** Parse and normalize a raw `.md` file into a full `Note`. */
 export function readNote(raw: string, now?: string): Note {
   const { data, body } = parseNoteFile(raw);
-  return { ...normalizeFrontmatter(data, now), body };
+  return { ...normalizeFrontmatter(data, now), title: deriveNoteTitle(body), body };
 }
 
 /** Serialize a note to `.md` text with frontmatter in a stable key order. */
 export function serializeNote(note: Note): string {
   const frontmatter: NoteFrontmatter = {
     id: note.id,
-    title: note.title,
     labels: note.labels,
     pinned: note.pinned,
     createdAt: note.createdAt,

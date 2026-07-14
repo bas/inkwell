@@ -47,19 +47,19 @@ describe('atomicWriteFile', () => {
 
 describe('write/read note round-trip', () => {
   it('writes a note and reads it back', () => {
-    const note = makeNote({ title: 'Round Trip', labels: ['x'] });
-    const path = join(dir, 'note.md');
+    const note = makeNote({ body: 'Round Trip\n\nHello world', labels: ['x'] });
+    const path = join(dir, `${note.id}.md`);
     writeNoteToPath(path, note);
     const read = readNoteFile(path);
     expect(read.title).toBe('Round Trip');
     expect(read.labels).toEqual(['x']);
-    expect(read.body.trimEnd()).toBe('Hello world');
+    expect(read.body.trimEnd()).toBe('Round Trip\n\nHello world');
   });
 });
 
 describe('scanVault', () => {
   it('returns readable notes and skips corrupt files', () => {
-    writeNoteToPath(join(dir, 'good.md'), makeNote({ id: 'good', title: 'Good' }));
+    writeNoteToPath(join(dir, 'good.md'), makeNote({ id: 'good', body: 'Good\n\nBody' }));
     writeFileSync(join(dir, 'bad.md'), '\u0000not a note');
     writeFileSync(join(dir, 'ignore.txt'), 'nope');
     const stored = scanVault(dir);
@@ -73,9 +73,10 @@ describe('scanVault', () => {
   });
 
   it('generates ids for notes missing frontmatter id', () => {
-    writeFileSync(join(dir, 'plain.md'), '# Just markdown\n\nNo frontmatter here.');
+    writeFileSync(join(dir, 'plain.md'), 'Shopping list\n\nNo frontmatter here.');
     const stored = scanVault(dir);
     expect(stored[0]?.note.id).toMatch(/[0-9a-f-]{36}/);
+    expect(stored[0]?.note.title).toBe('Shopping list');
   });
 });
 
