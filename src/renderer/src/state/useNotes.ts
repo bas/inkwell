@@ -7,14 +7,12 @@ export interface NotesState {
   labels: Label[];
   selectedId: string | undefined;
   query: string;
-  labelFilter: string | undefined;
   loading: boolean;
   error: string | undefined;
 }
 
 export interface NotesActions {
   setQuery: (query: string) => void;
-  setLabelFilter: (label: string | undefined) => void;
   select: (id: string | undefined) => void;
   createNote: () => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
@@ -33,23 +31,18 @@ export function useNotes(): NotesState & NotesActions {
   const [labels, setLabels] = useState<Label[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [query, setQueryState] = useState('');
-  const [labelFilter, setLabelFilterState] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
 
-  // Always read the latest query/filter inside async callbacks.
+  // Always read the latest query inside async callbacks.
   const queryRef = useRef(query);
-  const filterRef = useRef(labelFilter);
   queryRef.current = query;
-  filterRef.current = labelFilter;
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const q = queryRef.current.trim();
-      const list = q
-        ? await window.api.searchNotes(q)
-        : await window.api.listNotes(filterRef.current);
+      const list = q ? await window.api.searchNotes(q) : await window.api.listNotes();
       setSummaries(list);
       setError(undefined);
     } catch (err) {
@@ -78,14 +71,13 @@ export function useNotes(): NotesState & NotesActions {
     return unsubscribe;
   }, [refresh, refreshLabels]);
 
-  // Re-query when search text or label filter changes (debounced for search).
+  // Re-query when the search text changes (debounced for search).
   useEffect(() => {
     const handle = setTimeout(() => void refresh(), query ? 200 : 0);
     return () => clearTimeout(handle);
-  }, [query, labelFilter, refresh]);
+  }, [query, refresh]);
 
   const setQuery = useCallback((value: string) => setQueryState(value), []);
-  const setLabelFilter = useCallback((value: string | undefined) => setLabelFilterState(value), []);
   const select = useCallback((id: string | undefined) => setSelectedId(id), []);
 
   const createNote = useCallback(async () => {
@@ -131,11 +123,9 @@ export function useNotes(): NotesState & NotesActions {
     labels,
     selectedId,
     query,
-    labelFilter,
     loading,
     error,
     setQuery,
-    setLabelFilter,
     select,
     createNote,
     deleteNote,
