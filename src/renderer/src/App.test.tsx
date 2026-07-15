@@ -72,15 +72,14 @@ describe('App narrow sidebar behavior', () => {
       }),
       configurable: true,
     });
-    class MockResizeObserver {
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
+    if (!('ResizeObserver' in globalThis)) {
+      class ResizeObserverStub {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      }
+      (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub;
     }
-    Object.defineProperty(window, 'ResizeObserver', {
-      value: MockResizeObserver,
-      configurable: true,
-    });
   });
 
   beforeEach(() => {
