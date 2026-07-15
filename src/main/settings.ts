@@ -23,14 +23,30 @@ function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json');
 }
 
+let cachedSettings: AppSettings | undefined;
+
+function cloneSettings(settings: AppSettings): AppSettings {
+  return {
+    ...settings,
+    features: { ...settings.features },
+    windowBounds: settings.windowBounds ? { ...settings.windowBounds } : undefined,
+  };
+}
+
 export function readSettings(): AppSettings {
+  if (cachedSettings) {
+    return cloneSettings(cachedSettings);
+  }
+
   try {
     const raw = readFileSync(settingsPath(), 'utf8');
-    return normalizeSettings(JSON.parse(raw) as unknown);
+    cachedSettings = normalizeSettings(JSON.parse(raw) as unknown);
   } catch {
     // Missing or unreadable settings fall back to defaults.
-    return normalizeSettings(DEFAULT_SETTINGS);
+    cachedSettings = normalizeSettings(DEFAULT_SETTINGS);
   }
+
+  return cloneSettings(cachedSettings);
 }
 
 function writeSettings(settings: AppSettings): void {
@@ -46,6 +62,7 @@ function writeSettings(settings: AppSettings): void {
     closeSync(fd);
   }
   renameSync(tmp, path);
+  cachedSettings = cloneSettings(settings);
 }
 
 export function setColorMode(mode: ColorModePreference): AppSettings {
