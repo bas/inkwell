@@ -30,32 +30,32 @@ function renderSource(value: string): void {
   );
 }
 
-function gutterRows(): HTMLElement[] {
+function gutterLines(): string[] {
   const gutter = screen.getByTestId('source-editor-gutter');
-  return Array.from(gutter.querySelectorAll('div'));
+  return (gutter.textContent ?? '').split('\n');
 }
 
 describe('SourceEditor', () => {
   it('renders one line number per line of content', () => {
     renderSource('alpha\nbravo\ncharlie');
-    const rows = gutterRows();
-    expect(rows).toHaveLength(3);
-    expect(rows[0]?.textContent).toBe('1');
-    expect(rows[rows.length - 1]?.textContent).toBe('3');
+    const lines = gutterLines();
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toBe('1');
+    expect(lines[lines.length - 1]).toBe('3');
   });
 
   it('renders a single line number for empty content', () => {
     renderSource('');
-    const rows = gutterRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.textContent).toBe('1');
+    const lines = gutterLines();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toBe('1');
   });
 
   it('counts a trailing newline as an additional line', () => {
     renderSource('alpha\n');
-    const rows = gutterRows();
-    expect(rows).toHaveLength(2);
-    expect(rows[0]?.textContent).toBe('1');
-    expect(rows[1]?.textContent).toBe('2');
+    const lines = gutterLines();
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe('1');
+    expect(lines[1]).toBe('2');
   });
 });

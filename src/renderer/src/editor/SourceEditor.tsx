@@ -76,6 +76,7 @@ export function SourceEditor({ value, onChange, textareaRef }: SourceEditorProps
           minHeight: 0,
           overflow: 'hidden',
           textAlign: 'right',
+          whiteSpace: 'pre',
           userSelect: 'none',
           color: 'fg.muted',
           bg: 'canvas.subtle',
@@ -86,9 +87,7 @@ export function SourceEditor({ value, onChange, textareaRef }: SourceEditorProps
           ...lineMetrics,
         }}
       >
-        {lineNumbers.map((lineNumber) => (
-          <div key={lineNumber}>{lineNumber}</div>
-        ))}
+        {lineNumbers.join('\n')}
       </Box>
       <Textarea
         ref={setTextareaRef}
