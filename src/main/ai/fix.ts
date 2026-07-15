@@ -201,7 +201,14 @@ async function fixNote(
     };
   }
 
-  const existingLabels = service.listLabels().map((label) => label.name);
+  let existingLabels: string[] = [];
+  try {
+    existingLabels = service.listLabels().map((label) => label.name);
+  } catch {
+    // Labels are only prompt context; if the label store is unavailable,
+    // proceed with none rather than failing the whole tidy request.
+    existingLabels = [];
+  }
 
   let cancelFn: (() => void) | undefined;
   let canceled = false;

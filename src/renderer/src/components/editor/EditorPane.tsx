@@ -692,8 +692,11 @@ export function EditorPane({
             } catch {
               // Label may already exist globally; ignore and assign it below.
             }
-            await window.api.updateNote({ id: note.id, labels: [...note.labels, label] });
-            setNote({ ...note, labels: [...note.labels, label] });
+            const updated = await window.api.updateNote({
+              id: note.id,
+              labels: [...note.labels, label],
+            });
+            setNote(updated);
             onAfterChange();
             onLabelsChanged();
           }

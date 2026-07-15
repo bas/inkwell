@@ -64,7 +64,7 @@ describe('isAutoApplyable', () => {
 });
 
 describe('partitionFixSuggestions', () => {
-  it('splits auto-appliable edits from the review set', () => {
+  it('splits auto-applicable edits from the review set', () => {
     const auto = suggestion({ id: 'a' });
     const formatting = suggestion({
       id: 'b',
