@@ -4,7 +4,7 @@ import type { Label } from './note-labels';
 import type {
   AiAvailability,
   AiFixResult,
-  AiFixSuggestion,
+  AiFixBodySuggestion,
   AiFixApplyResult,
   AiResult,
   AiReviewApplyResult,
@@ -117,7 +117,7 @@ export interface InkwellApi {
   /** Apply a single tidy body suggestion and return the saved note or stale-target status. */
   applyFixSuggestion(
     noteId: string,
-    suggestion: AiFixSuggestion,
+    suggestion: AiFixBodySuggestion,
   ): Promise<{ note: Note; apply: AiFixApplyResult }>;
   /** Subscribe to streamed AI response chunks. Returns an unsubscribe function. */
   onAiStreamDelta(listener: (chunk: AiStreamChunk) => void): () => void;

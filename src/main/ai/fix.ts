@@ -4,10 +4,12 @@ import type {
   AiErrorCode,
   AiFixApplyResult,
   AiFixSuggestion,
+  AiFixBodySuggestion,
   AiFixResult,
   AiReviewSuggestion,
 } from '../../shared/ai';
 import { IpcChannels } from '../../shared/ipc';
+import { isBodyFixSuggestion } from '../../shared/aiFix';
 import type { NotesService } from '../storage/notesService';
 import { getAiAvailability } from './availability';
 import { buildFixPrompt } from './prompts';
@@ -257,10 +259,7 @@ async function fixNote(
  * Adapt a body-editing fix suggestion to the review-suggestion shape so it can
  * reuse the battle-tested line-range + anchor apply logic.
  */
-function toReviewShape(suggestion: AiFixSuggestion): AiReviewSuggestion {
-  if (!suggestion.target || typeof suggestion.replacement !== 'string') {
-    throw new Error('Fix suggestion has no body target to apply.');
-  }
+function toReviewShape(suggestion: AiFixBodySuggestion): AiReviewSuggestion {
   return {
     id: suggestion.id,
     title: suggestion.title,
@@ -301,6 +300,9 @@ export function registerFixHandlers(service: NotesService): void {
     }> => {
       if (typeof noteId !== 'string') throw new Error('Expected noteId to be a string');
       const suggestion = asFixSuggestion(suggestionValue);
+      if (!isBodyFixSuggestion(suggestion)) {
+        throw new Error('Expected a body-editing fix suggestion with a target and replacement');
+      }
       const note = await service.getNote(noteId);
       const apply = applyReviewSuggestionToBody(note.id, note.body, toReviewShape(suggestion));
       if (!apply.ok) {

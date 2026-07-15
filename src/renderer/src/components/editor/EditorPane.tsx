@@ -15,7 +15,7 @@ import { SourceEditor } from '../../editor/SourceEditor';
 import { useAiSummary } from '../../state/useAiSummary';
 import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
 import { useAiFix, type UiFixSuggestion, describeFixError } from '../../state/useAiFix';
-import { partitionFixSuggestions } from '@shared/aiFix';
+import { partitionFixSuggestions, isBodyFixSuggestion } from '@shared/aiFix';
 import { deriveNoteTitle } from '@shared/noteTitle';
 
 interface EditorPaneProps {
@@ -708,6 +708,11 @@ export function EditorPane({
         }
       }
 
+      if (!isBodyFixSuggestion(suggestion)) {
+        markFixOutdated(suggestion.id);
+        return false;
+      }
+
       let result: Awaited<ReturnType<typeof window.api.applyFixSuggestion>>;
       try {
         result = await window.api.applyFixSuggestion(fixNoteId, suggestion);
@@ -783,10 +788,11 @@ export function EditorPane({
       const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
       const snapshot = dataRef.current.markdown;
       let appliedCount = 0;
-      // Apply bottom-up so earlier edits don't shift the line targets of later ones.
-      const ordered = [...autoApply].sort(
-        (a, b) => (b.target?.startLine ?? 0) - (a.target?.startLine ?? 0),
-      );
+      // Auto-apply only ever contains body edits; narrow the type and apply
+      // bottom-up so earlier edits don't shift the line targets of later ones.
+      const ordered = autoApply
+        .filter(isBodyFixSuggestion)
+        .sort((a, b) => b.target.startLine - a.target.startLine);
       for (const suggestion of ordered) {
         try {
           const applied = await window.api.applyFixSuggestion(id, suggestion);
@@ -1205,7 +1211,7 @@ export function EditorPane({
             applyingId={fixApplyingId}
             batchApplying={fixBatchApplying}
             onClose={handleCloseFix}
-            onCancel={cancelFix}
+            onCancel={handleCloseFix}
             onRetry={handleTidy}
             onSelect={selectFixSuggestion}
             onApply={handleApplyFix}

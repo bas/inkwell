@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { AiFixSuggestion } from './ai';
-import { isAutoApplyable, partitionFixSuggestions } from './aiFix';
+import { isAutoApplyable, partitionFixSuggestions, isBodyFixSuggestion } from './aiFix';
 
 function suggestion(overrides: Partial<AiFixSuggestion> = {}): AiFixSuggestion {
   return {
@@ -88,5 +88,32 @@ describe('partitionFixSuggestions', () => {
 
   it('returns empty partitions for an empty input', () => {
     expect(partitionFixSuggestions([])).toEqual({ autoApply: [], review: [] });
+  });
+});
+
+describe('isBodyFixSuggestion', () => {
+  it('accepts a non-label suggestion with a target and replacement', () => {
+    expect(isBodyFixSuggestion(suggestion())).toBe(true);
+  });
+
+  it('rejects a label suggestion', () => {
+    expect(
+      isBodyFixSuggestion(
+        suggestion({
+          category: 'label',
+          label: 'ideas',
+          target: undefined,
+          replacement: undefined,
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('rejects a suggestion missing a target', () => {
+    expect(isBodyFixSuggestion(suggestion({ target: undefined }))).toBe(false);
+  });
+
+  it('rejects a suggestion with an empty replacement', () => {
+    expect(isBodyFixSuggestion(suggestion({ replacement: '   ' }))).toBe(false);
   });
 });

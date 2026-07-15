@@ -178,6 +178,20 @@ export interface AiFixSuggestion {
   label?: string;
 }
 
+/** Tidy categories that edit the note body (everything except `label`). */
+export type AiFixBodyCategory = Exclude<AiFixCategory, 'label'>;
+
+/**
+ * A tidy suggestion that edits the note body. Unlike the general
+ * {@link AiFixSuggestion}, it is guaranteed to be non-`label` and to carry a
+ * line `target` + `replacement`, so it is safe to hand to the apply IPC.
+ */
+export interface AiFixBodySuggestion extends AiFixSuggestion {
+  category: AiFixBodyCategory;
+  target: AiReviewTarget;
+  replacement: string;
+}
+
 /** Structured output from a tidy request. */
 export type AiFixResult =
   | {

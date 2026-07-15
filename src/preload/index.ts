@@ -3,7 +3,7 @@ import { IpcChannels, type InkwellApi } from '../shared/ipc';
 import type { ColorModePreference, FeatureKey } from '../shared/types';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
 import type {
-  AiFixSuggestion,
+  AiFixBodySuggestion,
   AiReviewOptions,
   AiReviewSuggestion,
   AiStreamChunk,
@@ -64,7 +64,7 @@ const api: InkwellApi = {
 
   cancelFix: (requestId: string) => ipcRenderer.invoke(IpcChannels.aiFixCancel, requestId),
 
-  applyFixSuggestion: (noteId: string, suggestion: AiFixSuggestion) =>
+  applyFixSuggestion: (noteId: string, suggestion: AiFixBodySuggestion) =>
     ipcRenderer.invoke(IpcChannels.aiApplyFixSuggestion, noteId, suggestion),
 
   onAiStreamDelta: (listener) => {
