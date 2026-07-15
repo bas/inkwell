@@ -35,12 +35,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
 };
 
+const FEATURE_KEYS = Object.keys(DEFAULT_SETTINGS.features) as FeatureKey[];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 export function isFeatureKey(value: unknown): value is FeatureKey {
-  return value === 'labels';
+  return typeof value === 'string' && FEATURE_KEYS.some((key) => key === value);
 }
 
 function normalizeColorMode(value: unknown): ColorModePreference {
