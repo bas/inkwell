@@ -59,30 +59,49 @@ export function useAppSettings(): UseAppSettingsResult {
     };
   }, []);
 
-  const setPreference = useCallback((mode: ColorModePreference) => {
-    setSettings((current) => ({ ...current, colorMode: mode }));
+  const resyncAfterWriteError = useCallback((err: unknown) => {
+    const writeError = describeError(err);
+    setError(writeError);
     void window.api
-      .setColorMode(mode)
-      .then((next) => {
-        setSettings(next);
-        setError(undefined);
+      .getSettings()
+      .then((persistedSettings) => {
+        setSettings(persistedSettings);
       })
-      .catch((err: unknown) => setError(describeError(err)));
+      .catch((reloadErr: unknown) => {
+        setError(`${writeError}; could not reload settings: ${describeError(reloadErr)}`);
+      });
   }, []);
 
-  const setFeatureEnabled = useCallback((feature: FeatureKey, enabled: boolean) => {
-    setSettings((current) => ({
-      ...current,
-      features: { ...current.features, [feature]: enabled },
-    }));
-    void window.api
-      .setFeatureEnabled(feature, enabled)
-      .then((next) => {
-        setSettings(next);
-        setError(undefined);
-      })
-      .catch((err: unknown) => setError(describeError(err)));
-  }, []);
+  const setPreference = useCallback(
+    (mode: ColorModePreference) => {
+      setSettings((current) => ({ ...current, colorMode: mode }));
+      void window.api
+        .setColorMode(mode)
+        .then((next) => {
+          setSettings(next);
+          setError(undefined);
+        })
+        .catch(resyncAfterWriteError);
+    },
+    [resyncAfterWriteError],
+  );
+
+  const setFeatureEnabled = useCallback(
+    (feature: FeatureKey, enabled: boolean) => {
+      setSettings((current) => ({
+        ...current,
+        features: { ...current.features, [feature]: enabled },
+      }));
+      void window.api
+        .setFeatureEnabled(feature, enabled)
+        .then((next) => {
+          setSettings(next);
+          setError(undefined);
+        })
+        .catch(resyncAfterWriteError);
+    },
+    [resyncAfterWriteError],
+  );
 
   const preference = settings.colorMode;
   const resolvedMode: EffectiveColorMode =
