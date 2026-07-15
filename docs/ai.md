@@ -18,7 +18,7 @@ One click cleans up the current note: it applies low-risk fixes automatically an
 
 ### What gets applied automatically
 
-Low-risk, high-confidence **spelling** and **capitalization** fixes are applied silently before the panel opens. A green banner at the top of the panel reports how many were applied, with an **Undo** button that restores the note to its exact pre-tidy state.
+Low-risk, high-confidence **spelling** and **capitalization** fixes are applied silently before the panel opens. A green banner at the top of the panel reports how many were applied, with an **Undo** button that restores the note **body** to its pre-tidy state. (Undo only reverts body edits; it does not roll back any labels or other metadata.)
 
 ### What you review
 

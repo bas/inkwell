@@ -146,6 +146,9 @@ function asFixSuggestion(value: unknown): AiFixSuggestion {
   const row = value as Record<string, unknown>;
   if (typeof row['id'] !== 'string' || !row['id']) throw new Error('Invalid fix suggestion id');
   if (!isFixCategory(row['category'])) throw new Error('Invalid fix suggestion category');
+  if (row['category'] === 'label') {
+    throw new Error('Label suggestions cannot be applied via the body-fix IPC');
+  }
   const target = parseTarget(row['target']);
   if (!target) throw new Error('Invalid fix suggestion target');
   if (typeof row['replacement'] !== 'string' || !row['replacement'].trim()) {
