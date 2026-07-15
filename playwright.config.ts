@@ -10,7 +10,7 @@ const isCI = !!process.env['CI'];
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: isCI,
+  fullyParallel: false,
   workers: isCI ? 2 : 1,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,

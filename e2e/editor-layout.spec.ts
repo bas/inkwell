@@ -57,7 +57,6 @@ test.describe('Editor layout', () => {
       .fill(
         [
           '# Long scrolling note',
-          '',
           ...Array.from(
             { length: 160 },
             (_, i) => `Paragraph ${i} of a note that must stay scrollable after reopen.`,
