@@ -46,17 +46,20 @@ function useMermaidPreview(code: string): PreviewState {
     }
 
     let active = true;
-    setPreview({ status: 'loading' });
-    renderMermaidSvg(code, mode)
-      .then((svg) => {
-        if (active) setPreview({ status: 'ready', svg });
-      })
-      .catch((error: unknown) => {
-        if (active) setPreview({ status: 'error', message: getErrorMessage(error) });
-      });
+    const timeout = window.setTimeout(() => {
+      setPreview({ status: 'loading' });
+      renderMermaidSvg(code, mode)
+        .then((svg) => {
+          if (active) setPreview({ status: 'ready', svg });
+        })
+        .catch((error: unknown) => {
+          if (active) setPreview({ status: 'error', message: getErrorMessage(error) });
+        });
+    }, 250);
 
     return () => {
       active = false;
+      window.clearTimeout(timeout);
     };
   }, [code, mode]);
 
@@ -99,7 +102,8 @@ function Preview({ preview }: { preview: PreviewState }): JSX.Element {
 
 export function MermaidBlockView(props: NodeViewProps): JSX.Element {
   const initialCode = getNodeCode(props);
-  const [editing, setEditing] = useState(initialCode.trim() === '');
+  const canEdit = props.editor.isEditable;
+  const [editing, setEditing] = useState(canEdit && initialCode.trim() === '');
   const [draft, setDraft] = useState(initialCode);
   const preview = useMermaidPreview(editing ? draft : initialCode);
 
@@ -107,16 +111,19 @@ export function MermaidBlockView(props: NodeViewProps): JSX.Element {
     if (!editing) setDraft(initialCode);
   }, [editing, initialCode]);
 
-  const canEdit = props.editor.isEditable;
+  useEffect(() => {
+    if (!canEdit) setEditing(false);
+  }, [canEdit]);
 
   const startEditing = useCallback((): void => {
     if (canEdit) setEditing(true);
   }, [canEdit]);
 
   const commit = useCallback((): void => {
+    if (!canEdit) return;
     props.updateAttributes({ code: draft });
     setEditing(false);
-  }, [draft, props]);
+  }, [canEdit, draft, props]);
 
   const cancel = useCallback((): void => {
     setDraft(initialCode);

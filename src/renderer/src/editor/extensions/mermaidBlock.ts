@@ -60,9 +60,11 @@ export const MermaidBlock = Node.create({
 
   renderHTML({ HTMLAttributes }) {
     const code = typeof HTMLAttributes['code'] === 'string' ? HTMLAttributes['code'] : '';
+    const wrapperAttributes = { ...HTMLAttributes };
+    delete wrapperAttributes['code'];
     return [
       'pre',
-      mergeAttributes(HTMLAttributes, { 'data-type': 'mermaid', 'data-mermaid': code }),
+      mergeAttributes(wrapperAttributes, { 'data-type': 'mermaid', 'data-mermaid': code }),
       ['code', { class: 'language-mermaid' }, code],
     ];
   },

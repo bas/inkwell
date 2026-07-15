@@ -7,7 +7,9 @@ vi.mock('mermaid', () => ({
   default: {
     initialize: vi.fn(),
     parse: vi.fn(async () => ({ diagramType: 'flowchart-v2' })),
-    render: vi.fn(async () => ({ svg: '<svg data-testid="rendered-mermaid"></svg>' })),
+    render: vi.fn(async () => ({
+      svg: '<svg><script>alert(1)</script><foreignObject>bad</foreignObject><a href="javascript:alert(1)" onclick="alert(1)"><text>safe</text></a></svg>',
+    })),
   },
 }));
 
@@ -36,6 +38,12 @@ describe('MarkdownEditor', () => {
     );
 
     expect(await screen.findByTestId('mermaid-block')).toBeTruthy();
-    expect(await screen.findByTestId('mermaid-preview')).toBeTruthy();
+    const preview = await screen.findByTestId('mermaid-preview');
+    expect(preview.innerHTML).toContain('<svg');
+    expect(preview.innerHTML).toContain('safe');
+    expect(preview.innerHTML).not.toContain('script');
+    expect(preview.innerHTML).not.toContain('foreignObject');
+    expect(preview.innerHTML).not.toContain('onclick');
+    expect(preview.innerHTML).not.toContain('javascript:');
   });
 });

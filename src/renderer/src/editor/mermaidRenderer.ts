@@ -5,6 +5,28 @@ let mermaidPromise: Promise<MermaidApi> | undefined;
 let initializedMode: ColorMode | undefined;
 let renderSequence = 0;
 
+function sanitizeMermaidSvg(svg: string): string {
+  const document = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  const parserError = document.querySelector('parsererror');
+  if (parserError) throw new Error('Mermaid returned invalid SVG.');
+
+  document.querySelectorAll('script, foreignObject').forEach((element) => element.remove());
+  document.querySelectorAll('*').forEach((element) => {
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (
+        name.startsWith('on') ||
+        ((name === 'href' || name.endsWith(':href')) && value.startsWith('javascript:'))
+      ) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  });
+
+  return document.documentElement.outerHTML;
+}
+
 function getMermaidTheme(mode: ColorMode): 'default' | 'dark' {
   return mode === 'dark' ? 'dark' : 'default';
 }
@@ -36,5 +58,5 @@ export async function renderMermaidSvg(code: string, mode: ColorMode): Promise<s
   const mermaid = await loadMermaid(mode);
   await mermaid.parse(code);
   const { svg } = await mermaid.render(`inkwell-mermaid-${++renderSequence}`, code);
-  return svg;
+  return sanitizeMermaidSvg(svg);
 }
