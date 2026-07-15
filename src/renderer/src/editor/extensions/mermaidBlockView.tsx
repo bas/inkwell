@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
-import { Box, Button, Text, Textarea } from '@primer/react';
+import { Box, Button, IconButton, Text, Textarea } from '@primer/react';
+import { ChevronDownIcon, ChevronRightIcon, PencilIcon } from '@primer/octicons-react';
 import { getCurrentMermaidColorMode, renderMermaidSvg } from '../mermaidRenderer';
 
 type PreviewState =
@@ -195,26 +196,24 @@ export function MermaidBlockView(props: NodeViewProps): JSX.Element {
               {initialCode.trim() === '' ? 'Empty Mermaid diagram' : 'Mermaid diagram'}
             </Text>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                type="button"
+              <IconButton
+                icon={collapsed ? ChevronRightIcon : ChevronDownIcon}
                 size="small"
                 variant="invisible"
+                aria-label={collapsed ? 'Expand diagram' : 'Collapse diagram'}
                 aria-expanded={!collapsed}
                 onClick={() => setCollapsed((value) => !value)}
                 data-testid="mermaid-toggle-collapse"
-              >
-                {collapsed ? 'Expand' : 'Collapse'}
-              </Button>
+              />
               {canEdit && (
-                <Button
-                  type="button"
+                <IconButton
+                  icon={PencilIcon}
                   size="small"
                   variant="invisible"
+                  aria-label="Edit diagram"
                   onClick={startEditing}
                   data-testid="mermaid-edit"
-                >
-                  Edit diagram
-                </Button>
+                />
               )}
             </Box>
           </Box>
