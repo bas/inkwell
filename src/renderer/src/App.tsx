@@ -10,6 +10,7 @@ import { EditorPane } from './components/editor/EditorPane';
 import { SettingsDialog } from './components/settings/SettingsDialog';
 
 const SIDEBAR_VISIBLE_KEY = 'inkwell-sidebar-visible';
+const NARROW_LAYOUT_BREAKPOINT = 768;
 
 export function App(): JSX.Element {
   const {
@@ -24,6 +25,10 @@ export function App(): JSX.Element {
   const labelsEnabled = loaded && settings.features.labels;
   const mermaidEnabled = settings.features.mermaid;
   const notes = useNotes();
+  const [isNarrowViewport, setIsNarrowViewport] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
+  });
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SIDEBAR_VISIBLE_KEY) !== 'false';
@@ -31,9 +36,15 @@ export function App(): JSX.Element {
       return true;
     }
   });
+  const [narrowSidebarVisible, setNarrowSidebarVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const effectiveSidebarVisible = isNarrowViewport ? narrowSidebarVisible : sidebarVisible;
 
   const toggleSidebar = (): void => {
+    if (isNarrowViewport) {
+      setNarrowSidebarVisible((prev) => !prev);
+      return;
+    }
     setSidebarVisible((prev) => {
       const next = !prev;
       try {
@@ -54,6 +65,19 @@ export function App(): JSX.Element {
     applyThemeAttrs(document.documentElement);
     applyThemeAttrs(document.body);
   }, [resolvedMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = (): void => {
+      const nextIsNarrow = window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
+      setIsNarrowViewport((previousIsNarrow) => {
+        if (!previousIsNarrow && nextIsNarrow) setNarrowSidebarVisible(false);
+        return nextIsNarrow;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <ThemeProvider colorMode={toPrimerColorMode(resolvedMode)}>
@@ -99,9 +123,9 @@ export function App(): JSX.Element {
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
               <IconButton
-                icon={sidebarVisible ? SidebarCollapseIcon : SidebarExpandIcon}
-                aria-label={sidebarVisible ? 'Hide notes list' : 'Show notes list'}
-                aria-pressed={sidebarVisible}
+                icon={effectiveSidebarVisible ? SidebarCollapseIcon : SidebarExpandIcon}
+                aria-label={effectiveSidebarVisible ? 'Hide notes list' : 'Show notes list'}
+                aria-pressed={effectiveSidebarVisible}
                 variant="invisible"
                 size="small"
                 onClick={toggleSidebar}
@@ -162,9 +186,9 @@ export function App(): JSX.Element {
               bg: 'canvas.default',
             }}
           >
-            {sidebarVisible && (
+            {effectiveSidebarVisible && (
               <SplitPageLayout.Pane
-                position="start"
+                position={{ regular: 'start', narrow: 'end' }}
                 divider="line"
                 width="medium"
                 padding="none"
