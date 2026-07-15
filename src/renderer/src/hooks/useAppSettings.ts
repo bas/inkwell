@@ -14,8 +14,8 @@ interface UseAppSettingsResult {
   setFeatureEnabled: (feature: FeatureKey, enabled: boolean) => void;
 }
 
-function describeError(err: unknown): string {
-  return err instanceof Error ? err.message : 'Could not update settings';
+function describeError(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export function useAppSettings(): UseAppSettingsResult {
@@ -41,7 +41,7 @@ export function useAppSettings(): UseAppSettingsResult {
       .catch((err: unknown) => {
         if (!active) return;
         setLoaded(true);
-        setError(describeError(err));
+        setError(describeError(err, 'Could not load settings'));
       });
     return () => {
       active = false;
@@ -62,7 +62,7 @@ export function useAppSettings(): UseAppSettingsResult {
   }, []);
 
   const resyncAfterWriteError = useCallback((err: unknown) => {
-    const writeError = describeError(err);
+    const writeError = describeError(err, 'Could not update settings');
     setError(writeError);
     void window.api
       .getSettings()
@@ -70,7 +70,12 @@ export function useAppSettings(): UseAppSettingsResult {
         setSettings(persistedSettings);
       })
       .catch((reloadErr: unknown) => {
-        setError(`${writeError}; could not reload settings: ${describeError(reloadErr)}`);
+        setError(
+          `${writeError}; could not reload settings: ${describeError(
+            reloadErr,
+            'Could not load settings',
+          )}`,
+        );
       });
   }, []);
 
