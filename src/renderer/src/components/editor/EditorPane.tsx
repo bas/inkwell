@@ -687,11 +687,9 @@ export function EditorPane({
         }
         try {
           if (!note.labels.includes(label)) {
-            try {
-              await window.api.createLabel(label);
-            } catch {
-              // Label may already exist globally; ignore and assign it below.
-            }
+            // createLabel is idempotent (INSERT OR IGNORE), so a real failure
+            // here is worth surfacing via the outer catch rather than swallowing.
+            await window.api.createLabel(label);
             const updated = await window.api.updateNote({
               id: note.id,
               labels: [...note.labels, label],

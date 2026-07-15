@@ -28,7 +28,7 @@ Everything else is surfaced as a suggestion you can apply or reject individually
 - **Label** — a suggested topical label. Applying it adds the label to the note (creating it if needed) rather than editing the body. Label suggestions only appear when the labels feature is enabled.
 - **Other** — any remaining small improvement.
 
-Each suggestion shows a **category** badge, a **severity** badge, a rationale, and a before/after preview (or a label preview). Body suggestions apply bottom-up so earlier edits don't shift the line targets of later ones.
+Each suggestion shows a **category** badge (tinted by severity), a **status** badge, a rationale, and a before/after preview (or a label preview). Body suggestions apply bottom-up so earlier edits don't shift the line targets of later ones.
 
 ### Undoing
 
