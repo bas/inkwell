@@ -22,7 +22,7 @@ export function App(): JSX.Element {
     setFeatureEnabled,
   } = useAppSettings();
   const labelsEnabled = loaded && settings.features.labels;
-  const notes = useNotes(labelsEnabled);
+  const notes = useNotes();
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SIDEBAR_VISIBLE_KEY) !== 'false';
