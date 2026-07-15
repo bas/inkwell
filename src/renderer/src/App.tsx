@@ -69,15 +69,15 @@ export function App(): JSX.Element {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleResize = (): void => {
-      setIsNarrowViewport(window.innerWidth < NARROW_LAYOUT_BREAKPOINT);
+      const nextIsNarrow = window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
+      setIsNarrowViewport((previousIsNarrow) => {
+        if (!previousIsNarrow && nextIsNarrow) setNarrowSidebarVisible(false);
+        return nextIsNarrow;
+      });
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    if (isNarrowViewport) setNarrowSidebarVisible(false);
-  }, [isNarrowViewport]);
 
   return (
     <ThemeProvider colorMode={toPrimerColorMode(resolvedMode)}>

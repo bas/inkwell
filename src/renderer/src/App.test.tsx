@@ -122,4 +122,25 @@ describe('App narrow sidebar behavior', () => {
     expect(screen.getByTestId('sidebar')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Hide notes list' })).toBeDefined();
   });
+
+  it('re-hides narrow sidebar when re-entering narrow mode', () => {
+    setViewportWidth(900);
+    render(<App />);
+
+    setViewportWidth(760);
+    fireEvent(window, new Event('resize'));
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show notes list' }));
+    expect(screen.getByTestId('sidebar')).toBeDefined();
+
+    setViewportWidth(900);
+    fireEvent(window, new Event('resize'));
+    expect(screen.getByTestId('sidebar')).toBeDefined();
+
+    setViewportWidth(760);
+    fireEvent(window, new Event('resize'));
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show notes list' })).toBeDefined();
+  });
 });
