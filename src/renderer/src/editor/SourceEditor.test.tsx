@@ -30,22 +30,32 @@ function renderSource(value: string): void {
   );
 }
 
+function gutterRows(): HTMLElement[] {
+  const gutter = screen.getByTestId('source-editor-gutter');
+  return Array.from(gutter.querySelectorAll('div'));
+}
+
 describe('SourceEditor', () => {
   it('renders one line number per line of content', () => {
     renderSource('alpha\nbravo\ncharlie');
-    const gutter = screen.getByTestId('source-editor-gutter');
-    expect(gutter.textContent).toBe('123');
+    const rows = gutterRows();
+    expect(rows).toHaveLength(3);
+    expect(rows[0]?.textContent).toBe('1');
+    expect(rows[rows.length - 1]?.textContent).toBe('3');
   });
 
   it('renders a single line number for empty content', () => {
     renderSource('');
-    const gutter = screen.getByTestId('source-editor-gutter');
-    expect(gutter.textContent).toBe('1');
+    const rows = gutterRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toBe('1');
   });
 
   it('counts a trailing newline as an additional line', () => {
     renderSource('alpha\n');
-    const gutter = screen.getByTestId('source-editor-gutter');
-    expect(gutter.textContent).toBe('12');
+    const rows = gutterRows();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.textContent).toBe('1');
+    expect(rows[1]?.textContent).toBe('2');
   });
 });

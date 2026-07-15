@@ -1,4 +1,4 @@
-import type { Ref, UIEvent } from 'react';
+import type { Ref, UIEvent, WheelEvent } from 'react';
 import { useCallback, useMemo, useRef } from 'react';
 import { Box, Textarea } from '@primer/react';
 
@@ -18,6 +18,21 @@ const lineMetrics = {
 /** Raw Markdown source view (toggleable alternative to the WYSIWYG editor). */
 export function SourceEditor({ value, onChange, textareaRef }: SourceEditorProps): JSX.Element {
   const gutterRef = useRef<HTMLDivElement>(null);
+  const textareaNodeRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Merge the internal textarea ref with any forwarded ref so we can drive
+  // scrolling from the gutter while still exposing the node to the parent.
+  const setTextareaRef = useCallback(
+    (node: HTMLTextAreaElement | null) => {
+      textareaNodeRef.current = node;
+      if (typeof textareaRef === 'function') {
+        textareaRef(node);
+      } else if (textareaRef) {
+        (textareaRef as { current: HTMLTextAreaElement | null }).current = node;
+      }
+    },
+    [textareaRef],
+  );
 
   const lineNumbers = useMemo(() => {
     const lineCount = value.split('\n').length;
@@ -28,6 +43,15 @@ export function SourceEditor({ value, onChange, textareaRef }: SourceEditorProps
     const gutter = gutterRef.current;
     if (gutter) {
       gutter.scrollTop = event.currentTarget.scrollTop;
+    }
+  }, []);
+
+  // The gutter isn't itself scrollable, so forward wheel deltas over it to the
+  // textarea to avoid a non-scrollable "dead zone" on the left.
+  const handleGutterWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
+    const textarea = textareaNodeRef.current;
+    if (textarea) {
+      textarea.scrollTop += event.deltaY;
     }
   }, []);
 
@@ -45,8 +69,11 @@ export function SourceEditor({ value, onChange, textareaRef }: SourceEditorProps
         ref={gutterRef}
         data-testid="source-editor-gutter"
         aria-hidden="true"
+        onWheel={handleGutterWheel}
         sx={{
           flex: 'none',
+          height: '100%',
+          minHeight: 0,
           overflow: 'hidden',
           textAlign: 'right',
           userSelect: 'none',
@@ -64,7 +91,7 @@ export function SourceEditor({ value, onChange, textareaRef }: SourceEditorProps
         ))}
       </Box>
       <Textarea
-        ref={textareaRef}
+        ref={setTextareaRef}
         aria-label="Markdown source"
         data-testid="source-editor"
         value={value}
