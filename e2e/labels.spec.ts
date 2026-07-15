@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   launchApp,
   createNote,
@@ -8,6 +8,10 @@ import {
   openSettings,
   type LaunchedApp,
 } from './helpers';
+
+function labelRow(page: Page, name: string) {
+  return page.getByTestId(/^label-row-/).filter({ hasText: name });
+}
 
 test.describe('Labels', () => {
   let ctx: LaunchedApp;
@@ -31,7 +35,7 @@ test.describe('Labels', () => {
     await page.getByTestId('color-opt-green').click();
     await page.getByTestId('create-label').click();
 
-    await expect(page.getByTestId('label-row-work')).toBeVisible();
+    await expect(labelRow(page, 'work')).toBeVisible();
   });
 
   test('recolors an existing label', async () => {
@@ -40,11 +44,12 @@ test.describe('Labels', () => {
     await openSettings(page);
     await page.getByTestId('new-label-name').fill('urgent');
     await page.getByTestId('create-label').click();
-    await expect(page.getByTestId('label-row-urgent')).toBeVisible();
+    const row = labelRow(page, 'urgent');
+    await expect(row).toBeVisible();
 
-    await page.getByTestId('recolor-urgent').click();
+    await row.getByTestId(/^recolor-/).click();
     await page.getByTestId('color-opt-red').click();
-    await expect(page.getByTestId('recolor-urgent')).toContainText('red');
+    await expect(row.getByTestId(/^recolor-/)).toContainText('red');
   });
 
   test('creating a duplicate label name does not add a second row', async () => {
@@ -53,12 +58,12 @@ test.describe('Labels', () => {
     await openSettings(page);
     await page.getByTestId('new-label-name').fill('dup');
     await page.getByTestId('create-label').click();
-    await expect(page.getByTestId('label-row-dup')).toBeVisible();
+    await expect(labelRow(page, 'dup')).toBeVisible();
 
     await page.getByTestId('new-label-name').fill('dup');
     await page.getByTestId('create-label').click();
 
-    await expect(page.getByTestId('label-row-dup')).toHaveCount(1);
+    await expect(labelRow(page, 'dup')).toHaveCount(1);
   });
 
   test('assigns a label to a note and persists it to frontmatter', async () => {
@@ -68,7 +73,7 @@ test.describe('Labels', () => {
     await openSettings(page);
     await page.getByTestId('new-label-name').fill('work');
     await page.getByTestId('create-label').click();
-    await expect(page.getByTestId('label-row-work')).toBeVisible();
+    await expect(labelRow(page, 'work')).toBeVisible();
     await page.keyboard.press('Escape');
 
     // Create a note and assign the label.
@@ -107,7 +112,7 @@ test.describe('Labels', () => {
     await openSettings(page);
     await page.getByTestId('new-label-name').fill('temp');
     await page.getByTestId('create-label').click();
-    await expect(page.getByTestId('label-row-temp')).toBeVisible();
+    await expect(labelRow(page, 'temp')).toBeVisible();
     await page.keyboard.press('Escape');
 
     await createNote(page);
@@ -120,9 +125,10 @@ test.describe('Labels', () => {
 
     // Delete the label.
     await openSettings(page);
-    await page.getByTestId('delete-label-temp').click();
-    await page.getByTestId('confirm-delete-temp').click();
-    await expect(page.getByTestId('label-row-temp')).toHaveCount(0);
+    const row = labelRow(page, 'temp');
+    await row.getByTestId(/^delete-label-/).click();
+    await row.getByTestId(/^confirm-delete-/).click();
+    await expect(labelRow(page, 'temp')).toHaveCount(0);
     await page.keyboard.press('Escape');
 
     // The label is stripped from the note's frontmatter.
@@ -136,7 +142,7 @@ test.describe('Labels', () => {
     await openSettings(page);
     await page.getByTestId('new-label-name').fill('kept');
     await page.getByTestId('create-label').click();
-    await expect(page.getByTestId('label-row-kept')).toBeVisible();
+    await expect(labelRow(page, 'kept')).toBeVisible();
     await page.keyboard.press('Escape');
 
     await createNote(page);

@@ -133,7 +133,7 @@ export function LabelManagerPanel({
             <Box
               key={label.id}
               sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-              data-testid={`label-row-${label.name}`}
+              data-testid={`label-row-${label.id}`}
             >
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <PrimerLabel variant={toLabelVariant(label.color)}>{label.name}</PrimerLabel>
@@ -144,7 +144,7 @@ export function LabelManagerPanel({
                   <Button
                     variant="danger"
                     size="small"
-                    data-testid={`confirm-delete-${label.name}`}
+                    data-testid={`confirm-delete-${label.id}`}
                     disabled={!enabled}
                     onClick={() =>
                       void run(async () => {
@@ -164,14 +164,14 @@ export function LabelManagerPanel({
                   <ColorMenu
                     color={label.color}
                     onSelect={(next) => void run(() => window.api.setLabelColor(label.id, next))}
-                    testid={`recolor-${label.name}`}
+                    testid={`recolor-${label.id}`}
                     disabled={!enabled}
                   />
                   <IconButton
                     icon={TrashIcon}
                     aria-label={`Delete label ${label.name}`}
                     variant="invisible"
-                    data-testid={`delete-label-${label.name}`}
+                    data-testid={`delete-label-${label.id}`}
                     disabled={!enabled}
                     onClick={() => setPendingDelete(label.id)}
                   />

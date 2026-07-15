@@ -15,7 +15,7 @@ async function createLabel(page: Page, name: string): Promise<void> {
   await openSettings(page);
   await page.getByTestId('new-label-name').fill(name);
   await page.getByTestId('create-label').click();
-  await expect(page.getByTestId(`label-row-${name}`)).toBeVisible();
+  await expect(page.getByTestId(/^label-row-/).filter({ hasText: name })).toBeVisible();
   await page.keyboard.press('Escape');
 }
 
