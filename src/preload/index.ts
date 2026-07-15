@@ -2,7 +2,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IpcChannels, type InkwellApi } from '../shared/ipc';
 import type { ColorModePreference, FeatureKey } from '../shared/types';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
-import type { AiReviewOptions, AiReviewSuggestion, AiStreamChunk } from '../shared/ai';
+import type {
+  AiFixSuggestion,
+  AiReviewOptions,
+  AiReviewSuggestion,
+  AiStreamChunk,
+} from '../shared/ai';
 
 const api: InkwellApi = {
   getSettings: () => ipcRenderer.invoke(IpcChannels.getSettings),
@@ -53,6 +58,14 @@ const api: InkwellApi = {
 
   applyReviewSuggestion: (noteId: string, suggestion: AiReviewSuggestion) =>
     ipcRenderer.invoke(IpcChannels.aiApplyReviewSuggestion, noteId, suggestion),
+
+  fixNote: (noteId: string, requestId: string) =>
+    ipcRenderer.invoke(IpcChannels.aiFix, noteId, requestId),
+
+  cancelFix: (requestId: string) => ipcRenderer.invoke(IpcChannels.aiFixCancel, requestId),
+
+  applyFixSuggestion: (noteId: string, suggestion: AiFixSuggestion) =>
+    ipcRenderer.invoke(IpcChannels.aiApplyFixSuggestion, noteId, suggestion),
 
   onAiStreamDelta: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, chunk: AiStreamChunk): void =>

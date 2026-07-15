@@ -144,3 +144,51 @@ export type AiReviewResult =
 export type AiReviewApplyResult =
   | { ok: true; noteId: string; suggestionId: string; updatedBody: string }
   | { ok: false; noteId: string; suggestionId: string; reason: 'outdated' | 'invalid-target' };
+
+/**
+ * Categories produced by the "Tidy up with Copilot" feature. Broader than review
+ * because tidy also proposes structural formatting and label changes.
+ */
+export type AiFixCategory = 'spelling' | 'capitalization' | 'formatting' | 'label' | 'other';
+
+/**
+ * A single tidy suggestion. Body-editing categories (spelling, capitalization,
+ * formatting, other) carry a line `target` + `replacement` and reuse the review
+ * apply logic. The `label` category instead proposes adding a label and has no
+ * body target.
+ */
+export interface AiFixSuggestion {
+  id: string;
+  title: string;
+  category: AiFixCategory;
+  severity: AiReviewSeverity;
+  rationale: string;
+  /** 0..1 confidence hint shown to users. */
+  confidence: number;
+  /**
+   * Whether this edit is safe to apply automatically without review. Only ever
+   * true for low-risk, high-confidence character-level fixes (spelling,
+   * capitalization).
+   */
+  autoApplyable: boolean;
+  /** Target/replacement for body-editing categories. Absent for `label`. */
+  target?: AiReviewTarget;
+  replacement?: string;
+  /** For the `label` category: the label name to add. */
+  label?: string;
+}
+
+/** Structured output from a tidy request. */
+export type AiFixResult =
+  | {
+      ok: true;
+      requestId: string;
+      summary: string;
+      suggestions: AiFixSuggestion[];
+    }
+  | { ok: false; requestId: string; error: AiError };
+
+/** Outcome of applying a single tidy body suggestion to a note body. */
+export type AiFixApplyResult =
+  | { ok: true; noteId: string; suggestionId: string; updatedBody: string }
+  | { ok: false; noteId: string; suggestionId: string; reason: 'outdated' | 'invalid-target' };
