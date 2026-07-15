@@ -83,6 +83,22 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
         reason: 'outdated' as const,
       },
     })),
+    fixNote: vi.fn(async () => ({
+      ok: true as const,
+      requestId: 'request-1',
+      summary: 'Nothing to tidy.',
+      suggestions: [],
+    })),
+    cancelFix: vi.fn(async () => undefined),
+    applyFixSuggestion: vi.fn(async () => ({
+      note: loadedNote,
+      apply: {
+        ok: false as const,
+        noteId: 'n1',
+        suggestionId: 'fix-1',
+        reason: 'outdated' as const,
+      },
+    })),
     onAiStreamDelta: vi.fn(() => () => {}),
     onMenuNewNote: vi.fn(() => () => {}),
     ...overrides,

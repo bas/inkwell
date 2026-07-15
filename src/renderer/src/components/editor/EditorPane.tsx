@@ -7,12 +7,15 @@ import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { AiSummaryDialog } from './AiSummaryDialog';
 import { AiReviewPanel } from './AiReviewPanel';
+import { AiFixPanel } from './AiFixPanel';
 import { LabelChip } from '../common/LabelChip';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
 import { useAiSummary } from '../../state/useAiSummary';
 import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
+import { useAiFix, type UiFixSuggestion, describeFixError } from '../../state/useAiFix';
+import { partitionFixSuggestions } from '@shared/aiFix';
 import { deriveNoteTitle } from '@shared/noteTitle';
 
 interface EditorPaneProps {
@@ -165,6 +168,26 @@ export function EditorPane({
   const [reviewNoteTitle, setReviewNoteTitle] = useState('');
   const [applyingId, setApplyingId] = useState<string | undefined>(undefined);
   const [batchApplying, setBatchApplying] = useState(false);
+  const {
+    state: fixState,
+    begin: beginFix,
+    fail: failFix,
+    present: presentFix,
+    cancelFix,
+    reset: resetFix,
+    selectSuggestion: selectFixSuggestion,
+    markRejected: markFixRejected,
+    markApplied: markFixApplied,
+    markOutdated: markFixOutdated,
+    activeRequestId: activeFixRequestId,
+  } = useAiFix();
+  const [fixOpen, setFixOpen] = useState(false);
+  const [fixNoteId, setFixNoteId] = useState('');
+  const [fixNoteTitle, setFixNoteTitle] = useState('');
+  const [fixApplyingId, setFixApplyingId] = useState<string | undefined>(undefined);
+  const [fixBatchApplying, setFixBatchApplying] = useState(false);
+  const [preTidyBody, setPreTidyBody] = useState<string | undefined>(undefined);
+  const [undoing, setUndoing] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState('');
   const [replaceQuery, setReplaceQuery] = useState('');
@@ -522,6 +545,9 @@ export function EditorPane({
     const { id, markdown: body } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    // Only one AI panel at a time.
+    setFixOpen(false);
+    cancelFix();
     resetReview();
     setReviewNoteId(id);
     setReviewNoteTitle(deriveNoteTitle(body));
@@ -535,7 +561,7 @@ export function EditorPane({
       }
       startReview(id);
     })();
-  }, [save, startReview, resetReview]);
+  }, [save, startReview, resetReview, cancelFix]);
 
   const handleCloseReview = useCallback(() => {
     setReviewOpen(false);
@@ -641,6 +667,196 @@ export function EditorPane({
     },
     [labelsEnabled, note, applyLabels],
   );
+
+  const commitUpdatedNote = useCallback((updated: Note) => {
+    setNote(updated);
+    setMarkdown(updated.body);
+    dataRef.current = { id: updated.id, markdown: updated.body };
+    dirtyRef.current = false;
+    setSaveState('saved');
+    setReloadNonce((nonce) => nonce + 1);
+  }, []);
+
+  const applyFixSuggestion = useCallback(
+    async (suggestion: UiFixSuggestion): Promise<boolean> => {
+      if (suggestion.category === 'label') {
+        const label = suggestion.label?.trim();
+        if (!label || !note || !labelsEnabled) {
+          markFixOutdated(suggestion.id);
+          return false;
+        }
+        try {
+          if (!note.labels.includes(label)) {
+            try {
+              await window.api.createLabel(label);
+            } catch {
+              // Label may already exist globally; ignore and assign it below.
+            }
+            await window.api.updateNote({ id: note.id, labels: [...note.labels, label] });
+            setNote({ ...note, labels: [...note.labels, label] });
+            onAfterChange();
+            onLabelsChanged();
+          }
+          markFixApplied(suggestion.id);
+          return true;
+        } catch (err) {
+          setError(describeError(err));
+          return false;
+        }
+      }
+
+      let result: Awaited<ReturnType<typeof window.api.applyFixSuggestion>>;
+      try {
+        result = await window.api.applyFixSuggestion(fixNoteId, suggestion);
+      } catch (err) {
+        setError(describeError(err));
+        return false;
+      }
+      if (!result.apply.ok) {
+        markFixOutdated(suggestion.id);
+        return false;
+      }
+      commitUpdatedNote(result.note);
+      markFixApplied(suggestion.id);
+      onAfterChange();
+      return true;
+    },
+    [
+      fixNoteId,
+      note,
+      labelsEnabled,
+      commitUpdatedNote,
+      markFixApplied,
+      markFixOutdated,
+      onAfterChange,
+      onLabelsChanged,
+    ],
+  );
+
+  const handleTidy = useCallback(() => {
+    const { id, markdown: body } = dataRef.current;
+    if (!id) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    // Only one AI panel at a time.
+    setReviewOpen(false);
+    cancelReview();
+    resetFix();
+    setPreTidyBody(undefined);
+    setFixNoteId(id);
+    setFixNoteTitle(deriveNoteTitle(body));
+    setFixOpen(true);
+    const requestId = beginFix();
+    void (async () => {
+      await save();
+      if (dirtyRef.current) {
+        setFixOpen(false);
+        resetFix();
+        setError('Could not save the note before tidying. Please try again.');
+        return;
+      }
+      let result: Awaited<ReturnType<typeof window.api.fixNote>>;
+      try {
+        result = await window.api.fixNote(id, requestId);
+      } catch (err) {
+        failFix(describeError(err));
+        return;
+      }
+      if (activeFixRequestId() !== requestId) return;
+      if (!result.ok) {
+        failFix(describeFixError(result.error));
+        return;
+      }
+      const { autoApply, review } = partitionFixSuggestions(result.suggestions);
+      const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
+      const snapshot = dataRef.current.markdown;
+      let appliedCount = 0;
+      // Apply bottom-up so earlier edits don't shift the line targets of later ones.
+      const ordered = [...autoApply].sort(
+        (a, b) => (b.target?.startLine ?? 0) - (a.target?.startLine ?? 0),
+      );
+      for (const suggestion of ordered) {
+        try {
+          const applied = await window.api.applyFixSuggestion(id, suggestion);
+          if (applied.apply.ok) {
+            commitUpdatedNote(applied.note);
+            appliedCount += 1;
+          }
+        } catch {
+          // Skip an individual auto-fix that no longer matches; others still apply.
+        }
+      }
+      if (activeFixRequestId() !== requestId) return;
+      if (appliedCount > 0) {
+        setPreTidyBody(snapshot);
+        onAfterChange();
+      }
+      presentFix(requestId, result.summary, reviewSet, appliedCount);
+    })();
+  }, [
+    save,
+    beginFix,
+    failFix,
+    presentFix,
+    resetFix,
+    cancelReview,
+    labelsEnabled,
+    commitUpdatedNote,
+    activeFixRequestId,
+    onAfterChange,
+  ]);
+
+  const handleApplyFix = useCallback(
+    (id: string) => {
+      const suggestion = fixState.suggestions.find((s) => s.id === id);
+      if (!suggestion) return;
+      setFixApplyingId(id);
+      void applyFixSuggestion(suggestion).finally(() => setFixApplyingId(undefined));
+    },
+    [fixState.suggestions, applyFixSuggestion],
+  );
+
+  const handleApplyFixBatch = useCallback(
+    (ids: string[]) => {
+      // Body edits apply bottom-up; label suggestions (no target) sort last.
+      const ordered = fixState.suggestions
+        .filter((s) => ids.includes(s.id))
+        .sort((a, b) => (b.target?.startLine ?? 0) - (a.target?.startLine ?? 0));
+      if (ordered.length === 0) return;
+      setFixBatchApplying(true);
+      void (async () => {
+        for (const suggestion of ordered) {
+          await applyFixSuggestion(suggestion);
+        }
+      })().finally(() => setFixBatchApplying(false));
+    },
+    [fixState.suggestions, applyFixSuggestion],
+  );
+
+  const handleCloseFix = useCallback(() => {
+    setFixOpen(false);
+    setPreTidyBody(undefined);
+    cancelFix();
+  }, [cancelFix]);
+
+  const handleUndoTidy = useCallback(() => {
+    const snapshot = preTidyBody;
+    if (snapshot === undefined || !fixNoteId) return;
+    setUndoing(true);
+    void (async () => {
+      try {
+        const updated = await window.api.updateNote({ id: fixNoteId, body: snapshot });
+        commitUpdatedNote(updated);
+        onAfterChange();
+        setPreTidyBody(undefined);
+        setFixOpen(false);
+        resetFix();
+      } catch (err) {
+        setError(describeError(err));
+      } finally {
+        setUndoing(false);
+      }
+    })();
+  }, [preTidyBody, fixNoteId, commitUpdatedNote, onAfterChange, resetFix]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!note) return;
@@ -814,6 +1030,7 @@ export function EditorPane({
               mermaidEnabled={mermaidEnabled}
               onSummarize={handleSummarize}
               onReview={handleReview}
+              onTidy={handleTidy}
               onTogglePin={handleTogglePin}
               onCopyMarkdown={() => void handleCopyMarkdown()}
               onDelete={() => setConfirmDelete(true)}
@@ -965,6 +1182,24 @@ export function EditorPane({
             onReject={markRejected}
             onApplyBatch={handleApplyBatch}
             onRefine={handleRefine}
+          />
+        )}
+
+        {fixOpen && (
+          <AiFixPanel
+            state={fixState}
+            noteTitle={fixNoteTitle}
+            applyingId={fixApplyingId}
+            batchApplying={fixBatchApplying}
+            onClose={handleCloseFix}
+            onCancel={cancelFix}
+            onRetry={handleTidy}
+            onSelect={selectFixSuggestion}
+            onApply={handleApplyFix}
+            onReject={markFixRejected}
+            onApplyBatch={handleApplyFixBatch}
+            onUndo={preTidyBody !== undefined ? handleUndoTidy : undefined}
+            undoing={undoing}
           />
         )}
       </Box>

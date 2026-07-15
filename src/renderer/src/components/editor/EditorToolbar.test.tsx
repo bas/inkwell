@@ -36,6 +36,7 @@ function renderToolbar(viewSource: boolean, labelsEnabled = true, mermaidEnabled
         pinned={false}
         onSummarize={() => {}}
         onReview={() => {}}
+        onTidy={() => {}}
         onTogglePin={() => {}}
         onCopyMarkdown={() => {}}
         onDelete={() => {}}
