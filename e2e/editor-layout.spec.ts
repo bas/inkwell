@@ -51,17 +51,20 @@ test.describe('Editor layout', () => {
     await createNote(page);
     await setTitle(page, 'Long scrolling note');
 
-    await page.getByTestId('editor-content').click();
-    // Body-first notes keep the title on the first line, so drop to a new line
-    // before filling the body — otherwise the paragraphs corrupt the title.
-    await page.keyboard.press('End');
-    await page.keyboard.press('Enter');
-    for (let i = 0; i < 160; i++) {
-      await page.keyboard.type(`Paragraph ${i} of a note that must stay scrollable after reopen.`);
-      await page.keyboard.press('Enter');
-      await page.keyboard.press('Enter');
-    }
+    await switchView(page, 'source');
+    await page
+      .getByTestId('source-editor')
+      .fill(
+        [
+          '# Long scrolling note',
+          ...Array.from(
+            { length: 160 },
+            (_, i) => `Paragraph ${i} of a note that must stay scrollable after reopen.`,
+          ),
+        ].join('\n\n'),
+      );
     await waitSaved(page);
+    await switchView(page, 'wysiwyg');
     await first.close({ keepDirs: true });
 
     ctx = await launchApp({
