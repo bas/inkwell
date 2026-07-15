@@ -50,6 +50,12 @@ describe('buildFixPrompt', () => {
     );
   });
 
+  it('nudges the model to promote an obvious title to a heading', () => {
+    const prompt = buildFixPrompt('Body', []);
+    expect(prompt).toMatch(/level-1 heading/i);
+    expect(prompt).toMatch(/level-2\/3 headings/i);
+  });
+
   it('lists existing labels to reuse when present', () => {
     const prompt = buildFixPrompt('Body', ['work', 'ideas']);
     expect(prompt).toContain('Existing labels you should prefer to reuse: work, ideas.');
