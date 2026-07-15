@@ -131,6 +131,28 @@ afterEach(() => {
 });
 
 describe('useAppSettings', () => {
+  it('does not let initial settings load overwrite a newer preference update', async () => {
+    const initialLoad = deferred<AppSettings>();
+    installApi({
+      getSettings: vi.fn(() => initialLoad.promise),
+    });
+
+    render(<SettingsHarness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }));
+
+    await waitFor(() => expect(screen.getByTestId('mode').textContent).toBe('dark'));
+
+    await act(async () => {
+      initialLoad.resolve(loadedSettings);
+      await initialLoad.promise;
+    });
+
+    expect(screen.getByTestId('loaded').textContent).toBe('loaded');
+    expect(screen.getByTestId('mode').textContent).toBe('dark');
+    expect(screen.getByTestId('error').textContent).toBe('none');
+  });
+
   it('ignores stale failed-write resyncs after a newer feature update starts', async () => {
     const resync = deferred<AppSettings>();
     const api = installApi({

@@ -30,18 +30,26 @@ export function useAppSettings(): UseAppSettingsResult {
 
   useEffect(() => {
     let active = true;
+    const preferenceRequestAtLoadStart = preferenceRequestId.current;
+    const featureRequestAtLoadStart = featureRequestId.current;
+    const loadIsCurrent = (): boolean =>
+      preferenceRequestAtLoadStart === preferenceRequestId.current &&
+      featureRequestAtLoadStart === featureRequestId.current;
+
     window.api
       .getSettings()
       .then((loadedSettings) => {
         if (!active) return;
-        setSettings(loadedSettings);
+        if (loadIsCurrent()) {
+          setSettings(loadedSettings);
+          setError(undefined);
+        }
         setLoaded(true);
-        setError(undefined);
       })
       .catch((err: unknown) => {
         if (!active) return;
         setLoaded(true);
-        setError(describeError(err, 'Could not load settings'));
+        if (loadIsCurrent()) setError(describeError(err, 'Could not load settings'));
       });
     return () => {
       active = false;
