@@ -25,7 +25,7 @@ beforeAll(() => {
 
 const labels: Label[] = [{ id: 1, name: 'work', color: 'default' }];
 
-function renderToolbar(viewSource: boolean): void {
+function renderToolbar(viewSource: boolean, labelsEnabled = true): void {
   render(
     <ThemeProvider>
       <EditorToolbar
@@ -40,6 +40,7 @@ function renderToolbar(viewSource: boolean): void {
         onCopyMarkdown={() => {}}
         onDelete={() => {}}
         onOpenFindReplace={() => {}}
+        labelsEnabled={labelsEnabled}
         noteLabels={[]}
         allLabels={labels}
         onLabelsChange={() => {}}
@@ -66,6 +67,12 @@ describe('EditorToolbar labels control placement', () => {
 
   it('does not render the labels button in source mode', () => {
     renderToolbar(true);
+
+    expect(screen.queryByTestId('label-picker')).toBeNull();
+  });
+
+  it('does not render the labels button when labels are disabled', () => {
+    renderToolbar(false, false);
 
     expect(screen.queryByTestId('label-picker')).toBeNull();
   });

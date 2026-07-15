@@ -18,6 +18,7 @@ import { deriveNoteTitle } from '@shared/noteTitle';
 interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
+  labelsEnabled: boolean;
   onCreateNote?: () => void;
   onAfterChange: () => void;
   onLabelsChanged: () => void;
@@ -120,6 +121,7 @@ function isExactDocRangeMatch(editor: Editor, match: WysiwygMatch, query: string
 export function EditorPane({
   noteId,
   labels,
+  labelsEnabled,
   onCreateNote,
   onAfterChange,
   onLabelsChanged,
@@ -612,7 +614,7 @@ export function EditorPane({
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
-      if (!note) return;
+      if (!note || !labelsEnabled) return;
       try {
         await window.api.updateNote({ id: note.id, labels: nextLabels });
         setNote({ ...note, labels: nextLabels });
@@ -622,12 +624,12 @@ export function EditorPane({
         setError(describeError(err));
       }
     },
-    [note, onAfterChange, onLabelsChanged],
+    [labelsEnabled, note, onAfterChange, onLabelsChanged],
   );
 
   const createAndAssign = useCallback(
     async (name: string) => {
-      if (!note) return;
+      if (!note || !labelsEnabled) return;
       try {
         await window.api.createLabel(name);
         await applyLabels([...note.labels, name]);
@@ -635,7 +637,7 @@ export function EditorPane({
         setError(describeError(err));
       }
     },
-    [note, applyLabels],
+    [labelsEnabled, note, applyLabels],
   );
 
   const handleConfirmDelete = useCallback(async () => {
@@ -738,7 +740,7 @@ export function EditorPane({
         bg: 'canvas.default',
       }}
     >
-      {note.labels.length > 0 && (
+      {labelsEnabled && note.labels.length > 0 && (
         <Box
           as="header"
           sx={{
@@ -806,6 +808,7 @@ export function EditorPane({
               }}
               onSelectSource={() => setViewSource(true)}
               pinned={note.pinned}
+              labelsEnabled={labelsEnabled}
               onSummarize={handleSummarize}
               onReview={handleReview}
               onTogglePin={handleTogglePin}

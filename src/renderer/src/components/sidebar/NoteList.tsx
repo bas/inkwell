@@ -16,6 +16,7 @@ interface NoteListProps {
   labels: Label[];
   selectedId: string | undefined;
   groupBy: GroupBy;
+  labelsEnabled?: boolean;
   /** When set, results are shown as one flat list without date/label sections. */
   searching?: boolean;
   onSelect: (id: string) => void;
@@ -125,6 +126,7 @@ export function NoteList({
   labels,
   selectedId,
   groupBy,
+  labelsEnabled = true,
   searching = false,
   onSelect,
   onTogglePin,
@@ -150,14 +152,14 @@ export function NoteList({
   if (searching) {
     return (
       <ActionList data-testid="note-list">
-        {summaries.map((summary) => renderRow(summary, summary.pinned, false))}
+        {summaries.map((summary) => renderRow(summary, summary.pinned, !labelsEnabled))}
       </ActionList>
     );
   }
 
   const pinned = summaries.filter((note) => note.pinned);
   const rest = summaries.filter((note) => !note.pinned);
-  const hideLabels = groupBy === 'label';
+  const hideLabels = !labelsEnabled || groupBy === 'label';
   const groups: NoteGroup[] =
     groupBy === 'label'
       ? groupNotesByLabel(

@@ -6,15 +6,16 @@ import {
   typeBody,
   waitSaved,
   expectNoteListTitle,
+  openSettings,
   type LaunchedApp,
 } from './helpers';
 
-/** Create a label through the manager dialog. */
+/** Create a label through Settings. */
 async function createLabel(page: Page, name: string): Promise<void> {
-  await page.getByTestId('manage-labels').click();
+  await openSettings(page);
   await page.getByTestId('new-label-name').fill(name);
   await page.getByTestId('create-label').click();
-  await expect(page.getByTestId(`label-row-${name}`)).toBeVisible();
+  await expect(page.getByTestId(/^label-row-/).filter({ hasText: name })).toBeVisible();
   await page.keyboard.press('Escape');
 }
 

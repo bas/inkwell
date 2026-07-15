@@ -1,7 +1,9 @@
 import { ipcMain } from 'electron';
 import { IpcChannels } from '../shared/ipc';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
+import { isLabelColor, normalizeLabelName, type LabelColor } from '../shared/note-labels';
 import type { NotesService } from './storage/notesService';
+import { readSettings } from './settings';
 
 function assertString(value: unknown, name: string): string {
   if (typeof value !== 'string') throw new Error(`Expected ${name} to be a string`);
@@ -39,6 +41,17 @@ function validateUpdateInput(value: unknown): UpdateNoteInput {
   };
 }
 
+function assertLabelsEnabled(): void {
+  if (!readSettings().features.labels) {
+    throw new Error('Labels are disabled in Settings');
+  }
+}
+
+function assertLabelColor(value: unknown): LabelColor {
+  if (!isLabelColor(value)) throw new Error('Invalid label color');
+  return value;
+}
+
 /** Register all note and label IPC handlers. */
 export function registerNoteHandlers(service: NotesService): void {
   ipcMain.handle(IpcChannels.listNotes, (_e, labelName: unknown) =>
@@ -48,24 +61,34 @@ export function registerNoteHandlers(service: NotesService): void {
     service.searchNotes(assertString(query, 'query')),
   );
   ipcMain.handle(IpcChannels.getNote, (_e, id: unknown) => service.getNote(assertString(id, 'id')));
-  ipcMain.handle(IpcChannels.createNote, (_e, input: unknown) =>
-    service.createNote(validateCreateInput(input)),
-  );
-  ipcMain.handle(IpcChannels.updateNote, (_e, input: unknown) =>
-    service.updateNote(validateUpdateInput(input)),
-  );
+  ipcMain.handle(IpcChannels.createNote, (_e, input: unknown) => {
+    const value = validateCreateInput(input);
+    if (value.labels !== undefined) assertLabelsEnabled();
+    return service.createNote(value);
+  });
+  ipcMain.handle(IpcChannels.updateNote, (_e, input: unknown) => {
+    const value = validateUpdateInput(input);
+    if (value.labels !== undefined) assertLabelsEnabled();
+    return service.updateNote(value);
+  });
   ipcMain.handle(IpcChannels.deleteNote, (_e, id: unknown) =>
     service.deleteNote(assertString(id, 'id')),
   );
 
   ipcMain.handle(IpcChannels.listLabels, () => service.listLabels());
-  ipcMain.handle(IpcChannels.createLabel, (_e, name: unknown, color: unknown) =>
-    service.createLabel(assertString(name, 'name'), typeof color === 'string' ? color : undefined),
-  );
-  ipcMain.handle(IpcChannels.setLabelColor, (_e, id: unknown, color: unknown) =>
-    service.setLabelColor(assertNumber(id, 'id'), assertString(color, 'color')),
-  );
-  ipcMain.handle(IpcChannels.deleteLabel, (_e, id: unknown) =>
-    service.deleteLabel(assertNumber(id, 'id')),
-  );
+  ipcMain.handle(IpcChannels.createLabel, (_e, name: unknown, color: unknown) => {
+    assertLabelsEnabled();
+    return service.createLabel(
+      normalizeLabelName(assertString(name, 'name')),
+      color === undefined ? undefined : assertLabelColor(color),
+    );
+  });
+  ipcMain.handle(IpcChannels.setLabelColor, (_e, id: unknown, color: unknown) => {
+    assertLabelsEnabled();
+    return service.setLabelColor(assertNumber(id, 'id'), assertLabelColor(color));
+  });
+  ipcMain.handle(IpcChannels.deleteLabel, (_e, id: unknown) => {
+    assertLabelsEnabled();
+    return service.deleteLabel(assertNumber(id, 'id'));
+  });
 }

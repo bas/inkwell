@@ -190,3 +190,11 @@ export async function openReview(page: Page): Promise<void> {
   await page.getByTestId('action-review').click();
   await expect(page.getByTestId('ai-review-dialog')).toBeVisible();
 }
+
+/** Open Settings from the app header. */
+export async function openSettings(page: Page): Promise<void> {
+  const settingsButton = page.getByTestId('app-header-menu');
+  await expect(settingsButton).toBeEnabled();
+  await settingsButton.click();
+  await expect(page.getByTestId('settings-dialog')).toBeVisible();
+}

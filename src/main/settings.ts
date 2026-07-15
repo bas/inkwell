@@ -13,7 +13,9 @@ import {
   DEFAULT_SETTINGS,
   type AppSettings,
   type ColorModePreference,
+  type FeatureKey,
   type WindowBounds,
+  normalizeSettings,
 } from '../shared/types';
 import { randomUUID } from 'node:crypto';
 
@@ -21,15 +23,30 @@ function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json');
 }
 
+let cachedSettings: AppSettings | undefined;
+
+function cloneSettings(settings: AppSettings): AppSettings {
+  return {
+    ...settings,
+    features: { ...settings.features },
+    windowBounds: settings.windowBounds ? { ...settings.windowBounds } : undefined,
+  };
+}
+
 export function readSettings(): AppSettings {
+  if (cachedSettings) {
+    return cloneSettings(cachedSettings);
+  }
+
   try {
     const raw = readFileSync(settingsPath(), 'utf8');
-    const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    cachedSettings = normalizeSettings(JSON.parse(raw) as unknown);
   } catch {
     // Missing or unreadable settings fall back to defaults.
-    return { ...DEFAULT_SETTINGS };
+    cachedSettings = normalizeSettings(DEFAULT_SETTINGS);
   }
+
+  return cloneSettings(cachedSettings);
 }
 
 function writeSettings(settings: AppSettings): void {
@@ -45,10 +62,24 @@ function writeSettings(settings: AppSettings): void {
     closeSync(fd);
   }
   renameSync(tmp, path);
+  cachedSettings = cloneSettings(settings);
 }
 
 export function setColorMode(mode: ColorModePreference): AppSettings {
   const next: AppSettings = { ...readSettings(), colorMode: mode };
+  writeSettings(next);
+  return next;
+}
+
+export function setFeatureEnabled(feature: FeatureKey, enabled: boolean): AppSettings {
+  const current = readSettings();
+  const next: AppSettings = {
+    ...current,
+    features: {
+      ...current.features,
+      [feature]: enabled,
+    },
+  };
   writeSettings(next);
   return next;
 }
