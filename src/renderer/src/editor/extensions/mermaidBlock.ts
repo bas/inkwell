@@ -64,7 +64,7 @@ export const MermaidBlock = Node.create({
     delete wrapperAttributes['code'];
     return [
       'pre',
-      mergeAttributes(wrapperAttributes, { 'data-type': 'mermaid', 'data-mermaid': code }),
+      mergeAttributes(wrapperAttributes, { 'data-type': 'mermaid' }),
       ['code', { class: 'language-mermaid' }, code],
     ];
   },

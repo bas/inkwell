@@ -168,7 +168,7 @@ export function MermaidBlockView(props: NodeViewProps): JSX.Element {
               '& textarea': {
                 fontFamily: 'mono',
                 fontSize: 1,
-                minHeight: 120,
+                minHeight: 'var(--base-size-96)',
                 resize: 'vertical',
               },
             }}

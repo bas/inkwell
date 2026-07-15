@@ -8,7 +8,7 @@ vi.mock('mermaid', () => ({
     initialize: vi.fn(),
     parse: vi.fn(async () => ({ diagramType: 'flowchart-v2' })),
     render: vi.fn(async () => ({
-      svg: '<svg><script>alert(1)</script><foreignObject>bad</foreignObject><a href="javascript:alert(1)" onclick="alert(1)"><text>safe</text></a></svg>',
+      svg: '<svg><script>alert(1)</script><foreignObject>bad</foreignObject><a href="javascript:alert(1)" onclick="alert(1)"><text>safe</text></a><a href="data:text/html,evil"></a><a href="vbscript:evil"></a><a href="https://example.com"></a><use href="#arrow"></use></svg>',
     })),
   },
 }));
@@ -45,5 +45,9 @@ describe('MarkdownEditor', () => {
     expect(preview.innerHTML).not.toContain('foreignObject');
     expect(preview.innerHTML).not.toContain('onclick');
     expect(preview.innerHTML).not.toContain('javascript:');
+    expect(preview.innerHTML).not.toContain('data:');
+    expect(preview.innerHTML).not.toContain('vbscript:');
+    expect(preview.innerHTML).not.toContain('https://example.com');
+    expect(preview.innerHTML).toContain('href="#arrow"');
   });
 });

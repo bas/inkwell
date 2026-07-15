@@ -1,12 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  createNote,
-  launchApp,
-  readSingleNote,
-  switchView,
-  waitSaved,
-  type LaunchedApp,
-} from './helpers';
+import { createNote, launchApp, readSingleNote, switchView, type LaunchedApp } from './helpers';
 
 test.describe('Mermaid diagrams', () => {
   let ctx: LaunchedApp;
@@ -24,14 +17,16 @@ test.describe('Mermaid diagrams', () => {
 
     await createNote(page);
     await page.getByTestId('fmt-mermaid').click();
-    await page.getByTestId('mermaid-source-editor').fill('flowchart LR\n  A[Start] --> B[End]');
+    await page
+      .getByRole('textbox', { name: 'Mermaid diagram source' })
+      .fill('flowchart LR\n  A[Start] --> B[End]');
     await page.getByTestId('mermaid-done').click();
 
     await expect(page.getByTestId('mermaid-preview')).toBeVisible({ timeout: 15_000 });
-    await waitSaved(page);
 
-    const markdown = readSingleNote(vaultDir);
-    expect(markdown).toContain('```mermaid\nflowchart LR\n  A[Start] --> B[End]\n```');
+    await expect
+      .poll(() => readSingleNote(vaultDir))
+      .toContain('```mermaid\nflowchart LR\n  A[Start] --> B[End]\n```');
   });
 
   test('renders fenced Mermaid Markdown entered in Source mode', async () => {

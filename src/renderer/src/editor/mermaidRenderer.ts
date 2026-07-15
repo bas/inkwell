@@ -5,6 +5,17 @@ let mermaidPromise: Promise<MermaidApi> | undefined;
 let initializedMode: ColorMode | undefined;
 let renderSequence = 0;
 
+function isAllowedSvgReference(value: string): boolean {
+  const normalized = Array.from(value)
+    .filter((character) => {
+      const code = character.charCodeAt(0);
+      return code > 31 && code !== 127 && !/\s/.test(character) && character !== '\\';
+    })
+    .join('')
+    .toLowerCase();
+  return normalized.startsWith('#');
+}
+
 function sanitizeMermaidSvg(svg: string): string {
   const document = new DOMParser().parseFromString(svg, 'image/svg+xml');
   const parserError = document.querySelector('parsererror');
@@ -14,10 +25,9 @@ function sanitizeMermaidSvg(svg: string): string {
   document.querySelectorAll('*').forEach((element) => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
-      const value = attribute.value.trim().toLowerCase();
       if (
         name.startsWith('on') ||
-        ((name === 'href' || name.endsWith(':href')) && value.startsWith('javascript:'))
+        ((name === 'href' || name.endsWith(':href')) && !isAllowedSvgReference(attribute.value))
       ) {
         element.removeAttribute(attribute.name);
       }
