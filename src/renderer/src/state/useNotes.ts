@@ -53,10 +53,7 @@ export function useNotes(labelsEnabled = true): NotesState & NotesActions {
   }, []);
 
   const refreshLabels = useCallback(async () => {
-    if (!labelsEnabled) {
-      setLabels([]);
-      return;
-    }
+    if (!labelsEnabled) return;
     try {
       setLabels(await window.api.listLabels());
     } catch (err) {
