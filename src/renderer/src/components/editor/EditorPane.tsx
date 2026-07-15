@@ -7,12 +7,15 @@ import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { AiSummaryDialog } from './AiSummaryDialog';
 import { AiReviewPanel } from './AiReviewPanel';
+import { AiFixPanel } from './AiFixPanel';
 import { LabelChip } from '../common/LabelChip';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
 import { useAiSummary } from '../../state/useAiSummary';
 import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
+import { useAiFix, type UiFixSuggestion, describeFixError } from '../../state/useAiFix';
+import { partitionFixSuggestions, isBodyFixSuggestion } from '@shared/aiFix';
 import { deriveNoteTitle } from '@shared/noteTitle';
 
 interface EditorPaneProps {
@@ -165,6 +168,26 @@ export function EditorPane({
   const [reviewNoteTitle, setReviewNoteTitle] = useState('');
   const [applyingId, setApplyingId] = useState<string | undefined>(undefined);
   const [batchApplying, setBatchApplying] = useState(false);
+  const {
+    state: fixState,
+    begin: beginFix,
+    fail: failFix,
+    present: presentFix,
+    cancelFix,
+    reset: resetFix,
+    selectSuggestion: selectFixSuggestion,
+    markRejected: markFixRejected,
+    markApplied: markFixApplied,
+    markOutdated: markFixOutdated,
+    activeRequestId: activeFixRequestId,
+  } = useAiFix();
+  const [fixOpen, setFixOpen] = useState(false);
+  const [fixNoteId, setFixNoteId] = useState('');
+  const [fixNoteTitle, setFixNoteTitle] = useState('');
+  const [fixApplyingId, setFixApplyingId] = useState<string | undefined>(undefined);
+  const [fixBatchApplying, setFixBatchApplying] = useState(false);
+  const [preTidyBody, setPreTidyBody] = useState<string | undefined>(undefined);
+  const [undoing, setUndoing] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState('');
   const [replaceQuery, setReplaceQuery] = useState('');
@@ -522,6 +545,9 @@ export function EditorPane({
     const { id, markdown: body } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    // Only one AI panel at a time.
+    setFixOpen(false);
+    cancelFix();
     resetReview();
     setReviewNoteId(id);
     setReviewNoteTitle(deriveNoteTitle(body));
@@ -535,7 +561,7 @@ export function EditorPane({
       }
       startReview(id);
     })();
-  }, [save, startReview, resetReview]);
+  }, [save, startReview, resetReview, cancelFix]);
 
   const handleCloseReview = useCallback(() => {
     setReviewOpen(false);
@@ -641,6 +667,232 @@ export function EditorPane({
     },
     [labelsEnabled, note, applyLabels],
   );
+
+  const commitUpdatedNote = useCallback((updated: Note) => {
+    setNote(updated);
+    setMarkdown(updated.body);
+    dataRef.current = { id: updated.id, markdown: updated.body };
+    dirtyRef.current = false;
+    setSaveState('saved');
+    setReloadNonce((nonce) => nonce + 1);
+  }, []);
+
+  const applyFixSuggestion = useCallback(
+    async (suggestion: UiFixSuggestion): Promise<boolean> => {
+      if (suggestion.category === 'label') {
+        const label = suggestion.label?.trim();
+        // Guard against the user switching notes while the panel is open: only
+        // mutate labels when the loaded note is still the tidy target.
+        if (!label || !note || !labelsEnabled || note.id !== fixNoteId) {
+          markFixOutdated(suggestion.id);
+          return false;
+        }
+        try {
+          if (!note.labels.includes(label)) {
+            // createLabel is idempotent (INSERT OR IGNORE), so a real failure
+            // here is worth surfacing via the outer catch rather than swallowing.
+            await window.api.createLabel(label);
+            const updated = await window.api.updateNote({
+              id: note.id,
+              labels: [...note.labels, label],
+            });
+            setNote(updated);
+            onAfterChange();
+            onLabelsChanged();
+          }
+          markFixApplied(suggestion.id);
+          return true;
+        } catch (err) {
+          setError(describeError(err));
+          return false;
+        }
+      }
+
+      if (!isBodyFixSuggestion(suggestion)) {
+        markFixOutdated(suggestion.id);
+        return false;
+      }
+
+      let result: Awaited<ReturnType<typeof window.api.applyFixSuggestion>>;
+      try {
+        result = await window.api.applyFixSuggestion(fixNoteId, suggestion);
+      } catch (err) {
+        setError(describeError(err));
+        return false;
+      }
+      if (!result.apply.ok) {
+        markFixOutdated(suggestion.id);
+        return false;
+      }
+      commitUpdatedNote(result.note);
+      markFixApplied(suggestion.id);
+      onAfterChange();
+      return true;
+    },
+    [
+      fixNoteId,
+      note,
+      labelsEnabled,
+      commitUpdatedNote,
+      markFixApplied,
+      markFixOutdated,
+      onAfterChange,
+      onLabelsChanged,
+    ],
+  );
+
+  const handleTidy = useCallback(() => {
+    const { id, markdown: body } = dataRef.current;
+    if (!id) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    // Only one AI panel at a time.
+    setReviewOpen(false);
+    cancelReview();
+    setPreTidyBody(undefined);
+    setFixNoteId(id);
+    setFixNoteTitle(deriveNoteTitle(body));
+    setFixOpen(true);
+    // beginFix() resets prior fix state and cancels any in-flight request, so
+    // an explicit resetFix() here would only clear the request id and prevent
+    // that cancellation.
+    const requestId = beginFix();
+    void (async () => {
+      // Block edits while tidy generates and auto-applies so background
+      // mutations can't race with or clobber the user's keystrokes.
+      editor?.setEditable(false);
+      try {
+        await save();
+        if (dirtyRef.current) {
+          setFixOpen(false);
+          resetFix();
+          setError('Could not save the note before tidying. Please try again.');
+          return;
+        }
+        // The pre-tidy save is async; if the user cancelled/closed the panel while
+        // it was in flight, don't start a generation that main can't yet cancel.
+        if (activeFixRequestId() !== requestId) return;
+        let result: Awaited<ReturnType<typeof window.api.fixNote>>;
+        try {
+          result = await window.api.fixNote(id, requestId);
+        } catch (err) {
+          failFix(describeError(err));
+          return;
+        }
+        if (activeFixRequestId() !== requestId) return;
+        if (!result.ok) {
+          failFix(describeFixError(result.error));
+          return;
+        }
+        // If the user edited while Copilot was generating, the suggestions are
+        // stale and auto-applying them would clobber the in-progress edits.
+        if (dirtyRef.current) {
+          failFix(
+            'You edited the note while Copilot was tidying. Save your changes and run Tidy again.',
+          );
+          return;
+        }
+        const { autoApply, review } = partitionFixSuggestions(result.suggestions);
+        const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
+        const snapshot = dataRef.current.markdown;
+        let appliedCount = 0;
+        // Auto-apply only ever contains body edits; narrow the type and apply
+        // bottom-up so earlier edits don't shift the line targets of later ones.
+        const ordered = autoApply
+          .filter(isBodyFixSuggestion)
+          .sort((a, b) => b.target.startLine - a.target.startLine);
+        for (const suggestion of ordered) {
+          try {
+            const applied = await window.api.applyFixSuggestion(id, suggestion);
+            if (applied.apply.ok) {
+              commitUpdatedNote(applied.note);
+              appliedCount += 1;
+            }
+          } catch {
+            // Skip an individual auto-fix that no longer matches; others still apply.
+          }
+        }
+        if (activeFixRequestId() !== requestId) return;
+        if (appliedCount > 0) {
+          setPreTidyBody(snapshot);
+          onAfterChange();
+        }
+        presentFix(requestId, result.summary, reviewSet, appliedCount);
+      } finally {
+        editor?.setEditable(true);
+      }
+    })();
+  }, [
+    save,
+    beginFix,
+    failFix,
+    presentFix,
+    resetFix,
+    cancelReview,
+    labelsEnabled,
+    commitUpdatedNote,
+    activeFixRequestId,
+    onAfterChange,
+    editor,
+  ]);
+
+  const handleApplyFix = useCallback(
+    (id: string) => {
+      const suggestion = fixState.suggestions.find((s) => s.id === id);
+      if (!suggestion) return;
+      setFixApplyingId(id);
+      void applyFixSuggestion(suggestion).finally(() => setFixApplyingId(undefined));
+    },
+    [fixState.suggestions, applyFixSuggestion],
+  );
+
+  const handleApplyFixBatch = useCallback(
+    (ids: string[]) => {
+      // Body edits apply bottom-up; label suggestions (no target) sort last.
+      const ordered = fixState.suggestions
+        .filter((s) => ids.includes(s.id))
+        .sort((a, b) => (b.target?.startLine ?? 0) - (a.target?.startLine ?? 0));
+      if (ordered.length === 0) return;
+      setFixBatchApplying(true);
+      void (async () => {
+        for (const suggestion of ordered) {
+          await applyFixSuggestion(suggestion);
+        }
+      })().finally(() => setFixBatchApplying(false));
+    },
+    [fixState.suggestions, applyFixSuggestion],
+  );
+
+  const handleCloseFix = useCallback(() => {
+    setFixOpen(false);
+    setPreTidyBody(undefined);
+    cancelFix();
+  }, [cancelFix]);
+
+  const handleUndoTidy = useCallback(() => {
+    const snapshot = preTidyBody;
+    if (snapshot === undefined || !fixNoteId) return;
+    // Undo overwrites the note body on disk; refuse if the user has typed since
+    // tidying so their unsaved edits aren't silently discarded.
+    if (dirtyRef.current) {
+      setError('Save or discard your current edits before undoing the tidy.');
+      return;
+    }
+    setUndoing(true);
+    void (async () => {
+      try {
+        const updated = await window.api.updateNote({ id: fixNoteId, body: snapshot });
+        commitUpdatedNote(updated);
+        onAfterChange();
+        setPreTidyBody(undefined);
+        setFixOpen(false);
+        resetFix();
+      } catch (err) {
+        setError(describeError(err));
+      } finally {
+        setUndoing(false);
+      }
+    })();
+  }, [preTidyBody, fixNoteId, commitUpdatedNote, onAfterChange, resetFix]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!note) return;
@@ -814,6 +1066,7 @@ export function EditorPane({
               mermaidEnabled={mermaidEnabled}
               onSummarize={handleSummarize}
               onReview={handleReview}
+              onTidy={handleTidy}
               onTogglePin={handleTogglePin}
               onCopyMarkdown={() => void handleCopyMarkdown()}
               onDelete={() => setConfirmDelete(true)}
@@ -965,6 +1218,24 @@ export function EditorPane({
             onReject={markRejected}
             onApplyBatch={handleApplyBatch}
             onRefine={handleRefine}
+          />
+        )}
+
+        {fixOpen && (
+          <AiFixPanel
+            state={fixState}
+            noteTitle={fixNoteTitle}
+            applyingId={fixApplyingId}
+            batchApplying={fixBatchApplying}
+            onClose={handleCloseFix}
+            onCancel={handleCloseFix}
+            onRetry={handleTidy}
+            onSelect={selectFixSuggestion}
+            onApply={handleApplyFix}
+            onReject={markFixRejected}
+            onApplyBatch={handleApplyFixBatch}
+            onUndo={preTidyBody !== undefined ? handleUndoTidy : undefined}
+            undoing={undoing}
           />
         )}
       </Box>

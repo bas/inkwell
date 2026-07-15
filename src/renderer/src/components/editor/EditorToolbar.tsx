@@ -1,5 +1,5 @@
 import { Box, SegmentedControl, IconButton } from '@primer/react';
-import { SearchIcon } from '@primer/octicons-react';
+import { SearchIcon, SparkleIcon } from '@primer/octicons-react';
 import type { Editor } from '@tiptap/react';
 import type { Label } from '@shared/note-labels';
 import { FormatControls } from '../../editor/FormatControls';
@@ -15,6 +15,7 @@ interface EditorToolbarProps {
   pinned: boolean;
   onSummarize: () => void;
   onReview: () => void;
+  onTidy: () => void;
   onTogglePin: () => void;
   onCopyMarkdown: () => void;
   onDelete: () => void;
@@ -53,6 +54,7 @@ export function EditorToolbar({
   pinned,
   onSummarize,
   onReview,
+  onTidy,
   onTogglePin,
   onCopyMarkdown,
   onDelete,
@@ -142,6 +144,13 @@ export function EditorToolbar({
         sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}
       >
         <IconButton
+          icon={SparkleIcon}
+          aria-label="Tidy up with Copilot"
+          variant="invisible"
+          onClick={onTidy}
+          data-testid="tidy-note"
+        />
+        <IconButton
           icon={SearchIcon}
           aria-label="Find and replace"
           variant="invisible"
@@ -152,6 +161,7 @@ export function EditorToolbar({
           pinned={pinned}
           onSummarize={onSummarize}
           onReview={onReview}
+          onTidy={onTidy}
           onTogglePin={onTogglePin}
           onCopyMarkdown={onCopyMarkdown}
           onDelete={onDelete}

@@ -191,6 +191,12 @@ export async function openReview(page: Page): Promise<void> {
   await expect(page.getByTestId('ai-review-dialog')).toBeVisible();
 }
 
+/** Open the "Tidy up with Copilot" panel from the toolbar trigger. */
+export async function openTidy(page: Page): Promise<void> {
+  await page.getByTestId('tidy-note').click();
+  await expect(page.getByTestId('ai-fix-dialog')).toBeVisible();
+}
+
 /** Open Settings from the app header. */
 export async function openSettings(page: Page): Promise<void> {
   const settingsButton = page.getByTestId('app-header-menu');

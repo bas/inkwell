@@ -1,8 +1,42 @@
 # AI Features (Copilot)
 
-Inkwell integrates with GitHub Copilot to provide two AI-powered writing tools: **Summarise** and **Review**. Both require an active GitHub Copilot subscription and network access.
+Inkwell integrates with GitHub Copilot to provide three AI-powered writing tools: **Tidy up**, **Summarise**, and **Review**. All require an active GitHub Copilot subscription and network access.
 
-Access both tools from the **⋯** (note actions) menu in the editor toolbar.
+Access **Tidy up** from the ✨ (sparkle) button in the editor toolbar, or find all three tools in the **⋯** (note actions) menu.
+
+---
+
+## Tidy up with Copilot
+
+One click cleans up the current note: it applies low-risk fixes automatically and surfaces the rest for review.
+
+### Starting a tidy
+
+1. Open the note you want to tidy.
+2. Click the ✨ **Tidy up with Copilot** button in the toolbar (or select it from the **⋯** menu).
+3. Inkwell saves the note, then a **Tidy up** panel opens on the right side of the editor.
+
+### What gets applied automatically
+
+Low-risk, high-confidence **spelling** and **capitalization** fixes are applied silently before the panel opens. A green banner at the top of the panel reports how many were applied, with an **Undo** button that restores the note **body** to its pre-tidy state. (Undo only reverts body edits; it does not roll back any labels or other metadata.)
+
+### What you review
+
+Everything else is surfaced as a suggestion you can apply or reject individually — or in a batch:
+
+- **Formatting** — structural improvements using Markdown headings (levels 1–3), paragraphs, lists, task lists, tables, code, and links. Existing wording is preserved.
+- **Label** — a suggested topical label. Applying it adds the label to the note (creating it if needed) rather than editing the body. Label suggestions only appear when the labels feature is enabled.
+- **Other** — any remaining small improvement.
+
+Each suggestion shows a **category** badge (tinted by severity), a **status** badge, a rationale, and a before/after preview (or a label preview). Body suggestions apply bottom-up so earlier edits don't shift the line targets of later ones.
+
+### Undoing
+
+If the automatic fixes weren't what you wanted, click **Undo** in the banner. This restores the note body captured before tidying and closes the panel.
+
+### Errors
+
+If tidying fails (network error, Copilot unavailable, or an empty note), an error message is shown with a **Try again** button.
 
 ---
 
@@ -93,4 +127,4 @@ A small token-usage summary is displayed at the bottom of both the Summary dialo
 
 ## Availability
 
-If GitHub Copilot is not available (no subscription, or the service is unreachable), the **Summarize** and **Review** items in the menu are disabled and an explanation is shown.
+If GitHub Copilot is not available (no subscription, or the service is unreachable), the AI actions surface a typed error with an explanation when you try to use them.

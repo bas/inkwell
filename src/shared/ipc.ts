@@ -3,6 +3,9 @@ import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note
 import type { Label } from './note-labels';
 import type {
   AiAvailability,
+  AiFixResult,
+  AiFixBodySuggestion,
+  AiFixApplyResult,
   AiResult,
   AiReviewApplyResult,
   AiReviewOptions,
@@ -49,6 +52,12 @@ export const IpcChannels = {
   aiReviewCancel: 'ai:reviewCancel',
   /** AI: apply a single review suggestion to a note body. */
   aiApplyReviewSuggestion: 'ai:applyReviewSuggestion',
+  /** AI: tidy a note and return structured fix suggestions. */
+  aiFix: 'ai:fix',
+  /** AI: cancel an in-flight tidy request by id. */
+  aiFixCancel: 'ai:fixCancel',
+  /** AI: apply a single tidy body suggestion to a note body. */
+  aiApplyFixSuggestion: 'ai:applyFixSuggestion',
   /** Main → renderer: a streamed chunk of an in-progress AI response. */
   aiStreamDelta: 'ai:streamDelta',
 
@@ -101,6 +110,15 @@ export interface InkwellApi {
     noteId: string,
     suggestion: AiReviewSuggestion,
   ): Promise<{ note: Note; apply: AiReviewApplyResult }>;
+  /** Tidy a note with Copilot and return typed fix suggestions. */
+  fixNote(noteId: string, requestId: string): Promise<AiFixResult>;
+  /** Cancel an in-flight tidy request by id. */
+  cancelFix(requestId: string): Promise<void>;
+  /** Apply a single tidy body suggestion and return the saved note or stale-target status. */
+  applyFixSuggestion(
+    noteId: string,
+    suggestion: AiFixBodySuggestion,
+  ): Promise<{ note: Note; apply: AiFixApplyResult }>;
   /** Subscribe to streamed AI response chunks. Returns an unsubscribe function. */
   onAiStreamDelta(listener: (chunk: AiStreamChunk) => void): () => void;
 
