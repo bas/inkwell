@@ -9,6 +9,7 @@ export type ColorModePreference = 'light' | 'dark' | 'auto';
 /** Feature toggles persisted as application-level user preferences. */
 export interface FeatureSettings {
   labels: boolean;
+  mermaid: boolean;
 }
 
 export type FeatureKey = keyof FeatureSettings;
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   colorMode: 'auto',
   features: {
     labels: true,
+    mermaid: true,
   },
 };
 
@@ -70,6 +72,7 @@ function normalizeFeatures(value: unknown): FeatureSettings {
   if (!isRecord(value)) return { ...defaults };
   return {
     labels: typeof value['labels'] === 'boolean' ? value['labels'] : defaults.labels,
+    mermaid: typeof value['mermaid'] === 'boolean' ? value['mermaid'] : defaults.mermaid,
   };
 }
 

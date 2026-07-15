@@ -20,6 +20,7 @@ interface EditorToolbarProps {
   onDelete: () => void;
   onOpenFindReplace: () => void;
   labelsEnabled: boolean;
+  mermaidEnabled: boolean;
   noteLabels: string[];
   allLabels: Label[];
   onLabelsChange: (labels: string[]) => void;
@@ -57,6 +58,7 @@ export function EditorToolbar({
   onDelete,
   onOpenFindReplace,
   labelsEnabled,
+  mermaidEnabled,
   noteLabels,
   allLabels,
   onLabelsChange,
@@ -114,7 +116,7 @@ export function EditorToolbar({
             minWidth: 0,
           }}
         >
-          <FormatControls editor={editor} />
+          <FormatControls editor={editor} mermaidEnabled={mermaidEnabled} />
           {labelsEnabled && (
             <>
               <Separator />

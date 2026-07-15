@@ -22,7 +22,7 @@ function deferred<T>(): {
 
 const loadedSettings: AppSettings = {
   colorMode: 'auto',
-  features: { labels: true },
+  features: { labels: true, mermaid: true },
 };
 
 function note(): Note {
@@ -98,12 +98,16 @@ function SettingsHarness(): JSX.Element {
       <span data-testid="loaded">{loaded ? 'loaded' : 'loading'}</span>
       <span data-testid="mode">{settings.colorMode}</span>
       <span data-testid="labels">{settings.features.labels ? 'on' : 'off'}</span>
+      <span data-testid="mermaid">{settings.features.mermaid ? 'on' : 'off'}</span>
       <span data-testid="error">{error ?? 'none'}</span>
       <button type="button" onClick={() => setPreference('dark')}>
         Dark
       </button>
       <button type="button" onClick={() => setFeatureEnabled('labels', false)}>
         Disable labels
+      </button>
+      <button type="button" onClick={() => setFeatureEnabled('mermaid', false)}>
+        Disable Mermaid
       </button>
     </div>
   );
@@ -186,5 +190,19 @@ describe('useAppSettings', () => {
     expect(screen.getByTestId('mode').textContent).toBe('dark');
     expect(screen.getByTestId('labels').textContent).toBe('off');
     expect(screen.getByTestId('error').textContent).toBe('none');
+  });
+
+  it('optimistically updates the Mermaid feature independently', async () => {
+    const api = installApi();
+
+    render(<SettingsHarness />);
+
+    await waitFor(() => expect(screen.getByTestId('loaded').textContent).toBe('loaded'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Disable Mermaid' }));
+
+    await waitFor(() => expect(screen.getByTestId('mermaid').textContent).toBe('off'));
+    expect(screen.getByTestId('labels').textContent).toBe('on');
+    expect(api.setFeatureEnabled).toHaveBeenCalledWith('mermaid', false);
   });
 });

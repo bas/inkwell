@@ -96,15 +96,18 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
   const api: InkwellApi = {
     getSettings: vi.fn(async () => ({
       colorMode: 'auto' as const,
-      features: { labels: true },
+      features: { labels: true, mermaid: true },
     })),
     setColorMode: vi.fn(async (mode) => ({
       colorMode: mode,
-      features: { labels: true },
+      features: { labels: true, mermaid: true },
     })),
     setFeatureEnabled: vi.fn(async (feature, enabled) => ({
       colorMode: 'auto' as const,
-      features: { labels: feature === 'labels' ? enabled : true },
+      features: {
+        labels: feature === 'labels' ? enabled : true,
+        mermaid: feature === 'mermaid' ? enabled : true,
+      },
     })),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
@@ -173,6 +176,7 @@ function renderEditor(): void {
         noteId="n1"
         labels={[]}
         labelsEnabled
+        mermaidEnabled
         onAfterChange={() => {}}
         onLabelsChanged={() => {}}
         onAfterDelete={() => {}}

@@ -53,6 +53,21 @@ export function SettingsDialog({
               existing label data intact.
             </FormControl.Caption>
           </FormControl>
+
+          <FormControl>
+            <FormControl.Label>
+              <Checkbox
+                checked={settings.features.mermaid}
+                onChange={(event) => onFeatureChange('mermaid', event.currentTarget.checked)}
+                data-testid="feature-mermaid-toggle"
+              />{' '}
+              Mermaid diagrams
+            </FormControl.Label>
+            <FormControl.Caption>
+              Show Mermaid diagram rendering and insertion tools. Turning this off keeps existing
+              diagram Markdown intact.
+            </FormControl.Caption>
+          </FormControl>
         </Box>
 
         <Box as="section" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
