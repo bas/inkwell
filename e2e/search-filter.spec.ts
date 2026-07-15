@@ -10,7 +10,7 @@ import {
   type LaunchedApp,
 } from './helpers';
 
-/** Create a label through the manager dialog. */
+/** Create a label through Settings. */
 async function createLabel(page: Page, name: string): Promise<void> {
   await openSettings(page);
   await page.getByTestId('new-label-name').fill(name);

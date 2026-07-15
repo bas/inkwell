@@ -96,15 +96,15 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
   const api: InkwellApi = {
     getSettings: vi.fn(async () => ({
       colorMode: 'auto' as const,
-      features: { labels: true, copilot: true },
+      features: { labels: true },
     })),
     setColorMode: vi.fn(async (mode) => ({
       colorMode: mode,
-      features: { labels: true, copilot: true },
+      features: { labels: true },
     })),
     setFeatureEnabled: vi.fn(async (feature, enabled) => ({
       colorMode: 'auto' as const,
-      features: { labels: feature === 'labels' ? enabled : true, copilot: true },
+      features: { labels: feature === 'labels' ? enabled : true },
     })),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
