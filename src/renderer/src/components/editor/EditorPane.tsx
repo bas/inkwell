@@ -743,11 +743,13 @@ export function EditorPane({
     // Only one AI panel at a time.
     setReviewOpen(false);
     cancelReview();
-    resetFix();
     setPreTidyBody(undefined);
     setFixNoteId(id);
     setFixNoteTitle(deriveNoteTitle(body));
     setFixOpen(true);
+    // beginFix() resets prior fix state and cancels any in-flight request, so
+    // an explicit resetFix() here would only clear the request id and prevent
+    // that cancellation.
     const requestId = beginFix();
     void (async () => {
       await save();
@@ -767,6 +769,14 @@ export function EditorPane({
       if (activeFixRequestId() !== requestId) return;
       if (!result.ok) {
         failFix(describeFixError(result.error));
+        return;
+      }
+      // If the user edited while Copilot was generating, the suggestions are
+      // stale and auto-applying them would clobber the in-progress edits.
+      if (dirtyRef.current) {
+        failFix(
+          'You edited the note while Copilot was tidying. Save your changes and run Tidy again.',
+        );
         return;
       }
       const { autoApply, review } = partitionFixSuggestions(result.suggestions);
