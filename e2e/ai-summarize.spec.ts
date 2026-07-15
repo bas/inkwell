@@ -6,7 +6,6 @@ import {
   typeBody,
   waitSaved,
   openSummary,
-  openSettings,
   readSingleNote,
   type LaunchedApp,
 } from './helpers';
@@ -64,23 +63,5 @@ test.describe('AI summarize', () => {
     expect(note).not.toContain('<!--');
     expect(note).toContain(FAKE_SUMMARY);
     expect(note).toContain('Original body text.');
-  });
-
-  test('hides Copilot note actions when Copilot writing tools are disabled', async () => {
-    const { page } = ctx;
-
-    await createNote(page);
-    await setTitle(page, 'No Copilot actions');
-    await typeBody(page, 'Some note content.');
-    await waitSaved(page);
-
-    await openSettings(page);
-    await page.getByTestId('feature-copilot-toggle').click();
-    await page.keyboard.press('Escape');
-
-    await page.getByTestId('note-actions').click();
-    await expect(page.getByTestId('action-summarize')).toHaveCount(0);
-    await expect(page.getByTestId('action-review')).toHaveCount(0);
-    await expect(page.getByTestId('action-copy-markdown')).toBeVisible();
   });
 });

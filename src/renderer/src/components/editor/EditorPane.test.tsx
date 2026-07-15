@@ -173,7 +173,6 @@ function renderEditor(): void {
         noteId="n1"
         labels={[]}
         labelsEnabled
-        copilotEnabled
         onAfterChange={() => {}}
         onLabelsChanged={() => {}}
         onAfterDelete={() => {}}

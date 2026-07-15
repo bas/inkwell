@@ -94,5 +94,3 @@ A small token-usage summary is displayed at the bottom of both the Summary dialo
 ## Availability
 
 If GitHub Copilot is not available (no subscription, or the service is unreachable), the **Summarize** and **Review** items in the menu are disabled and an explanation is shown.
-
-You can also turn off **Copilot writing tools** in **Settings**. When this feature is off, Copilot actions are hidden from the note actions menu and new Copilot requests are blocked.

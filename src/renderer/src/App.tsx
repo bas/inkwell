@@ -1,21 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  ThemeProvider,
-  BaseStyles,
-  SplitPageLayout,
-  Box,
-  Flash,
-  IconButton,
-  ActionMenu,
-  ActionList,
-} from '@primer/react';
-import {
-  SidebarCollapseIcon,
-  SidebarExpandIcon,
-  PlusIcon,
-  KebabHorizontalIcon,
-  GearIcon,
-} from '@primer/octicons-react';
+import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, IconButton } from '@primer/react';
+import { SidebarCollapseIcon, SidebarExpandIcon, PlusIcon, GearIcon } from '@primer/octicons-react';
 import type { ColorModePreference, FeatureKey } from '@shared/types';
 import { useAppSettings, toPrimerColorMode } from './hooks/useAppSettings';
 import { useNotes } from './state/useNotes';
@@ -37,7 +22,6 @@ export function App(): JSX.Element {
     setFeatureEnabled,
   } = useAppSettings();
   const labelsEnabled = settings.features.labels;
-  const copilotEnabled = settings.features.copilot;
   const notes = useNotes(labelsEnabled);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
@@ -122,30 +106,14 @@ export function App(): JSX.Element {
                 onClick={toggleSidebar}
                 data-testid="toggle-sidebar"
               />
-              <ActionMenu>
-                <ActionMenu.Anchor>
-                  <IconButton
-                    icon={KebabHorizontalIcon}
-                    aria-label="App menu"
-                    variant="invisible"
-                    size="small"
-                    data-testid="app-header-menu"
-                  />
-                </ActionMenu.Anchor>
-                <ActionMenu.Overlay width="small">
-                  <ActionList>
-                    <ActionList.Item
-                      data-testid="open-settings"
-                      onSelect={() => setSettingsOpen(true)}
-                    >
-                      <ActionList.LeadingVisual>
-                        <GearIcon />
-                      </ActionList.LeadingVisual>
-                      Settings
-                    </ActionList.Item>
-                  </ActionList>
-                </ActionMenu.Overlay>
-              </ActionMenu>
+              <IconButton
+                icon={GearIcon}
+                aria-label="Settings"
+                variant="invisible"
+                size="small"
+                data-testid="app-header-menu"
+                onClick={() => setSettingsOpen(true)}
+              />
               <IconButton
                 icon={PlusIcon}
                 aria-label="New note"
@@ -226,7 +194,6 @@ export function App(): JSX.Element {
                 noteId={notes.selectedId}
                 labels={notes.labels}
                 labelsEnabled={labelsEnabled}
-                copilotEnabled={copilotEnabled}
                 onCreateNote={() => void notes.createNote()}
                 onAfterChange={() => void notes.refresh()}
                 onLabelsChanged={() => {

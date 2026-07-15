@@ -20,7 +20,6 @@ interface EditorToolbarProps {
   onDelete: () => void;
   onOpenFindReplace: () => void;
   labelsEnabled: boolean;
-  copilotEnabled: boolean;
   noteLabels: string[];
   allLabels: Label[];
   onLabelsChange: (labels: string[]) => void;
@@ -58,7 +57,6 @@ export function EditorToolbar({
   onDelete,
   onOpenFindReplace,
   labelsEnabled,
-  copilotEnabled,
   noteLabels,
   allLabels,
   onLabelsChange,
@@ -150,7 +148,6 @@ export function EditorToolbar({
         />
         <NoteActionsMenu
           pinned={pinned}
-          copilotEnabled={copilotEnabled}
           onSummarize={onSummarize}
           onReview={onReview}
           onTogglePin={onTogglePin}

@@ -1,15 +1,14 @@
 # Settings
 
-Open **Settings** from the app header menu on the left side of the titlebar.
+Open **Settings** with the gear button on the left side of the titlebar.
 
 ## Features
 
 The **Features** section controls optional tools in the app.
 
-| Feature                   | What it controls                                                                    |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| **Labels**                | Label grouping, label chips, the per-note label picker, and global label management |
-| **Copilot writing tools** | Copilot-powered note actions such as summarize and review                           |
+| Feature    | What it controls                                                                    |
+| ---------- | ----------------------------------------------------------------------------------- |
+| **Labels** | Label grouping, label chips, the per-note label picker, and global label management |
 
 ## Labels
 

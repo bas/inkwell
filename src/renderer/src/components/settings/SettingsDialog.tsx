@@ -35,7 +35,7 @@ export function SettingsDialog({
               Features
             </Heading>
             <Text sx={{ display: 'block', color: 'fg.muted', fontSize: 1, mt: 1 }}>
-              Choose which organization and writing-assistant tools are visible in Inkwell.
+              Choose which organization tools are visible in Inkwell.
             </Text>
           </Box>
 
@@ -49,19 +49,6 @@ export function SettingsDialog({
             <FormControl.Caption>
               Show label grouping, label chips, and per-note label controls. Turning this off keeps
               existing label data intact.
-            </FormControl.Caption>
-          </FormControl>
-
-          <FormControl>
-            <Checkbox
-              checked={settings.features.copilot}
-              onChange={(event) => onFeatureChange('copilot', event.currentTarget.checked)}
-              data-testid="feature-copilot-toggle"
-            />
-            <FormControl.Label>Copilot writing tools</FormControl.Label>
-            <FormControl.Caption>
-              Preference is saved here so Copilot controls can be gated consistently as the feature
-              settings surface grows.
             </FormControl.Caption>
           </FormControl>
         </Box>

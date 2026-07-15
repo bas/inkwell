@@ -9,7 +9,6 @@ export type ColorModePreference = 'light' | 'dark' | 'auto';
 /** Feature toggles persisted as application-level user preferences. */
 export interface FeatureSettings {
   labels: boolean;
-  copilot: boolean;
 }
 
 export type FeatureKey = keyof FeatureSettings;
@@ -33,7 +32,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   colorMode: 'auto',
   features: {
     labels: true,
-    copilot: true,
   },
 };
 
@@ -42,7 +40,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function isFeatureKey(value: unknown): value is FeatureKey {
-  return value === 'labels' || value === 'copilot';
+  return value === 'labels';
 }
 
 function normalizeColorMode(value: unknown): ColorModePreference {
@@ -70,7 +68,6 @@ function normalizeFeatures(value: unknown): FeatureSettings {
   if (!isRecord(value)) return { ...defaults };
   return {
     labels: typeof value['labels'] === 'boolean' ? value['labels'] : defaults.labels,
-    copilot: typeof value['copilot'] === 'boolean' ? value['copilot'] : defaults.copilot,
   };
 }
 

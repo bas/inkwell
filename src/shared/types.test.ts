@@ -7,7 +7,6 @@ describe('normalizeSettings', () => {
       colorMode: 'dark',
       features: {
         labels: true,
-        copilot: true,
       },
     });
   });
@@ -17,7 +16,6 @@ describe('normalizeSettings', () => {
       colorMode: 'auto',
       features: {
         labels: false,
-        copilot: true,
       },
     });
   });
@@ -33,7 +31,6 @@ describe('normalizeSettings', () => {
       colorMode: 'auto',
       features: {
         labels: true,
-        copilot: false,
       },
       windowBounds: { width: 900, height: 700, x: 10 },
     });

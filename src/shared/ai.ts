@@ -8,7 +8,7 @@
  */
 
 /** Why the Copilot AI runtime is not usable, mapped to a renderer-facing message. */
-export type AiUnavailableReason = 'disabled-by-preference' | 'runtime-error' | 'not-authenticated';
+export type AiUnavailableReason = 'runtime-error' | 'not-authenticated';
 /**
  * Whether the Copilot runtime is reachable and the user is authenticated.
  *

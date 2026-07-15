@@ -9,7 +9,6 @@ import type {
 } from '../../shared/ai';
 import { IpcChannels } from '../../shared/ipc';
 import type { NotesService } from '../storage/notesService';
-import { readSettings } from '../settings';
 import { getAiAvailability } from './availability';
 import { buildReviewPrompt } from './prompts';
 import { runGeneration } from './runner';
@@ -179,12 +178,6 @@ function asReviewSuggestion(value: unknown): AiReviewSuggestion {
 
 const activeRequests = new Map<string, () => void>();
 
-function assertCopilotEnabled(): void {
-  if (!readSettings().features.copilot) {
-    throw new Error('Copilot writing tools are disabled in Settings');
-  }
-}
-
 async function reviewNote(
   service: NotesService,
   sender: WebContents,
@@ -291,7 +284,6 @@ export function registerReviewHandlers(service: NotesService): void {
       note: ReturnType<NotesService['updateNote']>;
       apply: AiReviewApplyResult;
     }> => {
-      assertCopilotEnabled();
       if (typeof noteId !== 'string') throw new Error('Expected noteId to be a string');
       const suggestion = asReviewSuggestion(suggestionValue);
       const note = await service.getNote(noteId);

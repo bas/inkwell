@@ -19,7 +19,6 @@ interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
   labelsEnabled: boolean;
-  copilotEnabled: boolean;
   onCreateNote?: () => void;
   onAfterChange: () => void;
   onLabelsChanged: () => void;
@@ -123,7 +122,6 @@ export function EditorPane({
   noteId,
   labels,
   labelsEnabled,
-  copilotEnabled,
   onCreateNote,
   onAfterChange,
   onLabelsChanged,
@@ -471,7 +469,7 @@ export function EditorPane({
 
   const handleSummarize = useCallback(() => {
     const { id, markdown: body } = dataRef.current;
-    if (!id || !copilotEnabled) return;
+    if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     resetSummary();
     setSummaryNoteId(id);
@@ -487,7 +485,7 @@ export function EditorPane({
       }
       runSummarize(id);
     })();
-  }, [copilotEnabled, save, runSummarize, resetSummary]);
+  }, [save, runSummarize, resetSummary]);
 
   const handleCloseSummary = useCallback(() => {
     setSummaryOpen(false);
@@ -520,7 +518,7 @@ export function EditorPane({
 
   const handleReview = useCallback(() => {
     const { id, markdown: body } = dataRef.current;
-    if (!id || !copilotEnabled) return;
+    if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     resetReview();
     setReviewNoteId(id);
@@ -535,7 +533,7 @@ export function EditorPane({
       }
       startReview(id);
     })();
-  }, [copilotEnabled, save, startReview, resetReview]);
+  }, [save, startReview, resetReview]);
 
   const handleCloseReview = useCallback(() => {
     setReviewOpen(false);
@@ -811,7 +809,6 @@ export function EditorPane({
               onSelectSource={() => setViewSource(true)}
               pinned={note.pinned}
               labelsEnabled={labelsEnabled}
-              copilotEnabled={copilotEnabled}
               onSummarize={handleSummarize}
               onReview={handleReview}
               onTogglePin={handleTogglePin}

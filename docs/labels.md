@@ -19,9 +19,8 @@ Open the label picker (see above) and click the label again to deselect it.
 
 The **Labels** section in Settings lets you create labels, change their colour, and delete them.
 
-1. Open the app header menu on the left side of the titlebar.
-2. Choose **Settings**.
-3. Use the **Labels** section.
+1. Click the **Settings** gear on the left side of the titlebar.
+2. Use the **Labels** section.
 
 ### Changing a label's colour
 
