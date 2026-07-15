@@ -32,5 +32,5 @@ test-results/
 # App data created during dev (local vault for manual testing)
 .dev-vault/
 
-# Impeccable hook cache (machine-local, per-session state)
-.impeccable/hook.cache.json
+# Impeccable (machine-local, per-session state)
+.impeccable/
