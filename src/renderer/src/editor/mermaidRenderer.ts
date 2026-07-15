@@ -17,12 +17,12 @@ function isAllowedSvgReference(value: string): boolean {
 }
 
 function sanitizeMermaidSvg(svg: string): string {
-  const document = new DOMParser().parseFromString(svg, 'image/svg+xml');
-  const parserError = document.querySelector('parsererror');
+  const svgDocument = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  const parserError = svgDocument.querySelector('parsererror');
   if (parserError) throw new Error('Mermaid returned invalid SVG.');
 
-  document.querySelectorAll('script, foreignObject').forEach((element) => element.remove());
-  document.querySelectorAll('*').forEach((element) => {
+  svgDocument.querySelectorAll('script, foreignObject').forEach((element) => element.remove());
+  svgDocument.querySelectorAll('*').forEach((element) => {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
       if (
@@ -34,7 +34,7 @@ function sanitizeMermaidSvg(svg: string): string {
     }
   });
 
-  return document.documentElement.outerHTML;
+  return svgDocument.documentElement.outerHTML;
 }
 
 function getMermaidTheme(mode: ColorMode): 'default' | 'dark' {
