@@ -25,7 +25,7 @@ beforeAll(() => {
 
 const labels: Label[] = [{ id: 1, name: 'work', color: 'default' }];
 
-function renderToolbar(viewSource: boolean): void {
+function renderToolbar(viewSource: boolean, labelsEnabled = true, copilotEnabled = true): void {
   render(
     <ThemeProvider>
       <EditorToolbar
@@ -40,6 +40,8 @@ function renderToolbar(viewSource: boolean): void {
         onCopyMarkdown={() => {}}
         onDelete={() => {}}
         onOpenFindReplace={() => {}}
+        labelsEnabled={labelsEnabled}
+        copilotEnabled={copilotEnabled}
         noteLabels={[]}
         allLabels={labels}
         onLabelsChange={() => {}}
@@ -65,5 +67,19 @@ describe('EditorToolbar labels control placement', () => {
     renderToolbar(true);
 
     expect(screen.queryByTestId('label-picker')).toBeNull();
+  });
+
+  it('does not render the labels button when labels are disabled', () => {
+    renderToolbar(false, false);
+
+    expect(screen.queryByTestId('label-picker')).toBeNull();
+  });
+
+  it('hides Copilot actions when Copilot writing tools are disabled', () => {
+    renderToolbar(false, true, false);
+
+    screen.getByTestId('note-actions').click();
+    expect(screen.queryByTestId('action-summarize')).toBeNull();
+    expect(screen.queryByTestId('action-review')).toBeNull();
   });
 });

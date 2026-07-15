@@ -10,6 +10,7 @@ import {
 
 interface NoteActionsMenuProps {
   pinned: boolean;
+  copilotEnabled: boolean;
   onSummarize: () => void;
   onReview: () => void;
   onTogglePin: () => void;
@@ -20,6 +21,7 @@ interface NoteActionsMenuProps {
 /** Overflow menu of actions for the currently open note. */
 export function NoteActionsMenu({
   pinned,
+  copilotEnabled,
   onSummarize,
   onReview,
   onTogglePin,
@@ -38,19 +40,23 @@ export function NoteActionsMenu({
       </ActionMenu.Anchor>
       <ActionMenu.Overlay width="small">
         <ActionList>
-          <ActionList.Item onSelect={onSummarize} data-testid="action-summarize">
-            <ActionList.LeadingVisual>
-              <CopilotIcon />
-            </ActionList.LeadingVisual>
-            Summarize with Copilot
-          </ActionList.Item>
-          <ActionList.Item onSelect={onReview} data-testid="action-review">
-            <ActionList.LeadingVisual>
-              <CommentDiscussionIcon />
-            </ActionList.LeadingVisual>
-            Review with Copilot
-          </ActionList.Item>
-          <ActionList.Divider />
+          {copilotEnabled && (
+            <>
+              <ActionList.Item onSelect={onSummarize} data-testid="action-summarize">
+                <ActionList.LeadingVisual>
+                  <CopilotIcon />
+                </ActionList.LeadingVisual>
+                Summarize with Copilot
+              </ActionList.Item>
+              <ActionList.Item onSelect={onReview} data-testid="action-review">
+                <ActionList.LeadingVisual>
+                  <CommentDiscussionIcon />
+                </ActionList.LeadingVisual>
+                Review with Copilot
+              </ActionList.Item>
+              <ActionList.Divider />
+            </>
+          )}
           <ActionList.Item onSelect={onTogglePin} data-testid="action-toggle-pin">
             <ActionList.LeadingVisual>
               <PinIcon />

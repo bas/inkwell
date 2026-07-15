@@ -1,4 +1,5 @@
 import type { AiAvailability } from '../../shared/ai';
+import { readSettings } from '../settings';
 import { getCopilotClient } from './copilotClient';
 
 function errorMessage(err: unknown): string {
@@ -12,6 +13,13 @@ function errorMessage(err: unknown): string {
  * renderer can render a first-class error state instead of an unhandled error.
  */
 export async function getAiAvailability(): Promise<AiAvailability> {
+  if (!readSettings().features.copilot) {
+    return {
+      ready: false,
+      reason: 'disabled-by-preference',
+      message: 'Copilot writing tools are disabled in Settings.',
+    };
+  }
   // E2E test seam: pretend the runtime is ready so Playwright can drive the AI
   // flow without a live Copilot login. Paired with the seam in `runner.ts`.
   if (process.env.INKWELL_FAKE_AI) {

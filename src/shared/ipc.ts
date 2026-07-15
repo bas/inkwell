@@ -1,4 +1,4 @@
-import type { AppSettings, ColorModePreference } from './types';
+import type { AppSettings, ColorModePreference, FeatureKey } from './types';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note';
 import type { Label } from './note-labels';
 import type {
@@ -15,6 +15,7 @@ import type {
 export const IpcChannels = {
   getSettings: 'settings:get',
   setColorMode: 'settings:setColorMode',
+  setFeatureEnabled: 'settings:setFeatureEnabled',
   /** Main → renderer: the effective system color scheme changed. */
   systemColorSchemeChanged: 'system:colorSchemeChanged',
 
@@ -62,6 +63,7 @@ export const IpcChannels = {
 export interface InkwellApi {
   getSettings(): Promise<AppSettings>;
   setColorMode(mode: ColorModePreference): Promise<AppSettings>;
+  setFeatureEnabled(feature: FeatureKey, enabled: boolean): Promise<AppSettings>;
   /** Subscribe to system color-scheme changes. Returns an unsubscribe function. */
   onSystemColorSchemeChanged(listener: (isDark: boolean) => void): () => void;
 

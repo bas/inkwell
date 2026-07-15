@@ -1,19 +1,44 @@
 import { useEffect, useState } from 'react';
-import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, IconButton } from '@primer/react';
-import { SidebarCollapseIcon, SidebarExpandIcon, TagIcon, PlusIcon } from '@primer/octicons-react';
-import type { ColorModePreference } from '@shared/types';
-import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
+import {
+  ThemeProvider,
+  BaseStyles,
+  SplitPageLayout,
+  Box,
+  Flash,
+  IconButton,
+  ActionMenu,
+  ActionList,
+} from '@primer/react';
+import {
+  SidebarCollapseIcon,
+  SidebarExpandIcon,
+  PlusIcon,
+  KebabHorizontalIcon,
+  GearIcon,
+} from '@primer/octicons-react';
+import type { ColorModePreference, FeatureKey } from '@shared/types';
+import { useAppSettings, toPrimerColorMode } from './hooks/useAppSettings';
 import { useNotes } from './state/useNotes';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Sidebar } from './components/sidebar/Sidebar';
-import { LabelManagerDialog } from './components/labels/LabelManagerDialog';
 import { EditorPane } from './components/editor/EditorPane';
+import { SettingsDialog } from './components/settings/SettingsDialog';
 
 const SIDEBAR_VISIBLE_KEY = 'inkwell-sidebar-visible';
 
 export function App(): JSX.Element {
-  const { preference, resolvedMode, loaded, setPreference } = useColorMode();
-  const notes = useNotes();
+  const {
+    settings,
+    preference,
+    resolvedMode,
+    loaded,
+    error: settingsError,
+    setPreference,
+    setFeatureEnabled,
+  } = useAppSettings();
+  const labelsEnabled = settings.features.labels;
+  const copilotEnabled = settings.features.copilot;
+  const notes = useNotes(labelsEnabled);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SIDEBAR_VISIBLE_KEY) !== 'false';
@@ -21,7 +46,7 @@ export function App(): JSX.Element {
       return true;
     }
   });
-  const [managingLabels, setManagingLabels] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const toggleSidebar = (): void => {
     setSidebarVisible((prev) => {
@@ -59,6 +84,7 @@ export function App(): JSX.Element {
         >
           <Box
             as="header"
+            data-testid="app-header"
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
             sx={{
               display: 'flex',
@@ -96,14 +122,30 @@ export function App(): JSX.Element {
                 onClick={toggleSidebar}
                 data-testid="toggle-sidebar"
               />
-              <IconButton
-                icon={TagIcon}
-                aria-label="Manage labels"
-                variant="invisible"
-                size="small"
-                data-testid="manage-labels"
-                onClick={() => queueMicrotask(() => setManagingLabels(true))}
-              />
+              <ActionMenu>
+                <ActionMenu.Anchor>
+                  <IconButton
+                    icon={KebabHorizontalIcon}
+                    aria-label="App menu"
+                    variant="invisible"
+                    size="small"
+                    data-testid="app-header-menu"
+                  />
+                </ActionMenu.Anchor>
+                <ActionMenu.Overlay width="small">
+                  <ActionList>
+                    <ActionList.Item
+                      data-testid="open-settings"
+                      onSelect={() => setSettingsOpen(true)}
+                    >
+                      <ActionList.LeadingVisual>
+                        <GearIcon />
+                      </ActionList.LeadingVisual>
+                      Settings
+                    </ActionList.Item>
+                  </ActionList>
+                </ActionMenu.Overlay>
+              </ActionMenu>
               <IconButton
                 icon={PlusIcon}
                 aria-label="New note"
@@ -164,6 +206,7 @@ export function App(): JSX.Element {
                 <Sidebar
                   summaries={notes.summaries}
                   labels={notes.labels}
+                  labelsEnabled={labelsEnabled}
                   selectedId={notes.selectedId}
                   query={notes.query}
                   loading={notes.loading}
@@ -182,6 +225,8 @@ export function App(): JSX.Element {
               <EditorPane
                 noteId={notes.selectedId}
                 labels={notes.labels}
+                labelsEnabled={labelsEnabled}
+                copilotEnabled={copilotEnabled}
                 onCreateNote={() => void notes.createNote()}
                 onAfterChange={() => void notes.refresh()}
                 onLabelsChanged={() => {
@@ -197,11 +242,17 @@ export function App(): JSX.Element {
           </SplitPageLayout>
         </Box>
 
-        {managingLabels && (
-          <LabelManagerDialog
+        {settingsOpen && (
+          <SettingsDialog
+            settings={settings}
             labels={notes.labels}
-            onClose={() => setManagingLabels(false)}
-            onChanged={() => {
+            error={settingsError}
+            onClose={() => setSettingsOpen(false)}
+            onFeatureChange={(feature: FeatureKey, enabled: boolean) => {
+              setFeatureEnabled(feature, enabled);
+              if (feature === 'labels' && enabled) void notes.refreshLabels();
+            }}
+            onLabelsChanged={() => {
               void notes.refreshLabels();
               void notes.refresh();
             }}

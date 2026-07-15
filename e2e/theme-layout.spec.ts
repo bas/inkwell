@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { launchApp, type LaunchedApp } from './helpers';
+import { launchApp, openSettings, type LaunchedApp } from './helpers';
 
 async function expectInDarkMode(
   locator: ReturnType<LaunchedApp['page']['getByTestId']>,
@@ -99,13 +99,13 @@ test.describe('Theme', () => {
     await page.getByRole('button', { name: 'Dark' }).click();
     await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
 
-    await page.getByTestId('manage-labels').click();
-    const labelDialog = page.getByTestId('label-manager');
-    await expect(labelDialog).toBeVisible();
-    await expectInDarkMode(labelDialog);
+    await openSettings(page);
+    const settingsDialog = page.getByTestId('settings-dialog');
+    await expect(settingsDialog).toBeVisible();
+    await expectInDarkMode(settingsDialog);
 
     await page.keyboard.press('Escape');
-    await expect(labelDialog).toBeHidden();
+    await expect(settingsDialog).toBeHidden();
 
     await page.getByTestId('new-note-button').click();
     await page.getByTestId('note-actions').click();

@@ -26,7 +26,7 @@ function describeError(err: unknown): string {
 }
 
 /** Central renderer state for the notes list, search, label filter, and selection. */
-export function useNotes(): NotesState & NotesActions {
+export function useNotes(labelsEnabled = true): NotesState & NotesActions {
   const [summaries, setSummaries] = useState<NoteSummary[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
@@ -53,12 +53,16 @@ export function useNotes(): NotesState & NotesActions {
   }, []);
 
   const refreshLabels = useCallback(async () => {
+    if (!labelsEnabled) {
+      setLabels([]);
+      return;
+    }
     try {
       setLabels(await window.api.listLabels());
     } catch (err) {
       setError(describeError(err));
     }
-  }, []);
+  }, [labelsEnabled]);
 
   // Initial load + subscribe to external vault changes.
   useEffect(() => {

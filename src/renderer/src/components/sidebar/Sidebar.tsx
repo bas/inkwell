@@ -21,6 +21,7 @@ function loadGroupBy(): GroupBy {
 interface SidebarProps {
   summaries: NoteSummary[];
   labels: Label[];
+  labelsEnabled: boolean;
   selectedId: string | undefined;
   query: string;
   loading: boolean;
@@ -33,6 +34,7 @@ interface SidebarProps {
 export function Sidebar({
   summaries,
   labels,
+  labelsEnabled,
   selectedId,
   query,
   loading,
@@ -43,6 +45,7 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
   const [groupBy, setGroupBy] = useState<GroupBy>(loadGroupBy);
   const searching = query.trim().length > 0;
+  const effectiveGroupBy: GroupBy = labelsEnabled ? groupBy : 'date';
 
   useEffect(() => {
     try {
@@ -75,22 +78,24 @@ export function Sidebar({
             <SearchBar value={query} onChange={onQueryChange} />
           </Box>
         </Box>
-        <SegmentedControl aria-label="Group notes by" size="small" fullWidth>
-          <SegmentedControl.Button
-            selected={groupBy === 'date'}
-            onClick={() => setGroupBy('date')}
-            data-testid="group-by-date"
-          >
-            Date
-          </SegmentedControl.Button>
-          <SegmentedControl.Button
-            selected={groupBy === 'label'}
-            onClick={() => setGroupBy('label')}
-            data-testid="group-by-label"
-          >
-            Labels
-          </SegmentedControl.Button>
-        </SegmentedControl>
+        {labelsEnabled && (
+          <SegmentedControl aria-label="Group notes by" size="small" fullWidth>
+            <SegmentedControl.Button
+              selected={groupBy === 'date'}
+              onClick={() => setGroupBy('date')}
+              data-testid="group-by-date"
+            >
+              Date
+            </SegmentedControl.Button>
+            <SegmentedControl.Button
+              selected={groupBy === 'label'}
+              onClick={() => setGroupBy('label')}
+              data-testid="group-by-label"
+            >
+              Labels
+            </SegmentedControl.Button>
+          </SegmentedControl>
+        )}
       </Box>
 
       <Box
@@ -123,7 +128,8 @@ export function Sidebar({
             summaries={summaries}
             labels={labels}
             selectedId={selectedId}
-            groupBy={groupBy}
+            groupBy={effectiveGroupBy}
+            labelsEnabled={labelsEnabled}
             searching={searching}
             onSelect={onSelect}
             onTogglePin={onTogglePin}

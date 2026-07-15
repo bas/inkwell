@@ -31,6 +31,8 @@ const IDLE: AiSummaryState = { status: 'idle', text: '' };
 /** Turn a typed AI error into a friendly, actionable message for the panel. */
 function describeAiError(error: AiError): string {
   switch (error.code) {
+    case 'disabled-by-preference':
+      return error.message || 'Copilot writing tools are disabled in Settings.';
     case 'runtime-error':
       return (
         error.message ||

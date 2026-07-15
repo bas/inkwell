@@ -2,6 +2,7 @@ import { ipcMain, type WebContents } from 'electron';
 import type { AiError, AiErrorCode, AiResult } from '../../shared/ai';
 import { IpcChannels } from '../../shared/ipc';
 import type { NotesService } from '../storage/notesService';
+import { readSettings } from '../settings';
 import { getAiAvailability } from './availability';
 import { buildSummarizePrompt } from './prompts';
 import { runGeneration } from './runner';
@@ -26,6 +27,12 @@ function classifyErrorType(errorType: string | undefined): AiErrorCode {
 
 /** Cancel functions for in-flight summarize requests, keyed by requestId. */
 const activeRequests = new Map<string, () => void>();
+
+function assertCopilotEnabled(): void {
+  if (!readSettings().features.copilot) {
+    throw new Error('Copilot writing tools are disabled in Settings');
+  }
+}
 
 /**
  * Summarize a note's body with Copilot, streaming deltas back to the calling
@@ -117,6 +124,7 @@ export function registerSummarizeHandler(service: NotesService): void {
   });
 
   ipcMain.handle(IpcChannels.aiInsertTldr, async (_event, noteId: unknown, summary: unknown) => {
+    assertCopilotEnabled();
     if (typeof noteId !== 'string') throw new Error('Expected noteId to be a string');
     if (typeof summary !== 'string') throw new Error('Expected summary to be a string');
     if (!summary.trim()) throw new Error('Cannot insert an empty summary');

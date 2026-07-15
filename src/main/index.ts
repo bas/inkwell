@@ -1,13 +1,13 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { readSettings, setColorMode, setWindowBounds } from './settings';
+import { readSettings, setColorMode, setFeatureEnabled, setWindowBounds } from './settings';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { IpcChannels } from '../shared/ipc';
-import type { ColorModePreference } from '../shared/types';
+import { isFeatureKey, type ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
@@ -86,6 +86,12 @@ function registerIpcHandlers(): void {
       throw new Error('Invalid color mode');
     }
     return setColorMode(mode as ColorModePreference);
+  });
+
+  ipcMain.handle(IpcChannels.setFeatureEnabled, (_event, feature: unknown, enabled: unknown) => {
+    if (!isFeatureKey(feature)) throw new Error('Invalid feature key');
+    if (typeof enabled !== 'boolean') throw new Error('Feature enabled must be a boolean');
+    return setFeatureEnabled(feature, enabled);
   });
 
   ipcMain.handle(IpcChannels.writeClipboard, (_event, text: unknown) => {

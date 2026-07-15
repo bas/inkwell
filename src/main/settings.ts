@@ -13,7 +13,9 @@ import {
   DEFAULT_SETTINGS,
   type AppSettings,
   type ColorModePreference,
+  type FeatureKey,
   type WindowBounds,
+  normalizeSettings,
 } from '../shared/types';
 import { randomUUID } from 'node:crypto';
 
@@ -24,11 +26,10 @@ function settingsPath(): string {
 export function readSettings(): AppSettings {
   try {
     const raw = readFileSync(settingsPath(), 'utf8');
-    const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return normalizeSettings(JSON.parse(raw) as unknown);
   } catch {
     // Missing or unreadable settings fall back to defaults.
-    return { ...DEFAULT_SETTINGS };
+    return normalizeSettings(DEFAULT_SETTINGS);
   }
 }
 
@@ -49,6 +50,19 @@ function writeSettings(settings: AppSettings): void {
 
 export function setColorMode(mode: ColorModePreference): AppSettings {
   const next: AppSettings = { ...readSettings(), colorMode: mode };
+  writeSettings(next);
+  return next;
+}
+
+export function setFeatureEnabled(feature: FeatureKey, enabled: boolean): AppSettings {
+  const current = readSettings();
+  const next: AppSettings = {
+    ...current,
+    features: {
+      ...current.features,
+      [feature]: enabled,
+    },
+  };
   writeSettings(next);
   return next;
 }

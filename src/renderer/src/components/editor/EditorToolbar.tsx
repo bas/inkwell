@@ -19,6 +19,8 @@ interface EditorToolbarProps {
   onCopyMarkdown: () => void;
   onDelete: () => void;
   onOpenFindReplace: () => void;
+  labelsEnabled: boolean;
+  copilotEnabled: boolean;
   noteLabels: string[];
   allLabels: Label[];
   onLabelsChange: (labels: string[]) => void;
@@ -55,6 +57,8 @@ export function EditorToolbar({
   onCopyMarkdown,
   onDelete,
   onOpenFindReplace,
+  labelsEnabled,
+  copilotEnabled,
   noteLabels,
   allLabels,
   onLabelsChange,
@@ -113,16 +117,20 @@ export function EditorToolbar({
           }}
         >
           <FormatControls editor={editor} />
-          <Separator />
-          <ToolbarGroup label="Note organization">
-            <LabelPicker
-              noteLabels={noteLabels}
-              allLabels={allLabels}
-              onChange={onLabelsChange}
-              onCreateAndAssign={onCreateAndAssign}
-              iconOnly
-            />
-          </ToolbarGroup>
+          {labelsEnabled && (
+            <>
+              <Separator />
+              <ToolbarGroup label="Note organization">
+                <LabelPicker
+                  noteLabels={noteLabels}
+                  allLabels={allLabels}
+                  onChange={onLabelsChange}
+                  onCreateAndAssign={onCreateAndAssign}
+                  iconOnly
+                />
+              </ToolbarGroup>
+            </>
+          )}
         </Box>
       )}
 
@@ -142,6 +150,7 @@ export function EditorToolbar({
         />
         <NoteActionsMenu
           pinned={pinned}
+          copilotEnabled={copilotEnabled}
           onSummarize={onSummarize}
           onReview={onReview}
           onTogglePin={onTogglePin}
