@@ -22,7 +22,7 @@ export function App(): JSX.Element {
     setFeatureEnabled,
   } = useAppSettings();
   const labelsEnabled = loaded && settings.features.labels;
-  const mermaidEnabled = loaded && settings.features.mermaid;
+  const mermaidEnabled = settings.features.mermaid;
   const notes = useNotes();
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
