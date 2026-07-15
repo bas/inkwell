@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, IconButton } from '@primer/react';
-import { SidebarCollapseIcon, SidebarExpandIcon, TagIcon, PlusIcon } from '@primer/octicons-react';
+import {
+  SidebarCollapseIcon,
+  SidebarExpandIcon,
+  TagIcon,
+  PlusIcon,
+  GearIcon,
+} from '@primer/octicons-react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
 import { useSettings } from './hooks/useSettings';
 import { useNotes } from './state/useNotes';
 import { ThemeToggle } from './components/ThemeToggle';
+import { SettingsDialog } from './components/SettingsDialog';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { LabelManagerDialog } from './components/labels/LabelManagerDialog';
 import { EditorPane } from './components/editor/EditorPane';
@@ -14,7 +21,7 @@ const SIDEBAR_VISIBLE_KEY = 'inkwell-sidebar-visible';
 
 export function App(): JSX.Element {
   const { preference, resolvedMode, loaded, setPreference } = useColorMode();
-  const { settings } = useSettings();
+  const { settings, setFeatures } = useSettings();
   const labelsEnabled = settings.features.labels;
   const notes = useNotes();
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
@@ -25,6 +32,7 @@ export function App(): JSX.Element {
     }
   });
   const [managingLabels, setManagingLabels] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const toggleSidebar = (): void => {
     setSidebarVisible((prev) => {
@@ -118,11 +126,22 @@ export function App(): JSX.Element {
                 data-testid="new-note-button"
               />
             </Box>
-            <Box sx={{ ml: 'auto' }} style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <Box
+              sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
               <ThemeToggle
                 key={loaded ? preference : 'loading'}
                 preference={preference}
                 onChange={(mode: ColorModePreference) => setPreference(mode)}
+              />
+              <IconButton
+                icon={GearIcon}
+                aria-label="Settings"
+                variant="invisible"
+                size="small"
+                onClick={() => setSettingsOpen(true)}
+                data-testid="open-settings"
               />
             </Box>
           </Box>
@@ -212,6 +231,13 @@ export function App(): JSX.Element {
               void notes.refreshLabels();
               void notes.refresh();
             }}
+          />
+        )}
+        {settingsOpen && (
+          <SettingsDialog
+            features={settings.features}
+            onClose={() => setSettingsOpen(false)}
+            onSetFeatures={setFeatures}
           />
         )}
       </BaseStyles>
