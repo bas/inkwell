@@ -7,6 +7,7 @@ describe('normalizeSettings', () => {
       colorMode: 'dark',
       features: {
         labels: true,
+        mermaid: true,
       },
     });
   });
@@ -16,6 +17,15 @@ describe('normalizeSettings', () => {
       colorMode: 'auto',
       features: {
         labels: false,
+        mermaid: true,
+      },
+    });
+
+    expect(normalizeSettings({ features: { mermaid: false } })).toEqual({
+      colorMode: 'auto',
+      features: {
+        labels: true,
+        mermaid: false,
       },
     });
   });
@@ -24,13 +34,14 @@ describe('normalizeSettings', () => {
     expect(
       normalizeSettings({
         colorMode: 'sepia',
-        features: { labels: 'no', copilot: false },
+        features: { labels: 'no', mermaid: 'off', copilot: false },
         windowBounds: { width: 900, height: 700, x: 10, y: Number.NaN },
       }),
     ).toEqual({
       colorMode: 'auto',
       features: {
         labels: true,
+        mermaid: true,
       },
       windowBounds: { width: 900, height: 700, x: 10 },
     });

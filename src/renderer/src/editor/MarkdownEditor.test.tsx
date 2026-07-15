@@ -50,4 +50,19 @@ describe('MarkdownEditor', () => {
     expect(preview.innerHTML).not.toContain('https://example.com');
     expect(preview.innerHTML).toContain('href="#arrow"');
   });
+
+  it('keeps mermaid fenced code blocks as plain code when Mermaid is disabled', async () => {
+    render(
+      <MarkdownEditor
+        initialMarkdown={['```mermaid', 'flowchart LR', '  A --> B', '```'].join('\n')}
+        mermaidEnabled={false}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const content = await screen.findByTestId('editor-content');
+    expect(screen.queryByTestId('mermaid-block')).toBeNull();
+    expect(content.textContent).toContain('flowchart LR');
+    expect(content.querySelector('pre code')?.className).toContain('language-mermaid');
+  });
 });

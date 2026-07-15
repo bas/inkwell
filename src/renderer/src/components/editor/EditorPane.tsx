@@ -19,6 +19,7 @@ interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
   labelsEnabled: boolean;
+  mermaidEnabled: boolean;
   onCreateNote?: () => void;
   onAfterChange: () => void;
   onLabelsChanged: () => void;
@@ -122,6 +123,7 @@ export function EditorPane({
   noteId,
   labels,
   labelsEnabled,
+  mermaidEnabled,
   onCreateNote,
   onAfterChange,
   onLabelsChanged,
@@ -809,6 +811,7 @@ export function EditorPane({
               onSelectSource={() => setViewSource(true)}
               pinned={note.pinned}
               labelsEnabled={labelsEnabled}
+              mermaidEnabled={mermaidEnabled}
               onSummarize={handleSummarize}
               onReview={handleReview}
               onTogglePin={handleTogglePin}
@@ -937,8 +940,9 @@ export function EditorPane({
                 </Box>
               ) : (
                 <MarkdownEditor
-                  key={`${note.id}:${reloadNonce}`}
+                  key={`${note.id}:${reloadNonce}:${mermaidEnabled ? 'mermaid' : 'plain'}`}
                   initialMarkdown={markdown}
+                  mermaidEnabled={mermaidEnabled}
                   onChange={handleBodyChange}
                   onEditorReady={setEditor}
                 />

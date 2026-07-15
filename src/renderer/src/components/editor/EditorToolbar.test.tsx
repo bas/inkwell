@@ -25,7 +25,7 @@ beforeAll(() => {
 
 const labels: Label[] = [{ id: 1, name: 'work', color: 'default' }];
 
-function renderToolbar(viewSource: boolean, labelsEnabled = true): void {
+function renderToolbar(viewSource: boolean, labelsEnabled = true, mermaidEnabled = true): void {
   render(
     <ThemeProvider>
       <EditorToolbar
@@ -41,6 +41,7 @@ function renderToolbar(viewSource: boolean, labelsEnabled = true): void {
         onDelete={() => {}}
         onOpenFindReplace={() => {}}
         labelsEnabled={labelsEnabled}
+        mermaidEnabled={mermaidEnabled}
         noteLabels={[]}
         allLabels={labels}
         onLabelsChange={() => {}}
@@ -75,5 +76,12 @@ describe('EditorToolbar labels control placement', () => {
     renderToolbar(false, false);
 
     expect(screen.queryByTestId('label-picker')).toBeNull();
+  });
+
+  it('does not render the diagram button when Mermaid is disabled', () => {
+    renderToolbar(false, true, false);
+
+    expect(screen.queryByRole('button', { name: 'Insert diagram' })).toBeNull();
+    expect(screen.queryByTestId('fmt-mermaid')).toBeNull();
   });
 });

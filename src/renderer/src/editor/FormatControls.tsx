@@ -21,6 +21,7 @@ import { canIndentList, canOutdentList, indentList, outdentList } from './extens
 
 interface FormatControlsProps {
   editor: Editor | null;
+  mermaidEnabled?: boolean;
 }
 
 function ToolbarButton({
@@ -73,7 +74,10 @@ function ControlGroup({ label, children }: ControlGroupProps): JSX.Element {
 
 /** Formatting controls for the Markdown editor. Renders inline (no own bar);
  * the host toolbar provides the surrounding container. */
-export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
+export function FormatControls({
+  editor,
+  mermaidEnabled = true,
+}: FormatControlsProps): JSX.Element {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
@@ -267,14 +271,16 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
           active={editor?.isActive('codeBlock')}
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
         />
-        <ToolbarButton
-          icon={WorkflowIcon}
-          label="Insert diagram"
-          testid="fmt-mermaid"
-          disabled={disabled}
-          active={editor?.isActive('mermaidBlock')}
-          onClick={() => editor?.chain().focus().insertMermaidDiagram().run()}
-        />
+        {mermaidEnabled && (
+          <ToolbarButton
+            icon={WorkflowIcon}
+            label="Insert diagram"
+            testid="fmt-mermaid"
+            disabled={disabled}
+            active={editor?.isActive('mermaidBlock')}
+            onClick={() => editor?.chain().focus().insertMermaidDiagram().run()}
+          />
+        )}
         <ToolbarButton
           icon={TableIcon}
           label="Insert table"

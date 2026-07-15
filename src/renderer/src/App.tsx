@@ -22,6 +22,7 @@ export function App(): JSX.Element {
     setFeatureEnabled,
   } = useAppSettings();
   const labelsEnabled = loaded && settings.features.labels;
+  const mermaidEnabled = loaded && settings.features.mermaid;
   const notes = useNotes();
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
@@ -195,6 +196,7 @@ export function App(): JSX.Element {
                 noteId={notes.selectedId}
                 labels={notes.labels}
                 labelsEnabled={labelsEnabled}
+                mermaidEnabled={mermaidEnabled}
                 onCreateNote={() => void notes.createNote()}
                 onAfterChange={() => void notes.refresh()}
                 onLabelsChanged={() => {

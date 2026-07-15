@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { createNote, launchApp, readSingleNote, switchView, type LaunchedApp } from './helpers';
+import {
+  createNote,
+  launchApp,
+  openSettings,
+  readSingleNote,
+  switchView,
+  type LaunchedApp,
+} from './helpers';
 
 test.describe('Mermaid diagrams', () => {
   let ctx: LaunchedApp;
@@ -49,5 +56,35 @@ test.describe('Mermaid diagrams', () => {
     await expect
       .poll(() => readSingleNote(vaultDir))
       .toContain('```mermaid\nflowchart TD\n  Source --> Preview\n```');
+  });
+
+  test('disabling Mermaid hides diagram UI without removing fenced Markdown', async () => {
+    const { page, vaultDir } = ctx;
+
+    await createNote(page);
+    await switchView(page, 'source');
+    await page
+      .getByTestId('source-editor')
+      .fill('# Optional diagram\n\n```mermaid\nflowchart TD\n  Stored --> Hidden\n```');
+    await switchView(page, 'wysiwyg');
+    await expect(page.getByTestId('mermaid-preview')).toBeVisible({ timeout: 15_000 });
+
+    await openSettings(page);
+    await page.getByTestId('feature-mermaid-toggle').click();
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByTestId('fmt-mermaid')).toHaveCount(0);
+    await expect(page.getByTestId('mermaid-block')).toHaveCount(0);
+    await expect(page.getByTestId('editor-content')).toContainText('flowchart TD');
+    await expect
+      .poll(() => readSingleNote(vaultDir))
+      .toContain('```mermaid\nflowchart TD\n  Stored --> Hidden\n```');
+
+    await openSettings(page);
+    await page.getByTestId('feature-mermaid-toggle').click();
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByTestId('fmt-mermaid')).toBeVisible();
+    await expect(page.getByTestId('mermaid-preview')).toBeVisible({ timeout: 15_000 });
   });
 });
