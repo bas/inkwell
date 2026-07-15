@@ -23,6 +23,11 @@ test.describe('Mermaid diagrams', () => {
     await page.getByTestId('mermaid-done').click();
 
     await expect(page.getByTestId('mermaid-preview')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Collapse' }).click();
+    await expect(page.getByTestId('mermaid-collapsed')).toBeVisible();
+    await expect(page.getByTestId('mermaid-preview')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Expand' }).click();
+    await expect(page.getByTestId('mermaid-preview')).toBeVisible({ timeout: 15_000 });
 
     await expect
       .poll(() => readSingleNote(vaultDir))

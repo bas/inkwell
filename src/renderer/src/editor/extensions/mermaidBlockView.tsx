@@ -104,8 +104,9 @@ export function MermaidBlockView(props: NodeViewProps): JSX.Element {
   const initialCode = getNodeCode(props);
   const canEdit = props.editor.isEditable;
   const [editing, setEditing] = useState(canEdit && initialCode.trim() === '');
+  const [collapsed, setCollapsed] = useState(false);
   const [draft, setDraft] = useState(initialCode);
-  const preview = useMermaidPreview(editing ? draft : initialCode);
+  const preview = useMermaidPreview(!editing && collapsed ? '' : editing ? draft : initialCode);
 
   useEffect(() => {
     if (!editing) setDraft(initialCode);
@@ -116,7 +117,9 @@ export function MermaidBlockView(props: NodeViewProps): JSX.Element {
   }, [canEdit]);
 
   const startEditing = useCallback((): void => {
-    if (canEdit) setEditing(true);
+    if (!canEdit) return;
+    setCollapsed(false);
+    setEditing(true);
   }, [canEdit]);
 
   const commit = useCallback((): void => {
@@ -187,20 +190,41 @@ export function MermaidBlockView(props: NodeViewProps): JSX.Element {
         </Box>
       ) : (
         <Box className="ink-mermaid-preview-shell">
-          <Box className="ink-mermaid-preview-panel">
-            <Preview preview={preview} />
-          </Box>
-          {canEdit && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box className="ink-mermaid-header">
+            <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+              {initialCode.trim() === '' ? 'Empty Mermaid diagram' : 'Mermaid diagram'}
+            </Text>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Button
                 type="button"
                 size="small"
                 variant="invisible"
-                onClick={startEditing}
-                data-testid="mermaid-edit"
+                aria-expanded={!collapsed}
+                onClick={() => setCollapsed((value) => !value)}
+                data-testid="mermaid-toggle-collapse"
               >
-                Edit diagram
+                {collapsed ? 'Expand' : 'Collapse'}
               </Button>
+              {canEdit && (
+                <Button
+                  type="button"
+                  size="small"
+                  variant="invisible"
+                  onClick={startEditing}
+                  data-testid="mermaid-edit"
+                >
+                  Edit diagram
+                </Button>
+              )}
+            </Box>
+          </Box>
+          {collapsed ? (
+            <Box className="ink-mermaid-collapsed" data-testid="mermaid-collapsed">
+              <Text sx={{ color: 'fg.muted', fontSize: 1 }}>Diagram collapsed.</Text>
+            </Box>
+          ) : (
+            <Box className="ink-mermaid-preview-panel">
+              <Preview preview={preview} />
             </Box>
           )}
         </Box>

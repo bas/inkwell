@@ -119,12 +119,31 @@
   gap: var(--base-size-8);
 }
 
+.ink-editor .ProseMirror .ink-mermaid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-size-8);
+}
+
 .ink-editor .ProseMirror .ink-mermaid-preview-panel {
   overflow: auto;
   border: 1px solid var(--borderColor-muted);
   border-radius: var(--borderRadius-medium);
   background: var(--bgColor-default);
   padding: var(--base-size-16);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-collapsed {
+  display: flex;
+  min-height: var(--base-size-48);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--borderColor-muted);
+  border-radius: var(--borderRadius-medium);
+  background: var(--bgColor-default);
+  padding: var(--base-size-12);
+  text-align: center;
 }
 
 .ink-editor .ProseMirror .ink-mermaid-empty,
