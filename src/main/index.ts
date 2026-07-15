@@ -1,13 +1,13 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { readSettings, setColorMode, setWindowBounds } from './settings';
+import { readSettings, setColorMode, setFeatures, setWindowBounds } from './settings';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { IpcChannels } from '../shared/ipc';
-import type { ColorModePreference } from '../shared/types';
+import type { AppFeatures, ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
@@ -86,6 +86,19 @@ function registerIpcHandlers(): void {
       throw new Error('Invalid color mode');
     }
     return setColorMode(mode as ColorModePreference);
+  });
+
+  ipcMain.handle(IpcChannels.setFeatures, (_event, features: unknown) => {
+    if (typeof features !== 'object' || features === null) {
+      throw new Error('Invalid features payload');
+    }
+    const f = features as Record<string, unknown>;
+    const update: Partial<AppFeatures> = {};
+    if ('labels' in f) {
+      if (typeof f['labels'] !== 'boolean') throw new Error('features.labels must be a boolean');
+      update.labels = f['labels'];
+    }
+    return setFeatures(update);
   });
 
   ipcMain.handle(IpcChannels.writeClipboard, (_event, text: unknown) => {

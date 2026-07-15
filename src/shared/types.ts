@@ -14,12 +14,24 @@ export interface WindowBounds {
   y?: number;
 }
 
+/** Feature flags that can be toggled to enable or disable optional app capabilities. */
+export interface AppFeatures {
+  /** When false, all label-related UI (label picker, label chips, group-by-label) is hidden. */
+  labels: boolean;
+}
+
 /** Application-level settings persisted by the main process. */
 export interface AppSettings {
   colorMode: ColorModePreference;
   windowBounds?: WindowBounds;
+  features: AppFeatures;
 }
+
+export const DEFAULT_FEATURES: AppFeatures = {
+  labels: true,
+};
 
 export const DEFAULT_SETTINGS: AppSettings = {
   colorMode: 'auto',
+  features: DEFAULT_FEATURES,
 };

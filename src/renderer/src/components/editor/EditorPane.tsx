@@ -18,6 +18,7 @@ import { deriveNoteTitle } from '@shared/noteTitle';
 interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
+  labelsEnabled: boolean;
   onCreateNote?: () => void;
   onAfterChange: () => void;
   onLabelsChanged: () => void;
@@ -120,6 +121,7 @@ function isExactDocRangeMatch(editor: Editor, match: WysiwygMatch, query: string
 export function EditorPane({
   noteId,
   labels,
+  labelsEnabled,
   onCreateNote,
   onAfterChange,
   onLabelsChanged,
@@ -751,7 +753,7 @@ export function EditorPane({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            {note.labels.map((name) => (
+            {labelsEnabled && note.labels.map((name) => (
               <LabelChip key={name} name={name} color={colorOf(name)} />
             ))}
           </Box>
@@ -812,6 +814,7 @@ export function EditorPane({
               onCopyMarkdown={() => void handleCopyMarkdown()}
               onDelete={() => setConfirmDelete(true)}
               onOpenFindReplace={openFindReplace}
+              labelsEnabled={labelsEnabled}
               noteLabels={note.labels}
               allLabels={labels}
               onLabelsChange={(next) => void applyLabels(next)}

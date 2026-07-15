@@ -11,6 +11,7 @@ import {
 import { join, dirname } from 'node:path';
 import {
   DEFAULT_SETTINGS,
+  type AppFeatures,
   type AppSettings,
   type ColorModePreference,
   type WindowBounds,
@@ -25,7 +26,11 @@ export function readSettings(): AppSettings {
   try {
     const raw = readFileSync(settingsPath(), 'utf8');
     const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      features: { ...DEFAULT_SETTINGS.features, ...parsed.features },
+    };
   } catch {
     // Missing or unreadable settings fall back to defaults.
     return { ...DEFAULT_SETTINGS };
@@ -49,6 +54,16 @@ function writeSettings(settings: AppSettings): void {
 
 export function setColorMode(mode: ColorModePreference): AppSettings {
   const next: AppSettings = { ...readSettings(), colorMode: mode };
+  writeSettings(next);
+  return next;
+}
+
+export function setFeatures(features: Partial<AppFeatures>): AppSettings {
+  const current = readSettings();
+  const next: AppSettings = {
+    ...current,
+    features: { ...current.features, ...features },
+  };
   writeSettings(next);
   return next;
 }

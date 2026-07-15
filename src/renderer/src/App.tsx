@@ -3,6 +3,7 @@ import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, IconButton } fr
 import { SidebarCollapseIcon, SidebarExpandIcon, TagIcon, PlusIcon } from '@primer/octicons-react';
 import type { ColorModePreference } from '@shared/types';
 import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
+import { useSettings } from './hooks/useSettings';
 import { useNotes } from './state/useNotes';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Sidebar } from './components/sidebar/Sidebar';
@@ -13,6 +14,8 @@ const SIDEBAR_VISIBLE_KEY = 'inkwell-sidebar-visible';
 
 export function App(): JSX.Element {
   const { preference, resolvedMode, loaded, setPreference } = useColorMode();
+  const { settings } = useSettings();
+  const labelsEnabled = settings.features.labels;
   const notes = useNotes();
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
@@ -96,14 +99,16 @@ export function App(): JSX.Element {
                 onClick={toggleSidebar}
                 data-testid="toggle-sidebar"
               />
-              <IconButton
-                icon={TagIcon}
-                aria-label="Manage labels"
-                variant="invisible"
-                size="small"
-                data-testid="manage-labels"
-                onClick={() => queueMicrotask(() => setManagingLabels(true))}
-              />
+              {labelsEnabled && (
+                <IconButton
+                  icon={TagIcon}
+                  aria-label="Manage labels"
+                  variant="invisible"
+                  size="small"
+                  data-testid="manage-labels"
+                  onClick={() => queueMicrotask(() => setManagingLabels(true))}
+                />
+              )}
               <IconButton
                 icon={PlusIcon}
                 aria-label="New note"
@@ -167,6 +172,7 @@ export function App(): JSX.Element {
                   selectedId={notes.selectedId}
                   query={notes.query}
                   loading={notes.loading}
+                  labelsEnabled={labelsEnabled}
                   onQueryChange={notes.setQuery}
                   onSelect={notes.select}
                   onCreateNote={() => void notes.createNote()}
@@ -182,6 +188,7 @@ export function App(): JSX.Element {
               <EditorPane
                 noteId={notes.selectedId}
                 labels={notes.labels}
+                labelsEnabled={labelsEnabled}
                 onCreateNote={() => void notes.createNote()}
                 onAfterChange={() => void notes.refresh()}
                 onLabelsChanged={() => {
@@ -197,7 +204,7 @@ export function App(): JSX.Element {
           </SplitPageLayout>
         </Box>
 
-        {managingLabels && (
+        {managingLabels && labelsEnabled && (
           <LabelManagerDialog
             labels={notes.labels}
             onClose={() => setManagingLabels(false)}

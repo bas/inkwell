@@ -24,6 +24,7 @@ interface SidebarProps {
   selectedId: string | undefined;
   query: string;
   loading: boolean;
+  labelsEnabled: boolean;
   onQueryChange: (value: string) => void;
   onSelect: (id: string) => void;
   onCreateNote: () => void;
@@ -36,6 +37,7 @@ export function Sidebar({
   selectedId,
   query,
   loading,
+  labelsEnabled,
   onQueryChange,
   onSelect,
   onCreateNote,
@@ -43,6 +45,9 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
   const [groupBy, setGroupBy] = useState<GroupBy>(loadGroupBy);
   const searching = query.trim().length > 0;
+
+  // If labels are disabled and the sidebar is currently grouped by label, fall back to date.
+  const effectiveGroupBy: GroupBy = !labelsEnabled && groupBy === 'label' ? 'date' : groupBy;
 
   useEffect(() => {
     try {
@@ -77,19 +82,21 @@ export function Sidebar({
         </Box>
         <SegmentedControl aria-label="Group notes by" size="small" fullWidth>
           <SegmentedControl.Button
-            selected={groupBy === 'date'}
+            selected={effectiveGroupBy === 'date'}
             onClick={() => setGroupBy('date')}
             data-testid="group-by-date"
           >
             Date
           </SegmentedControl.Button>
-          <SegmentedControl.Button
-            selected={groupBy === 'label'}
-            onClick={() => setGroupBy('label')}
-            data-testid="group-by-label"
-          >
-            Labels
-          </SegmentedControl.Button>
+          {labelsEnabled && (
+            <SegmentedControl.Button
+              selected={effectiveGroupBy === 'label'}
+              onClick={() => setGroupBy('label')}
+              data-testid="group-by-label"
+            >
+              Labels
+            </SegmentedControl.Button>
+          )}
         </SegmentedControl>
       </Box>
 
@@ -123,7 +130,7 @@ export function Sidebar({
             summaries={summaries}
             labels={labels}
             selectedId={selectedId}
-            groupBy={groupBy}
+            groupBy={effectiveGroupBy}
             searching={searching}
             onSelect={onSelect}
             onTogglePin={onTogglePin}

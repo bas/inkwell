@@ -42,6 +42,7 @@ function renderToolbar(viewSource: boolean): void {
         onOpenFindReplace={() => {}}
         noteLabels={[]}
         allLabels={labels}
+        labelsEnabled={true}
         onLabelsChange={() => {}}
         onCreateAndAssign={() => {}}
       />

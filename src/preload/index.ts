@@ -1,12 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IpcChannels, type InkwellApi } from '../shared/ipc';
-import type { ColorModePreference } from '../shared/types';
+import type { AppFeatures, ColorModePreference } from '../shared/types';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
 import type { AiReviewOptions, AiReviewSuggestion, AiStreamChunk } from '../shared/ai';
 
 const api: InkwellApi = {
   getSettings: () => ipcRenderer.invoke(IpcChannels.getSettings),
   setColorMode: (mode: ColorModePreference) => ipcRenderer.invoke(IpcChannels.setColorMode, mode),
+  setFeatures: (features: Partial<AppFeatures>) =>
+    ipcRenderer.invoke(IpcChannels.setFeatures, features),
   onSystemColorSchemeChanged: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, isDark: boolean): void => listener(isDark);
     ipcRenderer.on(IpcChannels.systemColorSchemeChanged, handler);

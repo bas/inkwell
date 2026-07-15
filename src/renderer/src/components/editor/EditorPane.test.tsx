@@ -94,8 +94,8 @@ function note(overrides: Partial<Note> = {}): Note {
 function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
   const loadedNote = note();
   const api: InkwellApi = {
-    getSettings: vi.fn(async () => ({ colorMode: 'auto' as const })),
-    setColorMode: vi.fn(async (mode) => ({ colorMode: mode })),
+    getSettings: vi.fn(async () => ({ colorMode: 'auto' as const, features: { labels: true } })),
+    setColorMode: vi.fn(async (mode) => ({ colorMode: mode, features: { labels: true } })),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
     searchNotes: vi.fn(async () => []),
@@ -150,6 +150,7 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
     })),
     onAiStreamDelta: vi.fn(() => () => {}),
     onMenuNewNote: vi.fn(() => () => {}),
+    setFeatures: vi.fn(async () => ({ colorMode: 'auto' as const, features: { labels: true } })),
     ...overrides,
   };
   Object.defineProperty(window, 'api', { value: api, configurable: true });
@@ -162,6 +163,7 @@ function renderEditor(): void {
       <EditorPane
         noteId="n1"
         labels={[]}
+        labelsEnabled={true}
         onAfterChange={() => {}}
         onLabelsChanged={() => {}}
         onAfterDelete={() => {}}
