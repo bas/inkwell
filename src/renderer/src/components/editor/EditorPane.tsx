@@ -681,7 +681,9 @@ export function EditorPane({
     async (suggestion: UiFixSuggestion): Promise<boolean> => {
       if (suggestion.category === 'label') {
         const label = suggestion.label?.trim();
-        if (!label || !note || !labelsEnabled) {
+        // Guard against the user switching notes while the panel is open: only
+        // mutate labels when the loaded note is still the tidy target.
+        if (!label || !note || !labelsEnabled || note.id !== fixNoteId) {
           markFixOutdated(suggestion.id);
           return false;
         }
@@ -755,62 +757,69 @@ export function EditorPane({
     // that cancellation.
     const requestId = beginFix();
     void (async () => {
-      await save();
-      if (dirtyRef.current) {
-        setFixOpen(false);
-        resetFix();
-        setError('Could not save the note before tidying. Please try again.');
-        return;
-      }
-      // The pre-tidy save is async; if the user cancelled/closed the panel while
-      // it was in flight, don't start a generation that main can't yet cancel.
-      if (activeFixRequestId() !== requestId) return;
-      let result: Awaited<ReturnType<typeof window.api.fixNote>>;
+      // Block edits while tidy generates and auto-applies so background
+      // mutations can't race with or clobber the user's keystrokes.
+      editor?.setEditable(false);
       try {
-        result = await window.api.fixNote(id, requestId);
-      } catch (err) {
-        failFix(describeError(err));
-        return;
-      }
-      if (activeFixRequestId() !== requestId) return;
-      if (!result.ok) {
-        failFix(describeFixError(result.error));
-        return;
-      }
-      // If the user edited while Copilot was generating, the suggestions are
-      // stale and auto-applying them would clobber the in-progress edits.
-      if (dirtyRef.current) {
-        failFix(
-          'You edited the note while Copilot was tidying. Save your changes and run Tidy again.',
-        );
-        return;
-      }
-      const { autoApply, review } = partitionFixSuggestions(result.suggestions);
-      const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
-      const snapshot = dataRef.current.markdown;
-      let appliedCount = 0;
-      // Auto-apply only ever contains body edits; narrow the type and apply
-      // bottom-up so earlier edits don't shift the line targets of later ones.
-      const ordered = autoApply
-        .filter(isBodyFixSuggestion)
-        .sort((a, b) => b.target.startLine - a.target.startLine);
-      for (const suggestion of ordered) {
-        try {
-          const applied = await window.api.applyFixSuggestion(id, suggestion);
-          if (applied.apply.ok) {
-            commitUpdatedNote(applied.note);
-            appliedCount += 1;
-          }
-        } catch {
-          // Skip an individual auto-fix that no longer matches; others still apply.
+        await save();
+        if (dirtyRef.current) {
+          setFixOpen(false);
+          resetFix();
+          setError('Could not save the note before tidying. Please try again.');
+          return;
         }
+        // The pre-tidy save is async; if the user cancelled/closed the panel while
+        // it was in flight, don't start a generation that main can't yet cancel.
+        if (activeFixRequestId() !== requestId) return;
+        let result: Awaited<ReturnType<typeof window.api.fixNote>>;
+        try {
+          result = await window.api.fixNote(id, requestId);
+        } catch (err) {
+          failFix(describeError(err));
+          return;
+        }
+        if (activeFixRequestId() !== requestId) return;
+        if (!result.ok) {
+          failFix(describeFixError(result.error));
+          return;
+        }
+        // If the user edited while Copilot was generating, the suggestions are
+        // stale and auto-applying them would clobber the in-progress edits.
+        if (dirtyRef.current) {
+          failFix(
+            'You edited the note while Copilot was tidying. Save your changes and run Tidy again.',
+          );
+          return;
+        }
+        const { autoApply, review } = partitionFixSuggestions(result.suggestions);
+        const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
+        const snapshot = dataRef.current.markdown;
+        let appliedCount = 0;
+        // Auto-apply only ever contains body edits; narrow the type and apply
+        // bottom-up so earlier edits don't shift the line targets of later ones.
+        const ordered = autoApply
+          .filter(isBodyFixSuggestion)
+          .sort((a, b) => b.target.startLine - a.target.startLine);
+        for (const suggestion of ordered) {
+          try {
+            const applied = await window.api.applyFixSuggestion(id, suggestion);
+            if (applied.apply.ok) {
+              commitUpdatedNote(applied.note);
+              appliedCount += 1;
+            }
+          } catch {
+            // Skip an individual auto-fix that no longer matches; others still apply.
+          }
+        }
+        if (activeFixRequestId() !== requestId) return;
+        if (appliedCount > 0) {
+          setPreTidyBody(snapshot);
+          onAfterChange();
+        }
+        presentFix(requestId, result.summary, reviewSet, appliedCount);
+      } finally {
+        editor?.setEditable(true);
       }
-      if (activeFixRequestId() !== requestId) return;
-      if (appliedCount > 0) {
-        setPreTidyBody(snapshot);
-        onAfterChange();
-      }
-      presentFix(requestId, result.summary, reviewSet, appliedCount);
     })();
   }, [
     save,
@@ -823,6 +832,7 @@ export function EditorPane({
     commitUpdatedNote,
     activeFixRequestId,
     onAfterChange,
+    editor,
   ]);
 
   const handleApplyFix = useCallback(
@@ -861,6 +871,12 @@ export function EditorPane({
   const handleUndoTidy = useCallback(() => {
     const snapshot = preTidyBody;
     if (snapshot === undefined || !fixNoteId) return;
+    // Undo overwrites the note body on disk; refuse if the user has typed since
+    // tidying so their unsaved edits aren't silently discarded.
+    if (dirtyRef.current) {
+      setError('Save or discard your current edits before undoing the tidy.');
+      return;
+    }
     setUndoing(true);
     void (async () => {
       try {
