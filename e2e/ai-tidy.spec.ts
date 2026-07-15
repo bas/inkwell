@@ -99,4 +99,22 @@ test.describe('AI tidy', () => {
     await expect(page.getByTestId('fix-status-f1')).toContainText('Applied');
     expect(readSingleNote(vaultDir)).toContain('## Plain text');
   });
+
+  test('parses a response wrapped in a Markdown code fence', async () => {
+    // Real Copilot models often wrap structured JSON in a ```json ... ``` fence.
+    // This reproduces the exact shape that previously crashed the tidy flow.
+    const fenced = '```json\n' + FAKE_AUTO + '\n```';
+    ctx = await launchApp({ env: { INKWELL_FAKE_AI: fenced } });
+    const { page, vaultDir } = ctx;
+
+    await createNote(page);
+    await setTitle(page, 'Fenced tidy');
+    await typeBody(page, 'teh cat');
+    await waitSaved(page);
+
+    await openTidy(page);
+
+    await expect(page.getByTestId('fix-auto-applied')).toContainText('Applied 1');
+    expect(readSingleNote(vaultDir)).toContain('the cat');
+  });
 });

@@ -113,6 +113,35 @@ describe('parseFixResponse', () => {
     expect(parseFixResponse(raw).suggestions[0]!.confidence).toBe(1);
   });
 
+  it('parses JSON wrapped in a Markdown code fence', () => {
+    const inner = {
+      summary: 'Tidied.',
+      suggestions: [
+        {
+          id: 's1',
+          title: 'Fix typo',
+          category: 'spelling',
+          severity: 'low',
+          rationale: 'x',
+          confidence: 0.9,
+          autoApplyable: true,
+          replacement: 'the cat',
+          target: { startLine: 1, endLine: 1, before: 'teh cat' },
+        },
+      ],
+    };
+    const raw = '```json\n' + JSON.stringify(inner, null, 2) + '\n```';
+    const parsed = parseFixResponse(raw);
+    expect(parsed.summary).toBe('Tidied.');
+    expect(parsed.suggestions).toHaveLength(1);
+  });
+
+  it('parses JSON with surrounding prose and a bare fence', () => {
+    const raw =
+      'Sure, here is the result:\n```\n{"summary":"ok","suggestions":[]}\n```\nHope that helps!';
+    expect(parseFixResponse(raw).summary).toBe('ok');
+  });
+
   it('throws on invalid JSON', () => {
     expect(() => parseFixResponse('not json')).toThrow();
   });

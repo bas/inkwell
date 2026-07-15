@@ -77,8 +77,27 @@ function parseTarget(value: unknown): AiFixSuggestion['target'] | undefined {
   };
 }
 
+/**
+ * Extract a JSON object from a model response that may wrap it in a Markdown
+ * code fence (```json ... ```) or surround it with prose. Falls back to the
+ * substring between the first `{` and last `}`.
+ */
+export function extractJsonPayload(raw: string): string {
+  let text = raw.trim();
+  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fence && fence[1]) {
+    text = fence[1].trim();
+  }
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first !== -1 && last > first) {
+    text = text.slice(first, last + 1);
+  }
+  return text;
+}
+
 export function parseFixResponse(raw: string): ParsedFixPayload {
-  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const parsed = JSON.parse(extractJsonPayload(raw)) as Record<string, unknown>;
   const summary = typeof parsed['summary'] === 'string' ? parsed['summary'].trim() : '';
   const sourceSuggestions = Array.isArray(parsed['suggestions']) ? parsed['suggestions'] : [];
   const suggestions: AiFixSuggestion[] = sourceSuggestions
