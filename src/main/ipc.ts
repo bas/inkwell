@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { IpcChannels } from '../shared/ipc';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
+import { isLabelColor, normalizeLabelName, type LabelColor } from '../shared/note-labels';
 import type { NotesService } from './storage/notesService';
 import { readSettings } from './settings';
 
@@ -46,6 +47,11 @@ function assertLabelsEnabled(): void {
   }
 }
 
+function assertLabelColor(value: unknown): LabelColor {
+  if (!isLabelColor(value)) throw new Error('Invalid label color');
+  return value;
+}
+
 /** Register all note and label IPC handlers. */
 export function registerNoteHandlers(service: NotesService): void {
   ipcMain.handle(IpcChannels.listNotes, (_e, labelName: unknown) =>
@@ -73,13 +79,13 @@ export function registerNoteHandlers(service: NotesService): void {
   ipcMain.handle(IpcChannels.createLabel, (_e, name: unknown, color: unknown) => {
     assertLabelsEnabled();
     return service.createLabel(
-      assertString(name, 'name'),
-      typeof color === 'string' ? color : undefined,
+      normalizeLabelName(assertString(name, 'name')),
+      color === undefined ? undefined : assertLabelColor(color),
     );
   });
   ipcMain.handle(IpcChannels.setLabelColor, (_e, id: unknown, color: unknown) => {
     assertLabelsEnabled();
-    return service.setLabelColor(assertNumber(id, 'id'), assertString(color, 'color'));
+    return service.setLabelColor(assertNumber(id, 'id'), assertLabelColor(color));
   });
   ipcMain.handle(IpcChannels.deleteLabel, (_e, id: unknown) => {
     assertLabelsEnabled();
