@@ -762,6 +762,9 @@ export function EditorPane({
         setError('Could not save the note before tidying. Please try again.');
         return;
       }
+      // The pre-tidy save is async; if the user cancelled/closed the panel while
+      // it was in flight, don't start a generation that main can't yet cancel.
+      if (activeFixRequestId() !== requestId) return;
       let result: Awaited<ReturnType<typeof window.api.fixNote>>;
       try {
         result = await window.api.fixNote(id, requestId);
