@@ -94,3 +94,73 @@
 .ink-editor .ProseMirror:focus {
   outline: none;
 }
+
+.ink-editor .ProseMirror .ink-mermaid-block {
+  border: 1px solid var(--borderColor-default);
+  border-radius: var(--borderRadius-medium);
+  background: var(--bgColor-muted);
+  padding: var(--base-size-12);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-block.is-selected {
+  outline: 2px solid var(--focus-outlineColor);
+  outline-offset: var(--base-size-2);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-12);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-preview-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-size-8);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-preview-panel {
+  overflow: auto;
+  border: 1px solid var(--borderColor-muted);
+  border-radius: var(--borderRadius-medium);
+  background: var(--bgColor-default);
+  padding: var(--base-size-16);
+}
+
+.ink-editor .ProseMirror .ink-mermaid-collapsed {
+  display: flex;
+  min-height: var(--base-size-48);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--borderColor-muted);
+  border-radius: var(--borderRadius-medium);
+  background: var(--bgColor-default);
+  padding: var(--base-size-12);
+  text-align: center;
+}
+
+.ink-editor .ProseMirror .ink-mermaid-empty,
+.ink-editor .ProseMirror .ink-mermaid-error {
+  display: flex;
+  min-height: var(--base-size-96);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ink-editor .ProseMirror .ink-mermaid-svg {
+  display: flex;
+  justify-content: center;
+}
+
+.ink-editor .ProseMirror .ink-mermaid-svg svg {
+  max-width: 100%;
+  height: auto;
+}

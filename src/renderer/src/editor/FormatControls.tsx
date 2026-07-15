@@ -9,6 +9,7 @@ import {
   TasklistIcon,
   QuoteIcon,
   FileCodeIcon,
+  WorkflowIcon,
   LinkIcon,
   TableIcon,
   ChevronRightIcon,
@@ -265,6 +266,14 @@ export function FormatControls({ editor }: FormatControlsProps): JSX.Element {
           disabled={disabled}
           active={editor?.isActive('codeBlock')}
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+        />
+        <ToolbarButton
+          icon={WorkflowIcon}
+          label="Insert diagram"
+          testid="fmt-mermaid"
+          disabled={disabled}
+          active={editor?.isActive('mermaidBlock')}
+          onClick={() => editor?.chain().focus().insertMermaidDiagram().run()}
         />
         <ToolbarButton
           icon={TableIcon}

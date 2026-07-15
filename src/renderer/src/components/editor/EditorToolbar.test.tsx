@@ -56,6 +56,9 @@ describe('EditorToolbar labels control placement', () => {
     const labelsButton = screen.getByTestId('label-picker');
     expect(labelsButton.textContent).toBe('');
     expect(screen.getByRole('button', { name: 'Labels' })).toBe(labelsButton);
+    expect(screen.getByRole('button', { name: 'Insert diagram' }).hasAttribute('disabled')).toBe(
+      true,
+    );
     expect(screen.getByTestId('fmt-table').compareDocumentPosition(labelsButton)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
