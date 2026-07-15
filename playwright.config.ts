@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
+const isCI = !!process.env['CI'];
+
 /**
  * Playwright config for Electron end-to-end tests.
  *
@@ -8,11 +10,11 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false,
-  workers: 1,
-  forbidOnly: !!process.env['CI'],
-  retries: process.env['CI'] ? 1 : 0,
-  reporter: process.env['CI'] ? 'github' : 'list',
+  fullyParallel: isCI,
+  workers: isCI ? 2 : 1,
+  forbidOnly: isCI,
+  retries: isCI ? 1 : 0,
+  reporter: isCI ? 'github' : 'list',
   timeout: 60_000,
   expect: { timeout: 10_000 },
 });
