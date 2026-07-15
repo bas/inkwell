@@ -1,5 +1,4 @@
 import type { AiReviewOptions } from '../../shared/ai';
-
 /**
  * Build the prompt that asks Copilot for a concise summary of a note body.
  * Pure and deterministic so it can be unit-tested. The note text is fenced with
@@ -41,6 +40,51 @@ export function buildReviewPrompt(noteBody: string, options?: AiReviewOptions): 
     instruction,
     'Return strict JSON with this shape and nothing else:',
     '{"summary":"string","suggestions":[{"id":"string","title":"string","category":"grammar|clarity|style","severity":"low|medium|high","rationale":"string","confidence":0.0,"replacement":"string","target":{"startLine":1,"endLine":1,"anchorText":"string optional","before":"string optional"}}]}',
+    'Use 1-based line numbers from the provided note.',
+    'Keep suggestions concise and high-signal.',
+    '',
+    '--- BEGIN NOTE ---',
+    body,
+    '--- END NOTE ---',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * Build the prompt for "Tidy up with Copilot". Asks the model for structured,
+ * line-targeted fix suggestions across spelling, capitalization, formatting,
+ * labels, and other categories. Must return strict JSON so parsing stays
+ * deterministic. `existingLabels` lets the model prefer reusing known labels.
+ * Pure and deterministic for unit testing.
+ */
+export function buildFixPrompt(noteBody: string, existingLabels: string[]): string {
+  const body = noteBody.replace(/\r\n/g, '\n');
+  const labelList = existingLabels.filter((name) => name.trim().length > 0);
+  const labels =
+    labelList.length > 0
+      ? `Existing labels you should prefer to reuse: ${labelList.join(', ')}.`
+      : 'There are no existing labels yet.';
+
+  return [
+    'You are tidying a personal Markdown note for its author.',
+    'Propose concrete, high-signal fixes that preserve the author’s meaning and voice.',
+    'Categories allowed: spelling, capitalization, formatting, label, other.',
+    '- spelling: fix clear misspellings.',
+    '- capitalization: fix sentence-start and proper-noun casing.',
+    '- formatting: improve structure using only Markdown headings (levels 1-3),',
+    '  paragraphs, bullet/numbered lists, task lists, tables, code, and links.',
+    '  Never emit raw HTML. Preserve all existing wording and content.',
+    '- label: suggest a short topical label to organize the note.',
+    '- other: any remaining small improvement.',
+    'Set "autoApplyable": true ONLY for low-risk, high-confidence character-level',
+    'spelling or capitalization fixes. Everything else must be autoApplyable: false.',
+    labels,
+    'For spelling, capitalization, formatting, and other suggestions, include a',
+    '"target" with 1-based line numbers and a "replacement" string.',
+    'For label suggestions, include a "label" string and omit target/replacement.',
+    'Return strict JSON with this shape and nothing else:',
+    '{"summary":"string","suggestions":[{"id":"string","title":"string","category":"spelling|capitalization|formatting|label|other","severity":"low|medium|high","rationale":"string","confidence":0.0,"autoApplyable":false,"replacement":"string optional","label":"string optional","target":{"startLine":1,"endLine":1,"anchorText":"string optional","before":"string optional"}}]}',
     'Use 1-based line numbers from the provided note.',
     'Keep suggestions concise and high-signal.',
     '',
