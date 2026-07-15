@@ -13,6 +13,14 @@ function getCodeAttribute(node: ProseMirrorNode): string {
   return typeof value === 'string' ? value : '';
 }
 
+function getMermaidFence(code: string): string {
+  const longestBacktickRun = Math.max(
+    0,
+    ...Array.from(code.matchAll(/`+/g), (match) => match[0].length),
+  );
+  return '`'.repeat(Math.max(3, longestBacktickRun + 1));
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     mermaidBlock: {
@@ -90,10 +98,11 @@ export const MermaidBlock = Node.create({
       markdown: {
         serialize(state: MarkdownSerializerState, node: ProseMirrorNode) {
           const code = getCodeAttribute(node);
-          state.write('```mermaid\n');
+          const fence = getMermaidFence(code);
+          state.write(`${fence}mermaid\n`);
           state.write(code);
           if (!code.endsWith('\n')) state.write('\n');
-          state.write('```');
+          state.write(fence);
           state.closeBlock(node);
         },
       },

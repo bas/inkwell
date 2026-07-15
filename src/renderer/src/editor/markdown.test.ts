@@ -37,4 +37,10 @@ describe('markdown round-trip', () => {
     const out = normalizeMarkdown('See [Primer](https://primer.style).');
     expect(out).toBe('See [Primer](https://primer.style).');
   });
+
+  it('uses a longer Mermaid fence when diagram source contains backticks', () => {
+    const source = ['````mermaid', 'flowchart LR', '  A["```"] --> B["End"]', '````'].join('\n');
+
+    expect(normalizeMarkdown(source)).toBe(source);
+  });
 });
