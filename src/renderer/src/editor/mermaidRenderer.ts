@@ -43,7 +43,12 @@ function getMermaidTheme(mode: ColorMode): 'default' | 'dark' {
 
 async function loadMermaid(mode: ColorMode): Promise<MermaidApi> {
   if (!mermaidPromise) {
-    mermaidPromise = import('mermaid').then((module) => module.default);
+    mermaidPromise = import('mermaid')
+      .then((module) => module.default)
+      .catch((error: unknown) => {
+        mermaidPromise = undefined;
+        throw error;
+      });
   }
 
   const mermaid = await mermaidPromise;
