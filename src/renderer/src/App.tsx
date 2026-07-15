@@ -21,7 +21,7 @@ export function App(): JSX.Element {
     setPreference,
     setFeatureEnabled,
   } = useAppSettings();
-  const labelsEnabled = settings.features.labels;
+  const labelsEnabled = loaded && settings.features.labels;
   const notes = useNotes(labelsEnabled);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
@@ -112,6 +112,7 @@ export function App(): JSX.Element {
                 variant="invisible"
                 size="small"
                 data-testid="app-header-menu"
+                disabled={!loaded}
                 onClick={() => setSettingsOpen(true)}
               />
               <IconButton

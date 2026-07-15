@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppSettings, ColorModePreference, FeatureKey } from '@shared/types';
 import { DEFAULT_SETTINGS, normalizeSettings } from '@shared/types';
 
@@ -25,6 +25,8 @@ export function useAppSettings(): UseAppSettingsResult {
   );
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const preferenceRequestId = useRef(0);
+  const featureRequestId = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -74,31 +76,35 @@ export function useAppSettings(): UseAppSettingsResult {
 
   const setPreference = useCallback(
     (mode: ColorModePreference) => {
+      const requestId = ++preferenceRequestId.current;
       setSettings((current) => ({ ...current, colorMode: mode }));
       void window.api
         .setColorMode(mode)
-        .then((next) => {
-          setSettings(next);
-          setError(undefined);
+        .then(() => {
+          if (requestId === preferenceRequestId.current) setError(undefined);
         })
-        .catch(resyncAfterWriteError);
+        .catch((err: unknown) => {
+          if (requestId === preferenceRequestId.current) resyncAfterWriteError(err);
+        });
     },
     [resyncAfterWriteError],
   );
 
   const setFeatureEnabled = useCallback(
     (feature: FeatureKey, enabled: boolean) => {
+      const requestId = ++featureRequestId.current;
       setSettings((current) => ({
         ...current,
         features: { ...current.features, [feature]: enabled },
       }));
       void window.api
         .setFeatureEnabled(feature, enabled)
-        .then((next) => {
-          setSettings(next);
-          setError(undefined);
+        .then(() => {
+          if (requestId === featureRequestId.current) setError(undefined);
         })
-        .catch(resyncAfterWriteError);
+        .catch((err: unknown) => {
+          if (requestId === featureRequestId.current) resyncAfterWriteError(err);
+        });
     },
     [resyncAfterWriteError],
   );
