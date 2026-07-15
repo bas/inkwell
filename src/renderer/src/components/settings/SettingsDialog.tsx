@@ -40,12 +40,14 @@ export function SettingsDialog({
           </Box>
 
           <FormControl>
-            <Checkbox
-              checked={settings.features.labels}
-              onChange={(event) => onFeatureChange('labels', event.currentTarget.checked)}
-              data-testid="feature-labels-toggle"
-            />
-            <FormControl.Label>Labels</FormControl.Label>
+            <FormControl.Label>
+              <Checkbox
+                checked={settings.features.labels}
+                onChange={(event) => onFeatureChange('labels', event.currentTarget.checked)}
+                data-testid="feature-labels-toggle"
+              />{' '}
+              Labels
+            </FormControl.Label>
             <FormControl.Caption>
               Show label grouping, label chips, and per-note label controls. Turning this off keeps
               existing label data intact.
