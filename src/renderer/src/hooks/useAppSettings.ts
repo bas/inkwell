@@ -63,13 +63,21 @@ export function useAppSettings(): UseAppSettingsResult {
 
   const resyncAfterWriteError = useCallback((err: unknown) => {
     const writeError = describeError(err, 'Could not update settings');
+    const preferenceRequestAtResyncStart = preferenceRequestId.current;
+    const featureRequestAtResyncStart = featureRequestId.current;
+    const resyncIsCurrent = (): boolean =>
+      preferenceRequestAtResyncStart === preferenceRequestId.current &&
+      featureRequestAtResyncStart === featureRequestId.current;
+
     setError(writeError);
     void window.api
       .getSettings()
       .then((persistedSettings) => {
+        if (!resyncIsCurrent()) return;
         setSettings(persistedSettings);
       })
       .catch((reloadErr: unknown) => {
+        if (!resyncIsCurrent()) return;
         setError(
           `${writeError}; could not reload settings: ${describeError(
             reloadErr,
