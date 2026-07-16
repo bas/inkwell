@@ -62,19 +62,22 @@ export function describeSyncState(state: GitSyncState, hasRemote: boolean): GitS
       return {
         label: 'Remote ahead',
         tone: 'attention',
-        description: 'The backup repository has changes Inkwell does not. Resolve them in GitHub.',
+        description:
+          'The backup repository has changes Inkwell does not. Reconcile them in git (fetch, then merge or rebase) before the next backup.',
       };
     case 'auth-required':
       return {
         label: 'Sign in needed',
         tone: 'danger',
-        description: 'GitHub authentication is required. Run `gh auth login`, then retry.',
+        description:
+          'The backup remote rejected your credentials. Check your Git authentication (for GitHub over HTTPS, `gh auth login`; for SSH, your keys), then retry.',
       };
     case 'offline':
       return {
         label: 'Offline',
         tone: 'neutral',
-        description: 'The backup host is unreachable. Inkwell will retry when you are back online.',
+        description:
+          'The backup host is unreachable. Inkwell will retry on the next scheduled or manual backup.',
       };
     case 'clean':
     default:
