@@ -105,9 +105,9 @@ export class GitService {
     });
   }
 
-  private stagePathspecs(): string[] {
+  private async stagePathspecs(gitBin: string): Promise<string[]> {
     const specs: string[] = [];
-    // Only include the markdown pathspec when at least one note exists: git aborts
+    // Only include the markdown pathspec when it matches something: git aborts
     // the entire `add` with a fatal error on a pathspec that matches nothing
     // (e.g. the first commit of an empty vault), which would strand the git meta
     // files. RD-11 still holds — we never fall back to a blanket `git add -A`.
@@ -123,6 +123,17 @@ export class GitService {
     } catch {
       hasMarkdown = false;
     }
+    // Even with no `.md` files left on disk, the index may still track markdown
+    // paths (e.g. the user just deleted the last note). Include the pathspec so
+    // that deletion gets staged and committed — otherwise the removal is never
+    // recorded and backup status stays stuck on "uncommitted". `git add` won't
+    // fatal here because the pathspec still matches the tracked (deleted) path.
+    if (!hasMarkdown) {
+      const tracked = await runGit(gitBin, this.vaultDir, ['ls-files', '--', ':(icase)*.md'], {
+        allowNonZero: true,
+      });
+      if (tracked.code === 0 && tracked.stdout.trim().length > 0) hasMarkdown = true;
+    }
     if (hasMarkdown) specs.push(':(icase)*.md');
     if (existsSync(join(this.vaultDir, '.gitignore'))) specs.push('.gitignore');
     if (existsSync(join(this.vaultDir, '.gitattributes'))) specs.push('.gitattributes');
@@ -135,7 +146,7 @@ export class GitService {
   ): Promise<CommitResult> {
     // Stage only managed markdown notes plus git meta files — never `git add -A`
     // (research R3 §3.2, RD-11).
-    const specs = this.stagePathspecs();
+    const specs = await this.stagePathspecs(gitBin);
     if (specs.length > 0) {
       // stagePathspecs() only emits pathspecs that currently match something, so
       // the "pathspec matches nothing" fatal cannot fire here. Any other non-zero

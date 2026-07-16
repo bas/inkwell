@@ -174,3 +174,60 @@ suite('GitService without an origin remote', () => {
     expect(status.syncState).toBe('clean');
   });
 });
+
+suite('GitService staging and dirty semantics', () => {
+  let root: string;
+  let vault: string;
+  let service: GitService;
+
+  beforeAll(async () => {
+    root = mkdtempSync(join(tmpdir(), 'inkwell-git-stage-'));
+    vault = join(root, 'vault');
+    await mkdir(vault, { recursive: true });
+    service = new GitService(vault);
+    await service.initialize();
+  });
+
+  afterAll(async () => {
+    await service.drain();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('stages the removal when the last markdown note is deleted', async () => {
+    writeFileSync(join(vault, 'only.md'), '---\ntitle: Only\n---\nBody\n');
+    expect((await service.commit(['Only'])).committed).toBe(true);
+    expect(execFileSync('git', ['-C', vault, 'ls-files'], { encoding: 'utf8' })).toContain(
+      'only.md',
+    );
+
+    // Deleting the last note leaves zero `.md` files on disk, but the index still
+    // tracks it: the deletion must still be committed (regression guard).
+    rmSync(join(vault, 'only.md'));
+    expect((await service.commit([])).committed).toBe(true);
+    expect(execFileSync('git', ['-C', vault, 'ls-files'], { encoding: 'utf8' })).not.toContain(
+      'only.md',
+    );
+
+    const status = await service.status({
+      enabled: true,
+      autoCommit: 'onSave',
+      intervalMinutes: 5,
+    });
+    expect(status.dirty).toBe(false);
+  });
+
+  it('does not report dirty for stray non-managed files', async () => {
+    writeFileSync(join(vault, 'scratch.txt'), 'not a note');
+    const status = await service.status({
+      enabled: true,
+      autoCommit: 'onSave',
+      intervalMinutes: 5,
+    });
+    expect(status.dirty).toBe(false);
+    // And committing does not stage the stray file.
+    await service.commit([]);
+    expect(execFileSync('git', ['-C', vault, 'ls-files'], { encoding: 'utf8' })).not.toContain(
+      'scratch.txt',
+    );
+  });
+});

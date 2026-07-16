@@ -101,7 +101,7 @@ export interface GitBackupStatus {
   syncState: GitSyncState;
   /** Number of local commits ahead of the remote, when a remote is configured. */
   ahead?: number;
-  /** Whether the working tree currently has uncommitted note changes. */
+  /** Whether there are uncommitted changes to managed note or git-meta files. */
   dirty: boolean;
   /** Human-readable detail for diagnostics / the UI (e.g. an error message). */
   detail?: string;

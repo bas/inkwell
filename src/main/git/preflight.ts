@@ -117,11 +117,21 @@ export async function countAhead(gitBin: string, vaultDir: string): Promise<numb
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Whether the working tree has uncommitted changes (porcelain, NUL-safe). */
+/**
+ * Whether there are uncommitted changes to the files Inkwell manages — markdown
+ * notes plus the git meta files (`.gitignore`/`.gitattributes`). Scoped to those
+ * pathspecs (porcelain, NUL-safe) so it matches the commit's staging set: stray
+ * non-managed files, which we deliberately never stage, must not report the
+ * vault as perpetually dirty. `git status` (unlike `git add`) does not fatal on
+ * a pathspec that matches nothing, so the meta pathspecs are always safe to pass.
+ */
 export async function isDirty(gitBin: string, vaultDir: string): Promise<boolean> {
-  const result = await runGit(gitBin, vaultDir, ['status', '--porcelain', '-z'], {
-    allowNonZero: true,
-  });
+  const result = await runGit(
+    gitBin,
+    vaultDir,
+    ['status', '--porcelain', '-z', '--', ':(icase)*.md', '.gitignore', '.gitattributes'],
+    { allowNonZero: true },
+  );
   if (result.code !== 0) return false;
   return result.stdout.replace(/\0/g, '').trim().length > 0;
 }
