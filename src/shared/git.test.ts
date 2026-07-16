@@ -5,11 +5,13 @@ import {
   isValidGitHubOwner,
   isValidRemoteUrl,
   MAX_INTERVAL_MINUTES,
+  mergePushOutcome,
   MIN_INTERVAL_MINUTES,
   normalizeRepoName,
   validateRepoName,
   DEFAULT_GIT_SETTINGS,
 } from './git';
+import type { GitBackupStatus } from './git';
 
 describe('normalizeRepoName', () => {
   it('collapses disallowed runs and repeated hyphens', () => {
@@ -131,5 +133,35 @@ describe('clampIntervalMinutes', () => {
     expect(clampIntervalMinutes(-5)).toBe(MIN_INTERVAL_MINUTES);
     expect(clampIntervalMinutes(10_000)).toBe(MAX_INTERVAL_MINUTES);
     expect(clampIntervalMinutes(4.6)).toBe(5);
+  });
+});
+
+describe('mergePushOutcome', () => {
+  const base: GitBackupStatus = {
+    available: { git: true, gh: true },
+    settings: { ...DEFAULT_GIT_SETTINGS, enabled: true },
+    // status() would report this after a push it can't classify.
+    syncState: 'committed-not-pushed',
+    dirty: false,
+  };
+
+  it('surfaces a push failure that status() cannot re-derive', () => {
+    const merged = mergePushOutcome(base, 'auth-required', 'Authentication failed');
+    expect(merged.syncState).toBe('auth-required');
+    expect(merged.detail).toBe('Authentication failed');
+    // The original status object is not mutated.
+    expect(base.syncState).toBe('committed-not-pushed');
+    expect(base.detail).toBeUndefined();
+  });
+
+  it('classifies offline, remote-diverged, and push-failed outcomes', () => {
+    expect(mergePushOutcome(base, 'offline').syncState).toBe('offline');
+    expect(mergePushOutcome(base, 'remote-diverged').syncState).toBe('remote-diverged');
+    expect(mergePushOutcome(base, 'push-failed').syncState).toBe('push-failed');
+  });
+
+  it('leaves the recomputed status untouched on a successful or derivable push', () => {
+    expect(mergePushOutcome(base, 'clean')).toBe(base);
+    expect(mergePushOutcome(base, 'not-ready')).toBe(base);
   });
 });

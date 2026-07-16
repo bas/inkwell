@@ -16,7 +16,7 @@ import {
   Token,
 } from '@primer/react';
 import { XIcon } from '@primer/octicons-react';
-import type { GitAutoCommitMode } from '@shared/git';
+import { clampIntervalMinutes, type GitAutoCommitMode } from '@shared/git';
 import { useGitBackup } from '../../hooks/useGitBackup';
 import { describeSyncState, type GitStatusTone } from './gitStatusView';
 import { RemoteSetupDialog } from './RemoteSetupDialog';
@@ -37,6 +37,9 @@ export function BackupSettingsSection(): JSX.Element {
   const git = useGitBackup();
   const [setupOpen, setSetupOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Local draft so the interval field can be cleared/retyped without snapping
+  // back; null means "not editing, mirror the persisted value".
+  const [intervalDraft, setIntervalDraft] = useState<string | null>(null);
   const status = git.status;
   const settings = status?.settings;
   const gitUnavailable = status?.available.git === false;
@@ -138,11 +141,21 @@ export function BackupSettingsSection(): JSX.Element {
                 type="number"
                 min={1}
                 max={1440}
-                value={String(settings.intervalMinutes)}
-                onChange={(event) => {
-                  const minutes = Number.parseInt(event.currentTarget.value, 10);
-                  if (Number.isFinite(minutes))
-                    void git.setAutoCommit('interval', minutes).catch(() => {});
+                value={intervalDraft ?? String(settings.intervalMinutes)}
+                onChange={(event) => setIntervalDraft(event.currentTarget.value)}
+                onBlur={() => {
+                  const raw = intervalDraft;
+                  setIntervalDraft(null);
+                  if (raw === null) return;
+                  const parsed = Number.parseInt(raw, 10);
+                  // Empty/invalid input reverts to the persisted value on blur.
+                  if (!Number.isFinite(parsed)) return;
+                  const minutes = clampIntervalMinutes(parsed);
+                  if (minutes === settings.intervalMinutes) return;
+                  void git.setAutoCommit('interval', minutes).catch(() => {});
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
                 }}
                 data-testid="backup-interval-input"
                 sx={{ maxWidth: 120 }}

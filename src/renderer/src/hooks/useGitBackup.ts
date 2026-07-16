@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { mergePushOutcome } from '@shared/git';
 import type {
   GitAutoCommitMode,
   GitBackupStatus,
@@ -118,7 +119,9 @@ export function useGitBackup(): UseGitBackupResult {
   const pushNow = useCallback(async () => {
     return run(async () => {
       const result = await window.api.gitPushNow();
-      if (activeRef.current) setStatus(result.status);
+      // status() can't classify a failed push, so fold the push outcome in.
+      if (activeRef.current)
+        setStatus(mergePushOutcome(result.status, result.state, result.detail));
       return result;
     }, 'Could not push to the backup remote');
   }, [run]);
@@ -146,7 +149,9 @@ export function useGitBackup(): UseGitBackupResult {
     (input: GitRemoteSetupInput) =>
       run(async () => {
         const result = await window.api.setupGitRemote(input);
-        if (activeRef.current) setStatus(result.status);
+        // Surface an initial-push failure instead of masking it as "pending".
+        if (activeRef.current)
+          setStatus(mergePushOutcome(result.status, result.pushState, result.detail));
         return result;
       }, 'Could not set up the backup remote'),
     [run],

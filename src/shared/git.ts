@@ -265,6 +265,38 @@ export interface GitPushResult {
   status: GitBackupStatus;
 }
 
+/**
+ * Push-outcome states that `status()` cannot re-derive from the working tree:
+ * they describe *why the last push attempt failed* rather than the current
+ * commit/ahead state, which is all a fresh status recomputation can see.
+ */
+const PUSH_OUTCOME_STATES: ReadonlySet<GitSyncState> = new Set<GitSyncState>([
+  'push-failed',
+  'auth-required',
+  'offline',
+  'remote-diverged',
+]);
+
+/**
+ * Merge the outcome of a push attempt into a freshly recomputed backup status.
+ * `status()` only classifies working-tree/ahead state, so a failed push would
+ * otherwise be masked as "committed-not-pushed" ("Backup pending"). When the
+ * push produced a failure classification, surface it (and its detail) on the
+ * status so the UI reflects the true result of the last push.
+ */
+export function mergePushOutcome(
+  status: GitBackupStatus,
+  pushState: GitSyncState,
+  detail?: string,
+): GitBackupStatus {
+  if (!PUSH_OUTCOME_STATES.has(pushState)) return status;
+  return {
+    ...status,
+    syncState: pushState,
+    ...(detail !== undefined ? { detail } : {}),
+  };
+}
+
 /** Result of checking a proposed repository name for availability. */
 export interface GitRepoNameCheck {
   available: boolean;
