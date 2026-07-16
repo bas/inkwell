@@ -149,7 +149,7 @@ export function RemoteSetupDialog({
             autoPush,
             ...(visibility === 'public' ? { acknowledgePublic } : {}),
           };
-    void onSubmit(input);
+    void onSubmit(input).catch(() => {});
   };
 
   return (

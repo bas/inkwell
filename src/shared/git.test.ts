@@ -64,6 +64,12 @@ describe('isValidRemoteUrl', () => {
     expect(isValidRemoteUrl('')).toBe(false);
     expect(isValidRemoteUrl('not a url')).toBe(false);
   });
+
+  it('rejects hosts that could be parsed as ssh option flags', () => {
+    expect(isValidRemoteUrl('ssh://-oProxyCommand=calc/repo.git')).toBe(false);
+    expect(isValidRemoteUrl('-oProxyCommand=calc@github.com:owner/repo.git')).toBe(false);
+    expect(isValidRemoteUrl('git@-oProxyCommand=calc:owner/repo.git')).toBe(false);
+  });
 });
 
 describe('DEFAULT_GIT_SETTINGS', () => {

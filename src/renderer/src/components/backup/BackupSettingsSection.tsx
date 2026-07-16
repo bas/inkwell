@@ -77,7 +77,7 @@ export function BackupSettingsSection(): JSX.Element {
       <FormControl disabled={gitUnavailable || git.busy}>
         <Checkbox
           checked={enabled}
-          onChange={(event) => void git.setEnabled(event.currentTarget.checked)}
+          onChange={(event) => void git.setEnabled(event.currentTarget.checked).catch(() => {})}
           data-testid="backup-enabled-toggle"
         />
         <FormControl.Label>Keep version history</FormControl.Label>
@@ -91,7 +91,10 @@ export function BackupSettingsSection(): JSX.Element {
           <RadioGroup
             name="backup-auto-commit"
             onChange={(value) =>
-              value && void git.setAutoCommit(value as GitAutoCommitMode, settings.intervalMinutes)
+              value &&
+              void git
+                .setAutoCommit(value as GitAutoCommitMode, settings.intervalMinutes)
+                .catch(() => {})
             }
           >
             <RadioGroup.Label>When to record changes</RadioGroup.Label>
@@ -119,7 +122,8 @@ export function BackupSettingsSection(): JSX.Element {
                 value={String(settings.intervalMinutes)}
                 onChange={(event) => {
                   const minutes = Number.parseInt(event.currentTarget.value, 10);
-                  if (Number.isFinite(minutes)) void git.setAutoCommit('interval', minutes);
+                  if (Number.isFinite(minutes))
+                    void git.setAutoCommit('interval', minutes).catch(() => {});
                 }}
                 data-testid="backup-interval-input"
                 sx={{ maxWidth: 120 }}
@@ -167,14 +171,16 @@ export function BackupSettingsSection(): JSX.Element {
                 <FormControl disabled={git.busy}>
                   <Checkbox
                     checked={remote.autoPush}
-                    onChange={(event) => void git.setAutoPush(event.currentTarget.checked)}
+                    onChange={(event) =>
+                      void git.setAutoPush(event.currentTarget.checked).catch(() => {})
+                    }
                     data-testid="backup-autopush-toggle"
                   />
                   <FormControl.Label>Back up automatically after each change</FormControl.Label>
                 </FormControl>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   <Button
-                    onClick={() => void git.pushNow()}
+                    onClick={() => void git.pushNow().catch(() => {})}
                     disabled={git.busy}
                     data-testid="backup-push-now"
                   >
@@ -233,7 +239,7 @@ export function BackupSettingsSection(): JSX.Element {
           title="Remove backup?"
           onClose={(gesture) => {
             setConfirmRemove(false);
-            if (gesture === 'confirm') void git.removeRemote();
+            if (gesture === 'confirm') void git.removeRemote().catch(() => {});
           }}
           confirmButtonContent="Remove backup"
           confirmButtonType="danger"

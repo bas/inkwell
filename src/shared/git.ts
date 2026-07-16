@@ -168,10 +168,29 @@ export function validateRepoName(input: string): RepoNameValidation {
  */
 export function isValidRemoteUrl(url: string): boolean {
   const trimmed = url.trim();
-  if (trimmed.length === 0) return false;
-  if (/^https:\/\/[^\s]+$/i.test(trimmed)) return true;
-  if (/^ssh:\/\/[^\s]+$/i.test(trimmed)) return true;
-  if (/^[A-Za-z0-9._-]+@[A-Za-z0-9._.-]+:[^\s]+$/.test(trimmed)) return true;
+  if (trimmed.length === 0 || /\s/.test(trimmed)) return false;
+  // Parse https:// and ssh:// with the URL API so we can reject hostnames that
+  // begin with '-'. Git/ssh would otherwise treat such a host as an option flag
+  // (e.g. `ssh://-oProxyCommand=...`), a command-injection surface from the
+  // untrusted renderer.
+  if (/^https:\/\//i.test(trimmed) || /^ssh:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'ssh:') return false;
+      const host = parsed.hostname;
+      return host.length > 0 && !host.startsWith('-');
+    } catch {
+      return false;
+    }
+  }
+  // scp-like syntax: user@host:path. Reject a user or host that starts with '-'.
+  const scp = /^([A-Za-z0-9._-]+)@([A-Za-z0-9._-]+):(.+)$/.exec(trimmed);
+  if (scp) {
+    const user = scp[1];
+    const host = scp[2];
+    if (!user || !host) return false;
+    return !user.startsWith('-') && !host.startsWith('-');
+  }
   return false;
 }
 

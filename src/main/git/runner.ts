@@ -21,6 +21,13 @@ const execFileAsync = promisify(execFile);
 /** Tokens that could shadow the user's real credentials — never forwarded. */
 const MASKED_ENV_VARS = ['COPILOT_GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN'] as const;
 
+/**
+ * Parent-process env vars forwarded into git/gh so SSH remotes authenticate
+ * non-interactively (gh provisioning prefers sshUrl and most users rely on the
+ * SSH agent / macOS Keychain). These carry no secrets themselves.
+ */
+const SSH_AGENT_ENV_VARS = ['SSH_AUTH_SOCK', 'SSH_AGENT_PID'] as const;
+
 /** Directories searched (after PATH) for the binaries on macOS. */
 const FALLBACK_BIN_DIRS = ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin'];
 
@@ -68,6 +75,12 @@ function hardenedEnv(extra?: Record<string, string>): NodeJS.ProcessEnv {
     LANG: 'C',
     ...extra,
   };
+  // Forward SSH agent vars (if present) so SSH remotes can authenticate via the
+  // running agent without an interactive prompt. Applied before masking below.
+  for (const name of SSH_AGENT_ENV_VARS) {
+    const value = process.env[name];
+    if (value) env[name] = value;
+  }
   // Defensively ensure masked tokens never leak in via `extra`.
   for (const name of MASKED_ENV_VARS) delete env[name];
   return env;
