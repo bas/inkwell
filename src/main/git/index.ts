@@ -16,6 +16,7 @@ import {
   isValidGitHost,
   isValidGitHubOwner,
   isValidRemoteUrl,
+  mergePushOutcome,
   validateRepoName,
 } from '../../shared/git';
 import { readSettings, setGitSettings } from '../settings';
@@ -178,8 +179,8 @@ export class GitBackup {
     return this.service.status(this.gitSettings());
   }
 
-  private async broadcastStatus(): Promise<GitBackupStatus> {
-    const status = await this.currentStatus();
+  private async broadcastStatus(override?: GitBackupStatus): Promise<GitBackupStatus> {
+    const status = override ?? (await this.currentStatus());
     if (this.window && !this.window.isDestroyed()) {
       this.window.webContents.send(IpcChannels.gitStatusChanged, status);
     }
@@ -257,7 +258,16 @@ export class GitBackup {
         const next: GitSettings = { ...git, remote: result.remote };
         if (result.pushState === 'clean') next.lastPushAt = new Date().toISOString();
         setGitSettings(next);
-        const status = await this.broadcastStatus();
+        // Broadcast the push-aware status so the status-changed event and the
+        // invoke result stay consistent: a recomputed status can't represent an
+        // initial-push failure (auth/offline/diverged), so without this merge a
+        // late status-changed event could overwrite the merged result and mask it.
+        const merged = mergePushOutcome(
+          await this.currentStatus(),
+          result.pushState,
+          result.detail,
+        );
+        const status = await this.broadcastStatus(merged);
         return {
           pushState: result.pushState,
           ...(result.detail ? { detail: result.detail } : {}),
@@ -297,7 +307,11 @@ export class GitBackup {
       }
       const push = await this.service.pushNow();
       if (push.state === 'clean') this.persistLastPush();
-      const status = await this.broadcastStatus();
+      // Merge the push outcome into the broadcast status (see gitSetupRemote):
+      // keep the status-changed event and the invoke result consistent so a
+      // failed push can't be masked by a later recomputed status broadcast.
+      const merged = mergePushOutcome(await this.currentStatus(), push.state, push.detail);
+      const status = await this.broadcastStatus(merged);
       return { state: push.state, ...(push.detail ? { detail: push.detail } : {}), status };
     });
   }

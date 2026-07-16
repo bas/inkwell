@@ -123,9 +123,24 @@ export interface CreateRepoInput {
   visibility: GitVisibility;
 }
 
+/** Thrown by {@link createRepo} when the target repo already exists. */
+export class RepoAlreadyExistsError extends Error {
+  constructor(
+    message = 'A repository with that name already exists. Choose "Use an existing repository" to attach to it, or pick a different name.',
+  ) {
+    super(message);
+    this.name = 'RepoAlreadyExistsError';
+  }
+}
+
 /**
- * Create the remote repo (API-only). Treats "already exists" as success so the
- * flow is idempotent and resumable on retry.
+ * Create the remote repo. The full `OWNER/REPO` argument plus an explicit
+ * visibility flag makes `gh repo create` non-interactive (no prompt), which is
+ * required because the hardened env sets `GH_PROMPT_DISABLED=1`. An
+ * "already exists" result is surfaced as {@link RepoAlreadyExistsError} rather
+ * than treated as success, so the caller must route the user through the
+ * explicit "attach to existing repo" flow instead of silently pushing notes to
+ * a repo it did not create (guards against a race / untrusted renderer).
  */
 export async function createRepo(ghBin: string, input: CreateRepoInput): Promise<void> {
   const result: RunResult = await runGh(
@@ -134,6 +149,6 @@ export async function createRepo(ghBin: string, input: CreateRepoInput): Promise
     { allowNonZero: true, ...hostEnv(input.host) },
   );
   if (result.code === 0) return;
-  if (isAlreadyExistsError(result.stderr)) return;
+  if (isAlreadyExistsError(result.stderr)) throw new RepoAlreadyExistsError();
   throw new Error(result.stderr.trim() || 'Could not create the repository.');
 }
