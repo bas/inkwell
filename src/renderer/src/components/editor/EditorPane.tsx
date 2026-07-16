@@ -197,26 +197,46 @@ export function EditorPane({
   const sourceEditorRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Latest editable data, read by the debounced/flush save without re-binding.
-  const dataRef = useRef({ id: '', markdown: '' });
+  const dataRef = useRef({ id: '', markdown: '', baseUpdatedAt: '' });
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const save = useCallback(async () => {
-    if (!dirtyRef.current) return;
-    const { id, markdown: body } = dataRef.current;
-    if (!id) return;
-    dirtyRef.current = false;
-    setSaveState('saving');
-    try {
-      await window.api.updateNote({ id, body });
-      setSaveState('saved');
-      onAfterChange();
-    } catch (err) {
-      dirtyRef.current = true;
-      setError(describeError(err));
-      setSaveState('error');
-    }
-  }, [onAfterChange]);
+  const save = useCallback(
+    async (retryOnStale = true): Promise<void> => {
+      if (!dirtyRef.current) return;
+      const { id, markdown: body, baseUpdatedAt } = dataRef.current;
+      if (!id) return;
+      dirtyRef.current = false;
+      setSaveState('saving');
+      try {
+        const saved = await window.api.updateNote({ id, body, baseUpdatedAt });
+        // Track the latest persisted version for the next optimistic write.
+        if (dataRef.current.id === id) dataRef.current.baseUpdatedAt = saved.updatedAt;
+        setSaveState('saved');
+        onAfterChange();
+      } catch (err) {
+        dirtyRef.current = true;
+        // A stale write means the note changed on disk since we last read it.
+        // Refresh our base to the on-disk version and let the active editor win
+        // by retrying once, rather than silently discarding the user's edits.
+        if (retryOnStale && err instanceof Error && /changed on disk/i.test(err.message)) {
+          try {
+            const latest = await window.api.getNote(id);
+            if (dataRef.current.id === id) {
+              dataRef.current.baseUpdatedAt = latest.updatedAt;
+              await save(false);
+              return;
+            }
+          } catch {
+            // Fall through to surfacing the original error.
+          }
+        }
+        setError(describeError(err));
+        setSaveState('error');
+      }
+    },
+    [onAfterChange],
+  );
 
   const scheduleSave = useCallback(() => {
     dirtyRef.current = true;
@@ -236,7 +256,7 @@ export function EditorPane({
       const loaded = await window.api.getNote(id);
       setNote(loaded);
       setMarkdown(loaded.body);
-      dataRef.current = { id: loaded.id, markdown: loaded.body };
+      dataRef.current = { id: loaded.id, markdown: loaded.body, baseUpdatedAt: loaded.updatedAt };
       dirtyRef.current = false;
       setSaveState('idle');
       setError(undefined);
@@ -527,7 +547,11 @@ export function EditorPane({
       const updated = await window.api.insertTldr(summaryNoteId, summaryState.text);
       setNote(updated);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, markdown: updated.body };
+      dataRef.current = {
+        id: updated.id,
+        markdown: updated.body,
+        baseUpdatedAt: updated.updatedAt,
+      };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -584,7 +608,11 @@ export function EditorPane({
       const updated = result.note;
       setNote(updated);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, markdown: updated.body };
+      dataRef.current = {
+        id: updated.id,
+        markdown: updated.body,
+        baseUpdatedAt: updated.updatedAt,
+      };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -671,7 +699,7 @@ export function EditorPane({
   const commitUpdatedNote = useCallback((updated: Note) => {
     setNote(updated);
     setMarkdown(updated.body);
-    dataRef.current = { id: updated.id, markdown: updated.body };
+    dataRef.current = { id: updated.id, markdown: updated.body, baseUpdatedAt: updated.updatedAt };
     dirtyRef.current = false;
     setSaveState('saved');
     setReloadNonce((nonce) => nonce + 1);

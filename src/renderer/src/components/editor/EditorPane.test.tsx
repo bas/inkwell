@@ -91,16 +91,25 @@ function note(overrides: Partial<Note> = {}): Note {
   };
 }
 
+const gitStatus = {
+  available: { git: true, gh: true },
+  settings: { enabled: false, autoCommit: 'onSave' as const, intervalMinutes: 5 },
+  syncState: 'disabled' as const,
+  dirty: false,
+};
+
 function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
   const loadedNote = note();
   const api: InkwellApi = {
     getSettings: vi.fn(async () => ({
       colorMode: 'auto' as const,
       features: { labels: true, mermaid: true },
+      git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
     setColorMode: vi.fn(async (mode) => ({
       colorMode: mode,
       features: { labels: true, mermaid: true },
+      git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
     setFeatureEnabled: vi.fn(async (feature, enabled) => ({
       colorMode: 'auto' as const,
@@ -108,6 +117,7 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
         labels: feature === 'labels' ? enabled : true,
         mermaid: feature === 'mermaid' ? enabled : true,
       },
+      git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
@@ -179,6 +189,16 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
     })),
     onAiStreamDelta: vi.fn(() => () => {}),
     onMenuNewNote: vi.fn(() => () => {}),
+    getGitStatus: vi.fn(async () => gitStatus),
+    setGitEnabled: vi.fn(async () => gitStatus),
+    setGitAutoCommit: vi.fn(async () => gitStatus),
+    setGitAutoPush: vi.fn(async () => gitStatus),
+    getGitDestinations: vi.fn(async () => ({ hosts: ['github.com'], owners: [], orgOwners: [] })),
+    checkGitRepoName: vi.fn(async () => ({ available: true, normalized: 'inkwell-notes' })),
+    setupGitRemote: vi.fn(async () => ({ pushState: 'clean' as const, status: gitStatus })),
+    removeGitRemote: vi.fn(async () => gitStatus),
+    gitPushNow: vi.fn(async () => ({ state: 'clean' as const, status: gitStatus })),
+    onGitStatusChanged: vi.fn(() => () => {}),
     ...overrides,
   };
   Object.defineProperty(window, 'api', { value: api, configurable: true });

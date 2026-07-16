@@ -9,6 +9,7 @@ describe('normalizeSettings', () => {
         labels: true,
         mermaid: true,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
     });
   });
 
@@ -19,6 +20,7 @@ describe('normalizeSettings', () => {
         labels: false,
         mermaid: true,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
     });
 
     expect(normalizeSettings({ features: { mermaid: false } })).toEqual({
@@ -27,6 +29,7 @@ describe('normalizeSettings', () => {
         labels: true,
         mermaid: false,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
     });
   });
 
@@ -43,6 +46,7 @@ describe('normalizeSettings', () => {
         labels: true,
         mermaid: true,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
       windowBounds: { width: 900, height: 700, x: 10 },
     });
   });
