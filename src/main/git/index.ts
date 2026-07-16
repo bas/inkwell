@@ -113,6 +113,13 @@ export class GitBackup {
       this.notes.setMutationListener((titles) => this.onMutation(titles));
     } else {
       this.notes.setMutationListener(undefined);
+      // Drop any pending debounced commit and accumulated titles so disabling
+      // backup can't leak stale titles into a later commit if it is re-enabled.
+      if (this.commitTimer) {
+        clearTimeout(this.commitTimer);
+        this.commitTimer = undefined;
+      }
+      this.pendingTitles.clear();
     }
     this.configureInterval(git);
   }

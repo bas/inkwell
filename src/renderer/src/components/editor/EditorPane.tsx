@@ -37,6 +37,18 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : 'Could not open note';
 }
 
+/**
+ * Detect a rejected write caused by optimistic-concurrency staleness. Prefer the
+ * error name set by the main process (`StaleNoteError`) and fall back to the
+ * message text so small wording changes — or a name lost crossing the IPC
+ * boundary — don't break stale-write handling.
+ */
+function isStaleWriteError(err: unknown): boolean {
+  return (
+    err instanceof Error && (err.name === 'StaleNoteError' || /changed on disk/i.test(err.message))
+  );
+}
+
 interface SourceMatch {
   start: number;
   end: number;
@@ -219,7 +231,7 @@ export function EditorPane({
         // A stale write means the note changed on disk since we last read it.
         // Refresh our base to the on-disk version and let the active editor win
         // by retrying once, rather than silently discarding the user's edits.
-        if (retryOnStale && err instanceof Error && /changed on disk/i.test(err.message)) {
+        if (retryOnStale && isStaleWriteError(err)) {
           try {
             const latest = await window.api.getNote(id);
             if (dataRef.current.id === id) {
@@ -923,7 +935,7 @@ export function EditorPane({
         setFixOpen(false);
         resetFix();
       } catch (err) {
-        if (err instanceof Error && /changed on disk/i.test(err.message)) {
+        if (isStaleWriteError(err)) {
           setError(
             'This note changed on disk since it was tidied, so the tidy was not undone. Reload the note and try again.',
           );
