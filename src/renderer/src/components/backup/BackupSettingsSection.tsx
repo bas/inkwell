@@ -96,7 +96,7 @@ export function BackupSettingsSection(): JSX.Element {
         </Flash>
       )}
 
-      <FormControl disabled={gitUnavailable || git.busy}>
+      <FormControl disabled={git.busy || (gitUnavailable && !enabled)}>
         <Checkbox
           checked={enabled}
           onChange={(event) => void git.setEnabled(event.currentTarget.checked).catch(() => {})}

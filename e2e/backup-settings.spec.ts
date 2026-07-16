@@ -1,9 +1,24 @@
 import { test, expect } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp, openSettings, type LaunchedApp } from './helpers';
 
+// Enabling version history shells out to `git`, so guard this suite the same
+// way the git integration tests do (src/main/git/service.test.ts) and skip it
+// on minimal runners where the binary isn't installed/resolvable.
+const hasGit = ((): boolean => {
+  try {
+    execFileSync('git', ['--version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 test.describe('Backup settings', () => {
+  test.skip(!hasGit, 'git binary not available on this runner');
+
   let ctx: LaunchedApp;
 
   test.beforeEach(async () => {
