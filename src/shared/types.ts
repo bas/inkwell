@@ -6,6 +6,7 @@
 import {
   clampIntervalMinutes,
   DEFAULT_GIT_SETTINGS,
+  isValidRemoteUrl,
   type GitAutoCommitMode,
   type GitRemoteConfig,
   type GitSettings,
@@ -104,10 +105,13 @@ function normalizeRemote(value: unknown): GitRemoteConfig | undefined {
   const rawUrl = value['remoteUrl'];
   if (typeof rawUrl !== 'string') return undefined;
   // settings.json is user-editable; canonicalize the URL and drop a remote whose
-  // URL is empty or contains whitespace so downstream git/gh code never receives
-  // a non-canonical value.
+  // URL is empty, contains whitespace, or fails shape validation (e.g. arg
+  // injection via a leading '-' host) so a hand-edited or corrupt value can never
+  // reach git remote/push operations.
   const remoteUrl = rawUrl.trim();
-  if (remoteUrl.length === 0 || /\s/.test(remoteUrl)) return undefined;
+  if (remoteUrl.length === 0 || /\s/.test(remoteUrl) || !isValidRemoteUrl(remoteUrl)) {
+    return undefined;
+  }
   const mode = value['mode'] === 'url' ? 'url' : 'gh';
   return {
     mode,

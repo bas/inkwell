@@ -143,7 +143,9 @@ export function normalizeRepoName(input: string): string {
 /** Validate + normalize a proposed repository name against GitHub's rules. */
 export function validateRepoName(input: string): RepoNameValidation {
   const normalized = normalizeRepoName(input);
-  const changed = normalized !== input.trim();
+  // Compare against the raw input (not a trimmed copy) so trimming-only changes
+  // still count as "changed" and the UI previews the actual created name.
+  const changed = normalized !== input;
   if (normalized.length === 0) {
     return { normalized, changed, valid: false, error: 'Enter a repository name.' };
   }

@@ -85,5 +85,14 @@ describe('normalizeSettings', () => {
       },
     });
     expect(dropped.git.remote).toBeUndefined();
+
+    const invalidShape = normalizeSettings({
+      ...base,
+      git: {
+        ...base.git,
+        remote: { ...base.git.remote, remoteUrl: 'ssh://-oProxyCommand=calc/repo.git' },
+      },
+    });
+    expect(invalidShape.git.remote).toBeUndefined();
   });
 });

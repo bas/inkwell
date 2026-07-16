@@ -128,6 +128,10 @@ export function RemoteSetupDialog({
     if (busy) return false;
     if (mode === 'url') return isValidRemoteUrl(remoteUrl);
     if (!ghReady || !owner || !validation.valid) return false;
+    // The repo-name availability check is async; don't allow submit while it is
+    // in flight, otherwise the nameConflict/existingMissing guards below can be
+    // bypassed and we could wire up an unintended repo.
+    if (checkingName) return false;
     if (visibility === 'public' && !acknowledgePublic) return false;
     if (mode === 'create' && nameConflict) return false;
     if (mode === 'existing' && existingMissing) return false;

@@ -40,6 +40,13 @@ describe('validateRepoName', () => {
     expect(result.valid).toBe(true);
   });
 
+  it('treats a trimming-only difference as changed', () => {
+    const result = validateRepoName('  inkwell-notes  ');
+    expect(result.normalized).toBe('inkwell-notes');
+    expect(result.changed).toBe(true);
+    expect(result.valid).toBe(true);
+  });
+
   it('rejects empty and reserved names', () => {
     expect(validateRepoName('').valid).toBe(false);
     expect(validateRepoName('   ').valid).toBe(false);
