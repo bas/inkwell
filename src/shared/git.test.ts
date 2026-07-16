@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { isValidRemoteUrl, normalizeRepoName, validateRepoName, DEFAULT_GIT_SETTINGS } from './git';
+import {
+  clampIntervalMinutes,
+  isValidRemoteUrl,
+  MAX_INTERVAL_MINUTES,
+  MIN_INTERVAL_MINUTES,
+  normalizeRepoName,
+  validateRepoName,
+  DEFAULT_GIT_SETTINGS,
+} from './git';
 
 describe('normalizeRepoName', () => {
   it('collapses disallowed runs and repeated hyphens', () => {
@@ -63,5 +71,20 @@ describe('DEFAULT_GIT_SETTINGS', () => {
     expect(DEFAULT_GIT_SETTINGS.enabled).toBe(false);
     expect(DEFAULT_GIT_SETTINGS.autoCommit).toBe('onSave');
     expect(DEFAULT_GIT_SETTINGS.remote).toBeUndefined();
+  });
+});
+
+describe('clampIntervalMinutes', () => {
+  it('allows the full supported range up to 24 hours', () => {
+    expect(MAX_INTERVAL_MINUTES).toBe(1440);
+    expect(clampIntervalMinutes(1440)).toBe(1440);
+    expect(clampIntervalMinutes(60)).toBe(60);
+  });
+
+  it('clamps out-of-range and rounds fractional values', () => {
+    expect(clampIntervalMinutes(0)).toBe(MIN_INTERVAL_MINUTES);
+    expect(clampIntervalMinutes(-5)).toBe(MIN_INTERVAL_MINUTES);
+    expect(clampIntervalMinutes(10_000)).toBe(MAX_INTERVAL_MINUTES);
+    expect(clampIntervalMinutes(4.6)).toBe(5);
   });
 });

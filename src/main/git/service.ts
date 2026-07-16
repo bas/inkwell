@@ -107,17 +107,19 @@ export class GitService {
 
   private stagePathspecs(): string[] {
     const specs: string[] = [];
-    // Only include the `*.md` pathspec when at least one note exists: git aborts
+    // Only include the markdown pathspec when at least one note exists: git aborts
     // the entire `add` with a fatal error on a pathspec that matches nothing
     // (e.g. the first commit of an empty vault), which would strand the git meta
     // files. RD-11 still holds — we never fall back to a blanket `git add -A`.
+    // Match `.md` case-insensitively to stay consistent with vault scanning, and
+    // use an icase pathspec so files like `NOTE.MD` are staged too.
     let hasMarkdown = false;
     try {
-      hasMarkdown = readdirSync(this.vaultDir).some((name) => name.endsWith('.md'));
+      hasMarkdown = readdirSync(this.vaultDir).some((name) => name.toLowerCase().endsWith('.md'));
     } catch {
       hasMarkdown = false;
     }
-    if (hasMarkdown) specs.push('*.md');
+    if (hasMarkdown) specs.push(':(icase)*.md');
     if (existsSync(join(this.vaultDir, '.gitignore'))) specs.push('.gitignore');
     if (existsSync(join(this.vaultDir, '.gitattributes'))) specs.push('.gitattributes');
     return specs;
@@ -315,7 +317,13 @@ export class GitService {
         return { state: 'not-ready' as GitSyncState, detail: 'The vault is not ready to push.' };
       }
       if (!state.remoteUrl) {
-        return { state: 'clean' as GitSyncState };
+        // No origin is configured in the repo, so a push is impossible. Never
+        // report 'clean' here — that would make callers persist lastPushAt and
+        // show a false "Backed up" status.
+        return {
+          state: 'not-ready' as GitSyncState,
+          detail: 'No backup remote is configured for this vault.',
+        };
       }
       return this.pushInternal(gitBin, state.branch);
     });
@@ -357,6 +365,19 @@ export class GitService {
 
     const dirty = await isDirty(gitBin, this.vaultDir);
     const ahead = state.hasUpstream ? await countAhead(gitBin, this.vaultDir) : undefined;
+
+    // Settings expect a backup remote but the repo has no origin (e.g. it was
+    // removed outside the app). Don't claim the vault is backed up.
+    if (settings.remote && !state.remoteUrl) {
+      return {
+        available,
+        settings,
+        syncState: 'not-ready',
+        dirty,
+        detail: 'The backup remote is no longer configured in this repository.',
+        ...(ahead !== undefined ? { ahead } : {}),
+      };
+    }
 
     let syncState: GitSyncState;
     if (dirty) syncState = 'uncommitted';

@@ -121,3 +121,56 @@ suite('GitService (integration)', () => {
     expect(readFileSync(join(vault, 'note.md'), 'utf8')).toContain('Eggs');
   });
 });
+
+suite('GitService without an origin remote', () => {
+  let root: string;
+  let vault: string;
+  let service: GitService;
+
+  beforeAll(async () => {
+    root = mkdtempSync(join(tmpdir(), 'inkwell-git-noremote-'));
+    vault = join(root, 'vault');
+    await mkdir(vault, { recursive: true });
+    service = new GitService(vault);
+    await service.initialize();
+    writeFileSync(join(vault, 'note.md'), '---\ntitle: Solo\n---\nBody\n');
+    await service.commit(['Solo']);
+  });
+
+  afterAll(async () => {
+    await service.drain();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('never reports "clean" from pushNow when no origin is configured', async () => {
+    const push = await service.pushNow();
+    expect(push.state).toBe('not-ready');
+  });
+
+  it('reports not-ready when settings expect a remote the repo does not have', async () => {
+    const status = await service.status({
+      enabled: true,
+      autoCommit: 'onSave',
+      intervalMinutes: 5,
+      remote: {
+        mode: 'url',
+        host: '',
+        owner: '',
+        repo: '',
+        visibility: 'unknown',
+        remoteUrl: 'https://example.com/x/y.git',
+        autoPush: false,
+      },
+    });
+    expect(status.syncState).toBe('not-ready');
+  });
+
+  it('reports clean history when no remote is configured at all', async () => {
+    const status = await service.status({
+      enabled: true,
+      autoCommit: 'onSave',
+      intervalMinutes: 5,
+    });
+    expect(status.syncState).toBe('clean');
+  });
+});

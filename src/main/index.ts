@@ -209,9 +209,17 @@ app.on('before-quit', (event) => {
     app.quit();
   };
   const barrier = gitBackup.flushForQuit();
-  // Never let a stuck network push block shutdown indefinitely.
-  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 8000));
-  void Promise.race([barrier, timeout]).finally(done);
+  // Never let a stuck network push block shutdown indefinitely. Clear the timer
+  // once the race settles so it can't keep the event loop alive after a fast
+  // flush and needlessly delay quit.
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, 8000);
+  });
+  void Promise.race([barrier, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+    done();
+  });
 });
 
 app.on('will-quit', () => {

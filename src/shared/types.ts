@@ -4,6 +4,7 @@
  */
 
 import {
+  clampIntervalMinutes,
   DEFAULT_GIT_SETTINGS,
   type GitAutoCommitMode,
   type GitRemoteConfig,
@@ -120,7 +121,7 @@ function normalizeGit(value: unknown): GitSettings {
   const intervalRaw = value['intervalMinutes'];
   const intervalMinutes =
     typeof intervalRaw === 'number' && Number.isFinite(intervalRaw) && intervalRaw > 0
-      ? Math.min(Math.round(intervalRaw), 720)
+      ? clampIntervalMinutes(intervalRaw)
       : defaults.intervalMinutes;
   const settings: GitSettings = {
     enabled: value['enabled'] === true,

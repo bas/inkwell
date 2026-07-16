@@ -11,14 +11,12 @@ import type {
   GitSettings,
   GitVisibility,
 } from '../../shared/git';
-import { isValidRemoteUrl, validateRepoName } from '../../shared/git';
+import { clampIntervalMinutes, isValidRemoteUrl, validateRepoName } from '../../shared/git';
 import { readSettings, setGitSettings } from '../settings';
 import type { NotesService } from '../storage/notesService';
 import { GitService } from './service';
 
 const COMMIT_DEBOUNCE_MS = 2000;
-const MIN_INTERVAL_MINUTES = 1;
-const MAX_INTERVAL_MINUTES = 24 * 60;
 
 function assertString(value: unknown, name: string): string {
   if (typeof value !== 'string') throw new Error(`Expected ${name} to be a string`);
@@ -114,10 +112,7 @@ export class GitBackup {
       this.intervalTimer = undefined;
     }
     if (!git.enabled || git.autoCommit !== 'interval') return;
-    const minutes = Math.min(
-      Math.max(git.intervalMinutes, MIN_INTERVAL_MINUTES),
-      MAX_INTERVAL_MINUTES,
-    );
+    const minutes = clampIntervalMinutes(git.intervalMinutes);
     this.intervalTimer = setInterval(() => {
       void this.commitAndMaybePush();
     }, minutes * 60_000);
@@ -201,10 +196,7 @@ export class GitBackup {
         typeof intervalMinutes === 'number' &&
         Number.isFinite(intervalMinutes)
       ) {
-        next.intervalMinutes = Math.min(
-          Math.max(Math.round(intervalMinutes), MIN_INTERVAL_MINUTES),
-          MAX_INTERVAL_MINUTES,
-        );
+        next.intervalMinutes = clampIntervalMinutes(intervalMinutes);
       }
       setGitSettings(next);
       this.applyScheduling();

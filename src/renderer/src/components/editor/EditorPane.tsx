@@ -908,14 +908,28 @@ export function EditorPane({
     setUndoing(true);
     void (async () => {
       try {
-        const updated = await window.api.updateNote({ id: fixNoteId, body: snapshot });
+        // Enforce optimistic concurrency so undo never clobbers a change made on
+        // disk since the tidy. dataRef holds the base for the loaded note, which
+        // is always the tidy target while the undo affordance is visible.
+        const base = dataRef.current.id === fixNoteId ? dataRef.current.baseUpdatedAt : undefined;
+        const updated = await window.api.updateNote({
+          id: fixNoteId,
+          body: snapshot,
+          ...(base ? { baseUpdatedAt: base } : {}),
+        });
         commitUpdatedNote(updated);
         onAfterChange();
         setPreTidyBody(undefined);
         setFixOpen(false);
         resetFix();
       } catch (err) {
-        setError(describeError(err));
+        if (err instanceof Error && /changed on disk/i.test(err.message)) {
+          setError(
+            'This note changed on disk since it was tidied, so the tidy was not undone. Reload the note and try again.',
+          );
+        } else {
+          setError(describeError(err));
+        }
       } finally {
         setUndoing(false);
       }

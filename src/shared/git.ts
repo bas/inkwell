@@ -56,6 +56,15 @@ export const DEFAULT_GIT_SETTINGS: GitSettings = {
   intervalMinutes: 5,
 };
 
+/** Inclusive bounds for `intervalMinutes`, shared by persistence and scheduling. */
+export const MIN_INTERVAL_MINUTES = 1;
+export const MAX_INTERVAL_MINUTES = 24 * 60;
+
+/** Clamp an interval to the supported range. */
+export function clampIntervalMinutes(minutes: number): number {
+  return Math.min(Math.max(Math.round(minutes), MIN_INTERVAL_MINUTES), MAX_INTERVAL_MINUTES);
+}
+
 /**
  * The user-facing sync state. Distinguishes auth/DNS problems from generic
  * offline so the UI never collapses everything into "Offline".
