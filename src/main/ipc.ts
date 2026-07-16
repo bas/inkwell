@@ -38,6 +38,7 @@ function validateUpdateInput(value: unknown): UpdateNoteInput {
       ? v['labels'].filter((l): l is string => typeof l === 'string')
       : undefined,
     pinned: typeof v['pinned'] === 'boolean' ? v['pinned'] : undefined,
+    baseUpdatedAt: typeof v['baseUpdatedAt'] === 'string' ? v['baseUpdatedAt'] : undefined,
   };
 }
 

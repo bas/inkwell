@@ -66,17 +66,24 @@ export function deleteNoteFile(path: string): void {
   rmSync(path, { force: true });
 }
 
-/** List absolute paths of every `.md` file directly in the vault directory. */
+/**
+ * List absolute paths of every `.md` file directly in the vault directory.
+ *
+ * Symlinks are deliberately skipped: a symlink placed in the vault could
+ * otherwise point outside it and cause content from an arbitrary location to be
+ * read, indexed, and (with backup enabled) committed and pushed upstream. Only
+ * regular files that live directly in the vault are treated as notes (RD-7).
+ */
 export function listMarkdownFiles(dir: string): string[] {
-  let entries: string[];
+  let entries: import('node:fs').Dirent[];
   try {
-    entries = readdirSync(dir);
+    entries = readdirSync(dir, { withFileTypes: true });
   } catch {
     return [];
   }
   return entries
-    .filter((name) => name.toLowerCase().endsWith('.md'))
-    .map((name) => join(dir, name));
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md'))
+    .map((entry) => join(dir, entry.name));
 }
 
 /**
