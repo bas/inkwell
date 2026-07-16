@@ -101,8 +101,13 @@ function normalizeVisibility(value: unknown): GitVisibility | 'unknown' {
 
 function normalizeRemote(value: unknown): GitRemoteConfig | undefined {
   if (!isRecord(value)) return undefined;
-  const remoteUrl = value['remoteUrl'];
-  if (typeof remoteUrl !== 'string' || remoteUrl.length === 0) return undefined;
+  const rawUrl = value['remoteUrl'];
+  if (typeof rawUrl !== 'string') return undefined;
+  // settings.json is user-editable; canonicalize the URL and drop a remote whose
+  // URL is empty or contains whitespace so downstream git/gh code never receives
+  // a non-canonical value.
+  const remoteUrl = rawUrl.trim();
+  if (remoteUrl.length === 0 || /\s/.test(remoteUrl)) return undefined;
   const mode = value['mode'] === 'url' ? 'url' : 'gh';
   return {
     mode,

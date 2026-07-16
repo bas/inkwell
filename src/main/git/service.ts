@@ -112,10 +112,14 @@ export class GitService {
     // (e.g. the first commit of an empty vault), which would strand the git meta
     // files. RD-11 still holds — we never fall back to a blanket `git add -A`.
     // Match `.md` case-insensitively to stay consistent with vault scanning, and
-    // use an icase pathspec so files like `NOTE.MD` are staged too.
+    // use an icase pathspec so files like `NOTE.MD` are staged too. Require a
+    // regular file (not a symlink or directory) so staging aligns with vault
+    // scanning, which intentionally skips symlinks for safety (RD-7).
     let hasMarkdown = false;
     try {
-      hasMarkdown = readdirSync(this.vaultDir).some((name) => name.toLowerCase().endsWith('.md'));
+      hasMarkdown = readdirSync(this.vaultDir, { withFileTypes: true }).some(
+        (entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md'),
+      );
     } catch {
       hasMarkdown = false;
     }

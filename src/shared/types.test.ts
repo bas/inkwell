@@ -50,4 +50,40 @@ describe('normalizeSettings', () => {
       windowBounds: { width: 900, height: 700, x: 10 },
     });
   });
+
+  it('trims a persisted remote URL and drops one containing whitespace', () => {
+    const base = {
+      git: {
+        enabled: true,
+        autoCommit: 'onSave',
+        intervalMinutes: 5,
+        remote: {
+          mode: 'url',
+          host: '',
+          owner: '',
+          repo: '',
+          visibility: 'unknown',
+          autoPush: false,
+        },
+      },
+    };
+
+    const trimmed = normalizeSettings({
+      ...base,
+      git: {
+        ...base.git,
+        remote: { ...base.git.remote, remoteUrl: '  https://github.com/o/r.git  ' },
+      },
+    });
+    expect(trimmed.git.remote?.remoteUrl).toBe('https://github.com/o/r.git');
+
+    const dropped = normalizeSettings({
+      ...base,
+      git: {
+        ...base.git,
+        remote: { ...base.git.remote, remoteUrl: 'https://github.com/o r.git' },
+      },
+    });
+    expect(dropped.git.remote).toBeUndefined();
+  });
 });
