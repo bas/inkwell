@@ -3,6 +3,7 @@ import { IpcChannels } from '../../shared/ipc';
 import type { NotesService } from '../storage/notesService';
 import { getAiAvailability } from './availability';
 import { disposeCopilotClient } from './copilotClient';
+import { registerFixHandlers } from './fix';
 import { registerReviewHandlers } from './review';
 import { registerSummarizeHandler } from './summarize';
 
@@ -11,6 +12,7 @@ export function registerAiHandlers(service: NotesService): void {
   ipcMain.handle(IpcChannels.aiGetAvailability, () => getAiAvailability());
   registerSummarizeHandler(service);
   registerReviewHandlers(service);
+  registerFixHandlers(service);
 }
 
 /** Release the Copilot runtime on shutdown. Safe to call when never started. */

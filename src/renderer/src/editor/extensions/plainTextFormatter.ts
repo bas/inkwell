@@ -48,10 +48,10 @@ export function heuristicPlainToMarkdown(text: string): string {
       continue;
     }
 
-    // Short isolated line without trailing punctuation → heading (h2)
+    // Short isolated line without trailing punctuation → heading (h1)
     const isolated = (prev === '' || i === 0) && (next === '' || i === lines.length - 1);
     if (isolated && trimmed.length <= 60 && !/[.!?,;:]$/.test(trimmed)) {
-      out.push(`## ${trimmed}`);
+      out.push(`# ${trimmed}`);
       continue;
     }
 

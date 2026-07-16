@@ -9,7 +9,7 @@ import {
   rmSync,
   writeSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Note } from '../../shared/note';
 import { readNote, serializeNote } from './frontmatter';
@@ -58,7 +58,7 @@ export function writeNoteToPath(path: string, note: Note): string {
 
 /** Read and parse a single note file. */
 export function readNoteFile(path: string): Note {
-  return readNote(readFileSync(path, 'utf8'));
+  return readNote(readFileSync(path, 'utf8'), undefined, basename(path).replace(/\.md$/i, ''));
 }
 
 /** Delete a note file. No-op if it is already gone. */

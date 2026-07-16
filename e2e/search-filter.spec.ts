@@ -6,15 +6,16 @@ import {
   typeBody,
   waitSaved,
   expectNoteListTitle,
+  openSettings,
   type LaunchedApp,
 } from './helpers';
 
-/** Create a label through the manager dialog. */
+/** Create a label through Settings. */
 async function createLabel(page: Page, name: string): Promise<void> {
-  await page.getByTestId('manage-labels').click();
+  await openSettings(page);
   await page.getByTestId('new-label-name').fill(name);
   await page.getByTestId('create-label').click();
-  await expect(page.getByTestId(`label-row-${name}`)).toBeVisible();
+  await expect(page.getByTestId(/^label-row-/).filter({ hasText: name })).toBeVisible();
   await page.keyboard.press('Escape');
 }
 
@@ -86,7 +87,7 @@ test.describe('Search and filter', () => {
     await expect(page.getByText('No matching notes')).toBeVisible();
   });
 
-  test('filters notes by a single label', async () => {
+  test('groups notes by label when the Labels view is selected', async () => {
     const { page } = ctx;
 
     await createLabel(page, 'work');
@@ -100,20 +101,22 @@ test.describe('Search and filter', () => {
     await setTitle(page, 'Personal Note');
     await waitSaved(page);
 
-    // Filter by the label.
-    await page.getByTestId('label-filter').click();
-    await page.getByTestId('label-filter-option-work').click();
-    await expectNoteListTitle(page, 'Work Note', true);
-    await expectNoteListTitle(page, 'Personal Note', false);
+    // Switch the sidebar to group by label.
+    await page.getByTestId('group-by-label').click();
 
-    // Reset to all notes.
-    await page.getByTestId('label-filter').click();
-    await page.getByText('All notes', { exact: true }).click();
+    // The label heading and its note are shown, and the unlabelled note falls
+    // under the "No label" section.
+    await expect(
+      page.getByTestId('note-list').getByRole('heading', { name: 'work' }),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId('note-list').getByRole('heading', { name: 'No label' }),
+    ).toBeVisible();
     await expectNoteListTitle(page, 'Work Note', true);
     await expectNoteListTitle(page, 'Personal Note', true);
   });
 
-  test('search overrides the active label filter', async () => {
+  test('search works regardless of the active grouping', async () => {
     const { page } = ctx;
 
     await createLabel(page, 'work');
@@ -129,13 +132,10 @@ test.describe('Search and filter', () => {
     await typeBody(page, 'grocery list');
     await waitSaved(page);
 
-    // Apply the label filter (only the work note matches).
-    await page.getByTestId('label-filter').click();
-    await page.getByTestId('label-filter-option-work').click();
-    await expectNoteListTitle(page, 'Personal Note', false);
-
-    // Searching ignores the label filter and finds the unlabeled note.
+    // Group by label, then search: matches surface as a flat list.
+    await page.getByTestId('group-by-label').click();
     await page.getByTestId('search-input').fill('grocery');
     await expectNoteListTitle(page, 'Personal Note', true);
+    await expectNoteListTitle(page, 'Work Note', false);
   });
 });

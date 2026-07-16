@@ -102,18 +102,33 @@ export function readSingleNote(vaultDir: string): string {
 /** Create a fresh note and wait for the editor to be ready. */
 export async function createNote(page: Page): Promise<void> {
   await page.getByTestId('new-note-button').click();
-  await expect(page.getByTestId('editor-title')).toHaveValue('Untitled');
+  await expect(page.getByTestId('editor-content')).toBeVisible();
 }
 
-/** Replace the note title. */
+/**
+ * Set the note title. Notes are body-first: the title is the first line of the
+ * editor content (rendered as an H1), so this types into that leading line. Call
+ * it on a fresh note before typing the body.
+ */
 export async function setTitle(page: Page, text: string): Promise<void> {
-  await page.getByTestId('editor-title').fill(text);
+  const content = page.getByTestId('editor-content');
+  await content.click();
+  // Move to the start of the first line (the title) and select its existing
+  // content so typing replaces the title instead of appending at the caret.
+  await page.keyboard.press('ControlOrMeta+ArrowUp');
+  await page.keyboard.press('Shift+End');
+  await page.keyboard.type(text);
 }
 
-/** Click into the WYSIWYG editor and type body text. */
+/**
+ * Click into the WYSIWYG editor and type body text on a new line below the
+ * title, so the body stays a distinct block from the leading title line.
+ */
 export async function typeBody(page: Page, text: string): Promise<void> {
   const body = page.getByTestId('editor-content');
   await body.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
   await page.keyboard.type(text);
 }
 
@@ -174,4 +189,18 @@ export async function openReview(page: Page): Promise<void> {
   await page.getByTestId('note-actions').click();
   await page.getByTestId('action-review').click();
   await expect(page.getByTestId('ai-review-dialog')).toBeVisible();
+}
+
+/** Open the "Tidy up with Copilot" panel from the toolbar trigger. */
+export async function openTidy(page: Page): Promise<void> {
+  await page.getByTestId('tidy-note').click();
+  await expect(page.getByTestId('ai-fix-dialog')).toBeVisible();
+}
+
+/** Open Settings from the app header. */
+export async function openSettings(page: Page): Promise<void> {
+  const settingsButton = page.getByTestId('app-header-menu');
+  await expect(settingsButton).toBeEnabled();
+  await settingsButton.click();
+  await expect(page.getByTestId('settings-dialog')).toBeVisible();
 }

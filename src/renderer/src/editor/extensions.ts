@@ -9,16 +9,25 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
 import type { Extensions } from '@tiptap/react';
+import { MermaidBlock } from './extensions/mermaidBlock';
 import { PlainTextFormatter } from './extensions/plainTextFormatter';
 import { ListIndent } from './extensions/listIndent';
+
+interface BuildExtensionsOptions {
+  mermaidEnabled?: boolean;
+}
 
 /**
  * The TipTap extension set for the note editor. Provides headings, inline
  * formatting, lists, task lists, links, tables, code, and Markdown
  * serialization (the on-disk source of truth is Markdown).
  */
-export function buildExtensions(placeholder: string): Extensions {
+export function buildExtensions(
+  placeholder: string,
+  { mermaidEnabled = true }: BuildExtensionsOptions = {},
+): Extensions {
   return [
+    ...(mermaidEnabled ? [MermaidBlock] : []),
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
       codeBlock: {},

@@ -13,9 +13,11 @@ vi.mock('../../editor/MarkdownEditor', () => ({
 
 vi.mock('./EditorToolbar', () => ({
   EditorToolbar: ({ onReview }: { onReview: () => void }): JSX.Element => (
-    <button type="button" data-testid="action-review" onClick={onReview}>
-      Review with Copilot
-    </button>
+    <div data-testid="editor-toolbar">
+      <button type="button" data-testid="action-review" onClick={onReview}>
+        Review with Copilot
+      </button>
+    </div>
   ),
 }));
 
@@ -92,8 +94,21 @@ function note(overrides: Partial<Note> = {}): Note {
 function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
   const loadedNote = note();
   const api: InkwellApi = {
-    getSettings: vi.fn(async () => ({ colorMode: 'auto' as const })),
-    setColorMode: vi.fn(async (mode) => ({ colorMode: mode })),
+    getSettings: vi.fn(async () => ({
+      colorMode: 'auto' as const,
+      features: { labels: true, mermaid: true },
+    })),
+    setColorMode: vi.fn(async (mode) => ({
+      colorMode: mode,
+      features: { labels: true, mermaid: true },
+    })),
+    setFeatureEnabled: vi.fn(async (feature, enabled) => ({
+      colorMode: 'auto' as const,
+      features: {
+        labels: feature === 'labels' ? enabled : true,
+        mermaid: feature === 'mermaid' ? enabled : true,
+      },
+    })),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
     searchNotes: vi.fn(async () => []),
@@ -146,6 +161,22 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
         reason: 'outdated' as const,
       },
     })),
+    fixNote: vi.fn(async () => ({
+      ok: true as const,
+      requestId: 'request-1',
+      summary: 'Nothing to tidy.',
+      suggestions: [],
+    })),
+    cancelFix: vi.fn(async () => undefined),
+    applyFixSuggestion: vi.fn(async () => ({
+      note: loadedNote,
+      apply: {
+        ok: false as const,
+        noteId: 'n1',
+        suggestionId: 'fix-1',
+        reason: 'outdated' as const,
+      },
+    })),
     onAiStreamDelta: vi.fn(() => () => {}),
     onMenuNewNote: vi.fn(() => () => {}),
     ...overrides,
@@ -160,6 +191,8 @@ function renderEditor(): void {
       <EditorPane
         noteId="n1"
         labels={[]}
+        labelsEnabled
+        mermaidEnabled
         onAfterChange={() => {}}
         onLabelsChanged={() => {}}
         onAfterDelete={() => {}}
@@ -199,5 +232,20 @@ describe('EditorPane AI review apply errors', () => {
     await waitFor(() =>
       expect(screen.getByTestId('review-status-s1').textContent).toBe('outdated'),
     );
+  });
+
+  it('renders save-state below the toolbar and above the editor body', async () => {
+    renderEditor();
+    const toolbar = await screen.findByTestId('editor-toolbar');
+    const saveState = await screen.findByTestId('save-state');
+    const editorBody = await screen.findByTestId('editor-body');
+
+    expect(saveState.textContent?.startsWith('Updated ')).toBe(true);
+    expect(
+      toolbar.compareDocumentPosition(saveState) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      saveState.compareDocumentPosition(editorBody) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

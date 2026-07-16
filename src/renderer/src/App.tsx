@@ -1,18 +1,34 @@
 import { useEffect, useState } from 'react';
 import { ThemeProvider, BaseStyles, SplitPageLayout, Box, Flash, IconButton } from '@primer/react';
-import { SidebarCollapseIcon, SidebarExpandIcon } from '@primer/octicons-react';
-import type { ColorModePreference } from '@shared/types';
-import { useColorMode, toPrimerColorMode } from './hooks/useColorMode';
+import { SidebarCollapseIcon, SidebarExpandIcon, PlusIcon, GearIcon } from '@primer/octicons-react';
+import type { ColorModePreference, FeatureKey } from '@shared/types';
+import { useAppSettings, toPrimerColorMode } from './hooks/useAppSettings';
 import { useNotes } from './state/useNotes';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { EditorPane } from './components/editor/EditorPane';
+import { SettingsDialog } from './components/settings/SettingsDialog';
 
 const SIDEBAR_VISIBLE_KEY = 'inkwell-sidebar-visible';
+const NARROW_LAYOUT_BREAKPOINT = 768;
 
 export function App(): JSX.Element {
-  const { preference, resolvedMode, loaded, setPreference } = useColorMode();
+  const {
+    settings,
+    preference,
+    resolvedMode,
+    loaded,
+    error: settingsError,
+    setPreference,
+    setFeatureEnabled,
+  } = useAppSettings();
+  const labelsEnabled = loaded && settings.features.labels;
+  const mermaidEnabled = settings.features.mermaid;
   const notes = useNotes();
+  const [isNarrowViewport, setIsNarrowViewport] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
+  });
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SIDEBAR_VISIBLE_KEY) !== 'false';
@@ -20,8 +36,15 @@ export function App(): JSX.Element {
       return true;
     }
   });
+  const [narrowSidebarVisible, setNarrowSidebarVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const effectiveSidebarVisible = isNarrowViewport ? narrowSidebarVisible : sidebarVisible;
 
   const toggleSidebar = (): void => {
+    if (isNarrowViewport) {
+      setNarrowSidebarVisible((prev) => !prev);
+      return;
+    }
     setSidebarVisible((prev) => {
       const next = !prev;
       try {
@@ -43,6 +66,19 @@ export function App(): JSX.Element {
     applyThemeAttrs(document.body);
   }, [resolvedMode]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = (): void => {
+      const nextIsNarrow = window.innerWidth < NARROW_LAYOUT_BREAKPOINT;
+      setIsNarrowViewport((previousIsNarrow) => {
+        if (!previousIsNarrow && nextIsNarrow) setNarrowSidebarVisible(false);
+        return nextIsNarrow;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <ThemeProvider colorMode={toPrimerColorMode(resolvedMode)}>
       <BaseStyles>
@@ -57,6 +93,7 @@ export function App(): JSX.Element {
         >
           <Box
             as="header"
+            data-testid="app-header"
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
             sx={{
               display: 'flex',
@@ -77,16 +114,39 @@ export function App(): JSX.Element {
             }}
           >
             <Box
-              sx={{ transform: 'translateY(calc(0px - var(--base-size-2)))' }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0,
+                transform: 'translateY(var(--base-size-2))',
+              }}
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
               <IconButton
-                icon={sidebarVisible ? SidebarCollapseIcon : SidebarExpandIcon}
-                aria-label={sidebarVisible ? 'Hide notes list' : 'Show notes list'}
-                aria-pressed={sidebarVisible}
+                icon={effectiveSidebarVisible ? SidebarCollapseIcon : SidebarExpandIcon}
+                aria-label={effectiveSidebarVisible ? 'Hide notes list' : 'Show notes list'}
+                aria-pressed={effectiveSidebarVisible}
                 variant="invisible"
+                size="small"
                 onClick={toggleSidebar}
                 data-testid="toggle-sidebar"
+              />
+              <IconButton
+                icon={GearIcon}
+                aria-label="Settings"
+                variant="invisible"
+                size="small"
+                data-testid="app-header-menu"
+                disabled={!loaded}
+                onClick={() => setSettingsOpen(true)}
+              />
+              <IconButton
+                icon={PlusIcon}
+                aria-label="New note"
+                variant="invisible"
+                size="small"
+                onClick={() => void notes.createNote()}
+                data-testid="new-note-button"
               />
             </Box>
             <Box sx={{ ml: 'auto' }} style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
@@ -126,9 +186,9 @@ export function App(): JSX.Element {
               bg: 'canvas.default',
             }}
           >
-            {sidebarVisible && (
+            {effectiveSidebarVisible && (
               <SplitPageLayout.Pane
-                position="start"
+                position={{ regular: 'start', narrow: 'end' }}
                 divider="line"
                 width="medium"
                 padding="none"
@@ -140,18 +200,14 @@ export function App(): JSX.Element {
                 <Sidebar
                   summaries={notes.summaries}
                   labels={notes.labels}
+                  labelsEnabled={labelsEnabled}
                   selectedId={notes.selectedId}
                   query={notes.query}
-                  labelFilter={notes.labelFilter}
                   loading={notes.loading}
                   onQueryChange={notes.setQuery}
-                  onLabelFilterChange={notes.setLabelFilter}
                   onSelect={notes.select}
                   onCreateNote={() => void notes.createNote()}
-                  onLabelsChanged={() => {
-                    void notes.refreshLabels();
-                    void notes.refresh();
-                  }}
+                  onTogglePin={(summary) => void notes.togglePin(summary)}
                 />
               </SplitPageLayout.Pane>
             )}
@@ -163,6 +219,8 @@ export function App(): JSX.Element {
               <EditorPane
                 noteId={notes.selectedId}
                 labels={notes.labels}
+                labelsEnabled={labelsEnabled}
+                mermaidEnabled={mermaidEnabled}
                 onCreateNote={() => void notes.createNote()}
                 onAfterChange={() => void notes.refresh()}
                 onLabelsChanged={() => {
@@ -177,6 +235,23 @@ export function App(): JSX.Element {
             </SplitPageLayout.Content>
           </SplitPageLayout>
         </Box>
+
+        {settingsOpen && (
+          <SettingsDialog
+            settings={settings}
+            labels={notes.labels}
+            error={settingsError}
+            onClose={() => setSettingsOpen(false)}
+            onFeatureChange={(feature: FeatureKey, enabled: boolean) => {
+              setFeatureEnabled(feature, enabled);
+              if (feature === 'labels' && enabled) void notes.refreshLabels();
+            }}
+            onLabelsChanged={() => {
+              void notes.refreshLabels();
+              void notes.refresh();
+            }}
+          />
+        )}
       </BaseStyles>
     </ThemeProvider>
   );

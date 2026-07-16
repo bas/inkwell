@@ -190,7 +190,7 @@ export function AiReviewPanel({
     });
   };
 
-  const subtitle = noteTitle.trim() || 'Untitled';
+  const subtitle = noteTitle.trim() || 'Start writing';
 
   const renderBody = (): JSX.Element => {
     if (state.status === 'reviewing') {

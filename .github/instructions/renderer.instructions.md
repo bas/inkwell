@@ -12,6 +12,7 @@ applyTo: 'src/renderer/**'
 - Theme via Primer `ThemeProvider` `colorMode`; respect the persisted light/dark/auto override.
 - **Accessibility + testability**: every interactive element has a stable `data-testid` and a correct
   accessible role/name. Use semantic Primer components rather than raw `div`/`span` for controls.
+- After UI changes, include final screenshots of the changed UI states.
 - Model and render error states explicitly (loading / empty / error), not just the happy path.
 - Keep components focused; lift IPC calls into a small typed client layer rather than scattering
   `window.api` calls across components.

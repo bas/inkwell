@@ -1,6 +1,7 @@
 import matter from 'gray-matter';
 import { randomUUID } from 'node:crypto';
 import type { Note, NoteFrontmatter } from '../../shared/note';
+import { deriveNoteTitle } from '../../shared/noteTitle';
 
 /** Result of parsing a note file: the (untyped) frontmatter and the markdown body. */
 export interface ParsedNoteFile {
@@ -38,6 +39,11 @@ function asIsoDate(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function normalizeFallbackId(fallbackId: string | undefined): string | undefined {
+  const trimmed = fallbackId?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
 /**
  * Coerce parsed frontmatter into a complete, valid `NoteFrontmatter`,
  * filling in missing/invalid fields (id, timestamps, labels, pinned).
@@ -45,12 +51,12 @@ function asIsoDate(value: unknown, fallback: string): string {
 export function normalizeFrontmatter(
   data: Record<string, unknown>,
   now: string = new Date().toISOString(),
+  fallbackId?: string,
 ): NoteFrontmatter {
-  const id = asString(data['id']) ?? randomUUID();
+  const id = asString(data['id']) ?? normalizeFallbackId(fallbackId) ?? randomUUID();
   const createdAt = asIsoDate(data['createdAt'], now);
   return {
     id,
-    title: asString(data['title'])?.trim() || 'Untitled',
     labels: asStringArray(data['labels']),
     pinned: data['pinned'] === true,
     createdAt,
@@ -59,16 +65,15 @@ export function normalizeFrontmatter(
 }
 
 /** Parse and normalize a raw `.md` file into a full `Note`. */
-export function readNote(raw: string, now?: string): Note {
+export function readNote(raw: string, now?: string, fallbackId?: string): Note {
   const { data, body } = parseNoteFile(raw);
-  return { ...normalizeFrontmatter(data, now), body };
+  return { ...normalizeFrontmatter(data, now, fallbackId), title: deriveNoteTitle(body), body };
 }
 
 /** Serialize a note to `.md` text with frontmatter in a stable key order. */
 export function serializeNote(note: Note): string {
   const frontmatter: NoteFrontmatter = {
     id: note.id,
-    title: note.title,
     labels: note.labels,
     pinned: note.pinned,
     createdAt: note.createdAt,

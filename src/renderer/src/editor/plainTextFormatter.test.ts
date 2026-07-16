@@ -37,10 +37,10 @@ describe('heuristicPlainToMarkdown', () => {
   });
 
   describe('heading detection', () => {
-    it('converts isolated short line to h2', () => {
+    it('converts isolated short line to h1', () => {
       const input = 'My Title\n\nSome paragraph text follows here.';
       const result = heuristicPlainToMarkdown(input);
-      expect(result).toBe('## My Title\n\nSome paragraph text follows here.');
+      expect(result).toBe('# My Title\n\nSome paragraph text follows here.');
     });
 
     it('does not convert line with trailing punctuation', () => {
@@ -103,12 +103,12 @@ describe('heuristicPlainToMarkdown', () => {
       ].join('\n');
 
       const expected = [
-        '## Meeting Notes',
+        '# Meeting Notes',
         '',
         '- Discussed the roadmap',
         '- Agreed on timeline',
         '',
-        '## Action Items',
+        '# Action Items',
         '',
         '1. Send follow-up email',
         '2. Update the docs',

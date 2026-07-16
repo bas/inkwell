@@ -68,6 +68,11 @@ scope; do not add features, refactors, or abstractions beyond what a task requir
 - Every interactive element needs a stable **`data-testid`** and a correct accessible **role/name**.
 - Prefer role/name queries in tests; use `data-testid` for disambiguation.
 
+## UI change verification
+
+- When changing UI, include final screenshots of the changed UI states once the work is done.
+  Capture relevant light/dark or responsive variants when the change meaningfully affects them.
+
 ## Conventions
 
 - TypeScript `strict`; **no `any`** (use `unknown` + narrowing). Prefer named exports.

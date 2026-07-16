@@ -12,6 +12,7 @@ Inkwell is a macOS desktop app for writing and organising notes in Markdown. Not
 | [Search](search.md)         | Full-text search and combined search + label filtering               |
 | [AI features](ai.md)        | Summarise a note and get writing suggestions with Copilot            |
 | [Appearance](appearance.md) | Light, dark, and system-adaptive colour modes                        |
+| [Settings](settings.md)     | Feature toggles and global label management                          |
 
 ## Quick start
 

@@ -51,13 +51,20 @@ test.describe('Editor layout', () => {
     await createNote(page);
     await setTitle(page, 'Long scrolling note');
 
-    await page.getByTestId('editor-content').click();
-    for (let i = 0; i < 160; i++) {
-      await page.keyboard.type(`Paragraph ${i} of a note that must stay scrollable after reopen.`);
-      await page.keyboard.press('Enter');
-      await page.keyboard.press('Enter');
-    }
+    await switchView(page, 'source');
+    await page
+      .getByTestId('source-editor')
+      .fill(
+        [
+          '# Long scrolling note',
+          ...Array.from(
+            { length: 160 },
+            (_, i) => `Paragraph ${i} of a note that must stay scrollable after reopen.`,
+          ),
+        ].join('\n\n'),
+      );
     await waitSaved(page);
+    await switchView(page, 'wysiwyg');
     await first.close({ keepDirs: true });
 
     ctx = await launchApp({
@@ -65,7 +72,7 @@ test.describe('Editor layout', () => {
     });
     await ctx.page.getByText('Long scrolling note', { exact: true }).click();
 
-    await expect(ctx.page.getByTestId('editor-title')).toBeVisible();
+    await expect(ctx.page.getByTestId('editor-content')).toBeVisible();
     await expect(ctx.page.getByTestId('editor-toolbar')).toBeInViewport();
 
     const wysiwygScroll = await ctx.page.getByTestId('editor-content').evaluate((element) => {

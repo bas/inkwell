@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { launchApp, type LaunchedApp } from './helpers';
+import { launchApp, openSettings, type LaunchedApp } from './helpers';
 
 async function expectInDarkMode(
   locator: ReturnType<LaunchedApp['page']['getByTestId']>,
@@ -29,28 +29,32 @@ test.describe('Theme', () => {
   test('toggles the notes list sidebar from the header', async () => {
     const { page } = ctx;
 
+    // The new-note button lives in the always-visible app header, so it stays
+    // put; toggling only shows/hides the notes list pane itself.
+    await expect(page.getByTestId('new-note-button')).toBeVisible();
+    await expect(page.getByTestId('note-list-scroll')).toBeVisible();
+
+    await page.getByTestId('toggle-sidebar').click();
+    await expect(page.getByTestId('note-list-scroll')).toHaveCount(0);
     await expect(page.getByTestId('new-note-button')).toBeVisible();
 
     await page.getByTestId('toggle-sidebar').click();
-    await expect(page.getByTestId('new-note-button')).toHaveCount(0);
-
-    await page.getByTestId('toggle-sidebar').click();
-    await expect(page.getByTestId('new-note-button')).toBeVisible();
+    await expect(page.getByTestId('note-list-scroll')).toBeVisible();
   });
 
   test('remembers the hidden sidebar after a relaunch', async () => {
     const { page } = ctx;
 
     await page.getByTestId('toggle-sidebar').click();
-    await expect(page.getByTestId('new-note-button')).toHaveCount(0);
+    await expect(page.getByTestId('note-list-scroll')).toHaveCount(0);
 
     const { vaultDir, userDataDir } = ctx;
     await ctx.close({ keepDirs: true });
     ctx = await launchApp({ reuse: { vaultDir, userDataDir } });
 
-    await expect(ctx.page.getByTestId('new-note-button')).toHaveCount(0);
+    await expect(ctx.page.getByTestId('note-list-scroll')).toHaveCount(0);
     await ctx.page.getByTestId('toggle-sidebar').click();
-    await expect(ctx.page.getByTestId('new-note-button')).toBeVisible();
+    await expect(ctx.page.getByTestId('note-list-scroll')).toBeVisible();
   });
 
   test('switches between light and dark color modes', async () => {
@@ -68,18 +72,24 @@ test.describe('Theme', () => {
 
     await page.getByRole('button', { name: 'Auto' }).click();
 
+    // Headless Electron applies `themeSource` but does not auto-fire the
+    // `updated` event the OS emits on a real appearance change, so emit it
+    // explicitly to exercise the app's main→IPC→renderer reactive path.
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'dark';
+      nativeTheme.emit('updated');
     });
     await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
 
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'light';
+      nativeTheme.emit('updated');
     });
     await expect(page.locator('html[data-color-mode="light"]')).toHaveCount(1);
 
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'system';
+      nativeTheme.emit('updated');
     });
   });
 
@@ -89,13 +99,13 @@ test.describe('Theme', () => {
     await page.getByRole('button', { name: 'Dark' }).click();
     await expect(page.locator('html[data-color-mode="dark"]')).toHaveCount(1);
 
-    await page.getByTestId('manage-labels').click();
-    const labelDialog = page.getByTestId('label-manager');
-    await expect(labelDialog).toBeVisible();
-    await expectInDarkMode(labelDialog);
+    await openSettings(page);
+    const settingsDialog = page.getByTestId('settings-dialog');
+    await expect(settingsDialog).toBeVisible();
+    await expectInDarkMode(settingsDialog);
 
     await page.keyboard.press('Escape');
-    await expect(labelDialog).toBeHidden();
+    await expect(settingsDialog).toBeHidden();
 
     await page.getByTestId('new-note-button').click();
     await page.getByTestId('note-actions').click();

@@ -9,6 +9,7 @@ interface MarkdownEditorProps {
    * (via `key`) to load a different note. */
   initialMarkdown: string;
   placeholder?: string;
+  mermaidEnabled?: boolean;
   onChange: (markdown: string) => void;
   /** Receives the TipTap editor instance when ready, and `null` on teardown,
    * so an external toolbar can drive formatting. */
@@ -22,11 +23,12 @@ interface MarkdownStorage {
 export function MarkdownEditor({
   initialMarkdown,
   placeholder = 'Start writing…',
+  mermaidEnabled = true,
   onChange,
   onEditorReady,
 }: MarkdownEditorProps): JSX.Element {
   const editor = useEditor({
-    extensions: buildExtensions(placeholder),
+    extensions: buildExtensions(placeholder, { mermaidEnabled }),
     content: initialMarkdown,
     editorProps: {
       attributes: {
@@ -45,6 +47,12 @@ export function MarkdownEditor({
     onEditorReady?.(editor);
     return () => onEditorReady?.(null);
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    if (!editor) return;
+    if (initialMarkdown.trim() !== '') return;
+    editor.commands.setHeading({ level: 1 });
+  }, [editor, initialMarkdown]);
 
   // Make sure the editor releases ProseMirror resources on unmount.
   useEffect(() => () => editor?.destroy(), [editor]);

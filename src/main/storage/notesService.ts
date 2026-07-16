@@ -5,6 +5,7 @@ import { watch, type FSWatcher } from 'chokidar';
 import type { Database as DB } from 'better-sqlite3';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from '../../shared/note';
 import type { Label } from '../../shared/note-labels';
+import { deriveNoteTitle } from '../../shared/noteTitle';
 import {
   createLabel,
   deleteLabel,
@@ -26,6 +27,19 @@ export class NoteNotFoundError extends Error {
     super(`Note not found: ${id}`);
     this.name = 'NoteNotFoundError';
   }
+}
+
+export function allocateNoteFile(
+  vaultDir: string,
+  generateId: () => string = randomUUID,
+): { id: string; path: string } {
+  let id = generateId();
+  let path = join(vaultDir, noteFilename(id));
+  while (existsSync(path)) {
+    id = generateId();
+    path = join(vaultDir, noteFilename(id));
+  }
+  return { id, path };
 }
 
 function indexInput(note: Note, path: string): Parameters<typeof upsertNote>[1] {
@@ -123,8 +137,9 @@ export class NotesService {
 
   createNote(input: CreateNoteInput): Note {
     const now = new Date().toISOString();
-    const id = randomUUID();
-    const title = input.title?.trim() || 'Untitled';
+    const body = input.body ?? '';
+    const { id, path } = allocateNoteFile(this.vaultDir);
+    const title = deriveNoteTitle(body);
     const note: Note = {
       id,
       title,
@@ -132,9 +147,8 @@ export class NotesService {
       pinned: false,
       createdAt: now,
       updatedAt: now,
-      body: input.body ?? '',
+      body,
     };
-    const path = this.uniquePath(noteFilename(title, id));
     this.selfWritePaths.add(path);
     writeNoteToPath(path, note);
     this.idToPath.set(id, path);
@@ -146,10 +160,11 @@ export class NotesService {
     const current = this.getNote(input.id);
     const path = this.idToPath.get(input.id);
     if (!path) throw new NoteNotFoundError(input.id);
+    const body = input.body ?? current.body;
     const next: Note = {
       ...current,
-      title: input.title?.trim() ? input.title.trim() : current.title,
-      body: input.body ?? current.body,
+      title: deriveNoteTitle(body),
+      body,
       labels: input.labels ?? current.labels,
       pinned: input.pinned ?? current.pinned,
       updatedAt: new Date().toISOString(),
@@ -200,16 +215,5 @@ export class NotesService {
       }
     }
     deleteLabel(this.db, id);
-  }
-
-  /** Ensure the chosen filename does not collide with an existing file. */
-  private uniquePath(filename: string): string {
-    let candidate = join(this.vaultDir, filename);
-    let counter = 1;
-    while (existsSync(candidate)) {
-      candidate = join(this.vaultDir, filename.replace(/\.md$/, `-${counter}.md`));
-      counter += 1;
-    }
-    return candidate;
   }
 }

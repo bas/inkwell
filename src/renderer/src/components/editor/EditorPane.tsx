@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Text, Heading, Button, Spinner, Flash, TextInput } from '@primer/react';
-import { NoteIcon } from '@primer/octicons-react';
+import { Box, Text, Button, Spinner, Flash, TextInput } from '@primer/react';
 import type { Editor } from '@tiptap/react';
 import type { Note } from '@shared/note';
 import type { Label } from '@shared/note-labels';
@@ -8,17 +7,22 @@ import { EditorToolbar } from './EditorToolbar';
 import { DeleteNoteDialog } from './DeleteNoteDialog';
 import { AiSummaryDialog } from './AiSummaryDialog';
 import { AiReviewPanel } from './AiReviewPanel';
+import { AiFixPanel } from './AiFixPanel';
 import { LabelChip } from '../common/LabelChip';
-import { LabelPicker } from '../labels/LabelPicker';
 import { relativeTime } from '../../utils/relativeTime';
 import { MarkdownEditor } from '../../editor/MarkdownEditor';
 import { SourceEditor } from '../../editor/SourceEditor';
 import { useAiSummary } from '../../state/useAiSummary';
 import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
+import { useAiFix, type UiFixSuggestion, describeFixError } from '../../state/useAiFix';
+import { partitionFixSuggestions, isBodyFixSuggestion } from '@shared/aiFix';
+import { deriveNoteTitle } from '@shared/noteTitle';
 
 interface EditorPaneProps {
   noteId: string | undefined;
   labels: Label[];
+  labelsEnabled: boolean;
+  mermaidEnabled: boolean;
   onCreateNote?: () => void;
   onAfterChange: () => void;
   onLabelsChanged: () => void;
@@ -121,13 +125,14 @@ function isExactDocRangeMatch(editor: Editor, match: WysiwygMatch, query: string
 export function EditorPane({
   noteId,
   labels,
+  labelsEnabled,
+  mermaidEnabled,
   onCreateNote,
   onAfterChange,
   onLabelsChanged,
   onAfterDelete,
 }: EditorPaneProps): JSX.Element {
   const [note, setNote] = useState<Note | undefined>(undefined);
-  const [title, setTitle] = useState('');
   const [markdown, setMarkdown] = useState('');
   const [viewSource, setViewSource] = useState(false);
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -163,6 +168,26 @@ export function EditorPane({
   const [reviewNoteTitle, setReviewNoteTitle] = useState('');
   const [applyingId, setApplyingId] = useState<string | undefined>(undefined);
   const [batchApplying, setBatchApplying] = useState(false);
+  const {
+    state: fixState,
+    begin: beginFix,
+    fail: failFix,
+    present: presentFix,
+    cancelFix,
+    reset: resetFix,
+    selectSuggestion: selectFixSuggestion,
+    markRejected: markFixRejected,
+    markApplied: markFixApplied,
+    markOutdated: markFixOutdated,
+    activeRequestId: activeFixRequestId,
+  } = useAiFix();
+  const [fixOpen, setFixOpen] = useState(false);
+  const [fixNoteId, setFixNoteId] = useState('');
+  const [fixNoteTitle, setFixNoteTitle] = useState('');
+  const [fixApplyingId, setFixApplyingId] = useState<string | undefined>(undefined);
+  const [fixBatchApplying, setFixBatchApplying] = useState(false);
+  const [preTidyBody, setPreTidyBody] = useState<string | undefined>(undefined);
+  const [undoing, setUndoing] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState('');
   const [replaceQuery, setReplaceQuery] = useState('');
@@ -172,18 +197,18 @@ export function EditorPane({
   const sourceEditorRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Latest editable data, read by the debounced/flush save without re-binding.
-  const dataRef = useRef({ id: '', title: '', markdown: '' });
+  const dataRef = useRef({ id: '', markdown: '' });
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const save = useCallback(async () => {
     if (!dirtyRef.current) return;
-    const { id, title: t, markdown: body } = dataRef.current;
+    const { id, markdown: body } = dataRef.current;
     if (!id) return;
     dirtyRef.current = false;
     setSaveState('saving');
     try {
-      await window.api.updateNote({ id, title: t.trim() || 'Untitled', body });
+      await window.api.updateNote({ id, body });
       setSaveState('saved');
       onAfterChange();
     } catch (err) {
@@ -210,9 +235,8 @@ export function EditorPane({
     try {
       const loaded = await window.api.getNote(id);
       setNote(loaded);
-      setTitle(loaded.title);
       setMarkdown(loaded.body);
-      dataRef.current = { id: loaded.id, title: loaded.title, markdown: loaded.body };
+      dataRef.current = { id: loaded.id, markdown: loaded.body };
       dirtyRef.current = false;
       setSaveState('idle');
       setError(undefined);
@@ -250,12 +274,6 @@ export function EditorPane({
   const colorOf = (name: string): string =>
     labels.find((label) => label.name === name)?.color ?? 'default';
 
-  const handleTitleChange = (value: string): void => {
-    setTitle(value);
-    dataRef.current = { ...dataRef.current, title: value };
-    scheduleSave();
-  };
-
   const handleBodyChange = useCallback(
     (value: string): void => {
       setMarkdown(value);
@@ -264,6 +282,8 @@ export function EditorPane({
     },
     [scheduleSave],
   );
+
+  const draftTitle = useMemo(() => deriveNoteTitle(markdown), [markdown]);
 
   const sourceMatches = useMemo(() => findExactMatches(markdown, findQuery), [markdown, findQuery]);
   const clearSelection = useCallback(() => {
@@ -462,10 +482,9 @@ export function EditorPane({
   }, [note, onAfterChange]);
 
   const handleCopyMarkdown = useCallback(async () => {
-    const { title: t, markdown: body } = dataRef.current;
-    const heading = t.trim() ? `# ${t.trim()}\n\n` : '';
+    const { markdown: body } = dataRef.current;
     try {
-      await window.api.writeClipboard(`${heading}${body}`.trimEnd() + '\n');
+      await window.api.writeClipboard(body.trimEnd() + '\n');
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
@@ -474,12 +493,12 @@ export function EditorPane({
   }, []);
 
   const handleSummarize = useCallback(() => {
-    const { id, title } = dataRef.current;
+    const { id, markdown: body } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     resetSummary();
     setSummaryNoteId(id);
-    setSummaryNoteTitle(title);
+    setSummaryNoteTitle(deriveNoteTitle(body));
     setSummaryOpen(true);
     void (async () => {
       await save();
@@ -507,9 +526,8 @@ export function EditorPane({
     try {
       const updated = await window.api.insertTldr(summaryNoteId, summaryState.text);
       setNote(updated);
-      setTitle(updated.title);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dataRef.current = { id: updated.id, markdown: updated.body };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -524,12 +542,15 @@ export function EditorPane({
   }, [summaryNoteId, summaryState.text, save, resetSummary, onAfterChange]);
 
   const handleReview = useCallback(() => {
-    const { id, title: currentTitle } = dataRef.current;
+    const { id, markdown: body } = dataRef.current;
     if (!id) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    // Only one AI panel at a time.
+    setFixOpen(false);
+    cancelFix();
     resetReview();
     setReviewNoteId(id);
-    setReviewNoteTitle(currentTitle);
+    setReviewNoteTitle(deriveNoteTitle(body));
     setReviewOpen(true);
     void (async () => {
       await save();
@@ -540,7 +561,7 @@ export function EditorPane({
       }
       startReview(id);
     })();
-  }, [save, startReview, resetReview]);
+  }, [save, startReview, resetReview, cancelFix]);
 
   const handleCloseReview = useCallback(() => {
     setReviewOpen(false);
@@ -562,9 +583,8 @@ export function EditorPane({
       }
       const updated = result.note;
       setNote(updated);
-      setTitle(updated.title);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, title: updated.title, markdown: updated.body };
+      dataRef.current = { id: updated.id, markdown: updated.body };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -622,7 +642,7 @@ export function EditorPane({
 
   const applyLabels = useCallback(
     async (nextLabels: string[]) => {
-      if (!note) return;
+      if (!note || !labelsEnabled) return;
       try {
         await window.api.updateNote({ id: note.id, labels: nextLabels });
         setNote({ ...note, labels: nextLabels });
@@ -632,12 +652,12 @@ export function EditorPane({
         setError(describeError(err));
       }
     },
-    [note, onAfterChange, onLabelsChanged],
+    [labelsEnabled, note, onAfterChange, onLabelsChanged],
   );
 
   const createAndAssign = useCallback(
     async (name: string) => {
-      if (!note) return;
+      if (!note || !labelsEnabled) return;
       try {
         await window.api.createLabel(name);
         await applyLabels([...note.labels, name]);
@@ -645,8 +665,234 @@ export function EditorPane({
         setError(describeError(err));
       }
     },
-    [note, applyLabels],
+    [labelsEnabled, note, applyLabels],
   );
+
+  const commitUpdatedNote = useCallback((updated: Note) => {
+    setNote(updated);
+    setMarkdown(updated.body);
+    dataRef.current = { id: updated.id, markdown: updated.body };
+    dirtyRef.current = false;
+    setSaveState('saved');
+    setReloadNonce((nonce) => nonce + 1);
+  }, []);
+
+  const applyFixSuggestion = useCallback(
+    async (suggestion: UiFixSuggestion): Promise<boolean> => {
+      if (suggestion.category === 'label') {
+        const label = suggestion.label?.trim();
+        // Guard against the user switching notes while the panel is open: only
+        // mutate labels when the loaded note is still the tidy target.
+        if (!label || !note || !labelsEnabled || note.id !== fixNoteId) {
+          markFixOutdated(suggestion.id);
+          return false;
+        }
+        try {
+          if (!note.labels.includes(label)) {
+            // createLabel is idempotent (INSERT OR IGNORE), so a real failure
+            // here is worth surfacing via the outer catch rather than swallowing.
+            await window.api.createLabel(label);
+            const updated = await window.api.updateNote({
+              id: note.id,
+              labels: [...note.labels, label],
+            });
+            setNote(updated);
+            onAfterChange();
+            onLabelsChanged();
+          }
+          markFixApplied(suggestion.id);
+          return true;
+        } catch (err) {
+          setError(describeError(err));
+          return false;
+        }
+      }
+
+      if (!isBodyFixSuggestion(suggestion)) {
+        markFixOutdated(suggestion.id);
+        return false;
+      }
+
+      let result: Awaited<ReturnType<typeof window.api.applyFixSuggestion>>;
+      try {
+        result = await window.api.applyFixSuggestion(fixNoteId, suggestion);
+      } catch (err) {
+        setError(describeError(err));
+        return false;
+      }
+      if (!result.apply.ok) {
+        markFixOutdated(suggestion.id);
+        return false;
+      }
+      commitUpdatedNote(result.note);
+      markFixApplied(suggestion.id);
+      onAfterChange();
+      return true;
+    },
+    [
+      fixNoteId,
+      note,
+      labelsEnabled,
+      commitUpdatedNote,
+      markFixApplied,
+      markFixOutdated,
+      onAfterChange,
+      onLabelsChanged,
+    ],
+  );
+
+  const handleTidy = useCallback(() => {
+    const { id, markdown: body } = dataRef.current;
+    if (!id) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    // Only one AI panel at a time.
+    setReviewOpen(false);
+    cancelReview();
+    setPreTidyBody(undefined);
+    setFixNoteId(id);
+    setFixNoteTitle(deriveNoteTitle(body));
+    setFixOpen(true);
+    // beginFix() resets prior fix state and cancels any in-flight request, so
+    // an explicit resetFix() here would only clear the request id and prevent
+    // that cancellation.
+    const requestId = beginFix();
+    void (async () => {
+      // Block edits while tidy generates and auto-applies so background
+      // mutations can't race with or clobber the user's keystrokes.
+      editor?.setEditable(false);
+      try {
+        await save();
+        if (dirtyRef.current) {
+          setFixOpen(false);
+          resetFix();
+          setError('Could not save the note before tidying. Please try again.');
+          return;
+        }
+        // The pre-tidy save is async; if the user cancelled/closed the panel while
+        // it was in flight, don't start a generation that main can't yet cancel.
+        if (activeFixRequestId() !== requestId) return;
+        let result: Awaited<ReturnType<typeof window.api.fixNote>>;
+        try {
+          result = await window.api.fixNote(id, requestId);
+        } catch (err) {
+          failFix(describeError(err));
+          return;
+        }
+        if (activeFixRequestId() !== requestId) return;
+        if (!result.ok) {
+          failFix(describeFixError(result.error));
+          return;
+        }
+        // If the user edited while Copilot was generating, the suggestions are
+        // stale and auto-applying them would clobber the in-progress edits.
+        if (dirtyRef.current) {
+          failFix(
+            'You edited the note while Copilot was tidying. Save your changes and run Tidy again.',
+          );
+          return;
+        }
+        const { autoApply, review } = partitionFixSuggestions(result.suggestions);
+        const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
+        const snapshot = dataRef.current.markdown;
+        let appliedCount = 0;
+        // Auto-apply only ever contains body edits; narrow the type and apply
+        // bottom-up so earlier edits don't shift the line targets of later ones.
+        const ordered = autoApply
+          .filter(isBodyFixSuggestion)
+          .sort((a, b) => b.target.startLine - a.target.startLine);
+        for (const suggestion of ordered) {
+          try {
+            const applied = await window.api.applyFixSuggestion(id, suggestion);
+            if (applied.apply.ok) {
+              commitUpdatedNote(applied.note);
+              appliedCount += 1;
+            }
+          } catch {
+            // Skip an individual auto-fix that no longer matches; others still apply.
+          }
+        }
+        if (activeFixRequestId() !== requestId) return;
+        if (appliedCount > 0) {
+          setPreTidyBody(snapshot);
+          onAfterChange();
+        }
+        presentFix(requestId, result.summary, reviewSet, appliedCount);
+      } finally {
+        editor?.setEditable(true);
+      }
+    })();
+  }, [
+    save,
+    beginFix,
+    failFix,
+    presentFix,
+    resetFix,
+    cancelReview,
+    labelsEnabled,
+    commitUpdatedNote,
+    activeFixRequestId,
+    onAfterChange,
+    editor,
+  ]);
+
+  const handleApplyFix = useCallback(
+    (id: string) => {
+      const suggestion = fixState.suggestions.find((s) => s.id === id);
+      if (!suggestion) return;
+      setFixApplyingId(id);
+      void applyFixSuggestion(suggestion).finally(() => setFixApplyingId(undefined));
+    },
+    [fixState.suggestions, applyFixSuggestion],
+  );
+
+  const handleApplyFixBatch = useCallback(
+    (ids: string[]) => {
+      // Body edits apply bottom-up; label suggestions (no target) sort last.
+      const ordered = fixState.suggestions
+        .filter((s) => ids.includes(s.id))
+        .sort((a, b) => (b.target?.startLine ?? 0) - (a.target?.startLine ?? 0));
+      if (ordered.length === 0) return;
+      setFixBatchApplying(true);
+      void (async () => {
+        for (const suggestion of ordered) {
+          await applyFixSuggestion(suggestion);
+        }
+      })().finally(() => setFixBatchApplying(false));
+    },
+    [fixState.suggestions, applyFixSuggestion],
+  );
+
+  const handleCloseFix = useCallback(() => {
+    setFixOpen(false);
+    setPreTidyBody(undefined);
+    cancelFix();
+  }, [cancelFix]);
+
+  const handleUndoTidy = useCallback(() => {
+    const snapshot = preTidyBody;
+    if (snapshot === undefined || !fixNoteId) return;
+    // Undo overwrites the note body on disk; refuse if the user has typed since
+    // tidying so their unsaved edits aren't silently discarded.
+    if (dirtyRef.current) {
+      setError('Save or discard your current edits before undoing the tidy.');
+      return;
+    }
+    setUndoing(true);
+    void (async () => {
+      try {
+        const updated = await window.api.updateNote({ id: fixNoteId, body: snapshot });
+        commitUpdatedNote(updated);
+        onAfterChange();
+        setPreTidyBody(undefined);
+        setFixOpen(false);
+        resetFix();
+      } catch (err) {
+        setError(describeError(err));
+      } finally {
+        setUndoing(false);
+      }
+    })();
+  }, [preTidyBody, fixNoteId, commitUpdatedNote, onAfterChange, resetFix]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!note) return;
@@ -684,12 +930,9 @@ export function EditorPane({
             px: 4,
           }}
         >
-          <Box sx={{ color: 'fg.muted', mb: 3 }}>
-            <NoteIcon size={32} />
-          </Box>
-          <Heading as="h2" sx={{ fontSize: 4, mb: 2 }}>
+          <Text as="h2" sx={{ fontSize: 4, fontWeight: 'bold', mb: 2 }}>
             No note selected
-          </Heading>
+          </Text>
           <Text sx={{ color: 'fg.muted', mb: 4 }}>
             Select a note from the list, or create a new one to start writing.
           </Text>
@@ -751,51 +994,25 @@ export function EditorPane({
         bg: 'canvas.default',
       }}
     >
-      <Box
-        as="header"
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 2,
-          px: 4,
-          py: 3,
-          bg: 'canvas.default',
-          boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
-        }}
-      >
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <TextInput
-            aria-label="Note title"
-            data-testid="editor-title"
-            value={title}
-            onChange={(event) => handleTitleChange(event.target.value)}
-            sx={{
-              width: '100%',
-              border: 'none',
-              boxShadow: 'none',
-              px: 0,
-              '& input': { fontSize: 4, fontWeight: 'bold', px: 0 },
-            }}
-          />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
-            <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="save-state">
-              {copied ? 'Copied to clipboard' : saveLabel}
-            </Text>
+      {labelsEnabled && note.labels.length > 0 && (
+        <Box
+          as="header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            px: 4,
+            py: 2,
+            bg: 'canvas.default',
+            boxShadow: 'inset 0 -1px 0 0 var(--borderColor-default)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             {note.labels.map((name) => (
               <LabelChip key={name} name={name} color={colorOf(name)} />
             ))}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <LabelPicker
-            noteLabels={note.labels}
-            allLabels={labels}
-            onChange={(next) => void applyLabels(next)}
-            onCreateAndAssign={(name) => void createAndAssign(name)}
-          />
-        </Box>
-      </Box>
+      )}
 
       {error && (
         <Box sx={{ px: 4, pt: 3 }}>
@@ -815,7 +1032,8 @@ export function EditorPane({
             display: 'flex',
             justifyContent: 'center',
             px: 4,
-            py: 4,
+            pt: 3,
+            pb: 4,
             overflow: 'hidden',
           }}
         >
@@ -844,13 +1062,36 @@ export function EditorPane({
               }}
               onSelectSource={() => setViewSource(true)}
               pinned={note.pinned}
+              labelsEnabled={labelsEnabled}
+              mermaidEnabled={mermaidEnabled}
               onSummarize={handleSummarize}
               onReview={handleReview}
+              onTidy={handleTidy}
               onTogglePin={handleTogglePin}
               onCopyMarkdown={() => void handleCopyMarkdown()}
               onDelete={() => setConfirmDelete(true)}
               onOpenFindReplace={openFindReplace}
+              noteLabels={note.labels}
+              allLabels={labels}
+              onLabelsChange={(next) => void applyLabels(next)}
+              onCreateAndAssign={(name) => void createAndAssign(name)}
             />
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                px: 3,
+                py: 2,
+                bg: 'canvas.default',
+              }}
+              data-testid="editor-status-row"
+            >
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }} data-testid="save-state">
+                {copied ? 'Copied to clipboard' : saveLabel}
+              </Text>
+            </Box>
 
             {findOpen && (
               <Box
@@ -952,8 +1193,9 @@ export function EditorPane({
                 </Box>
               ) : (
                 <MarkdownEditor
-                  key={`${note.id}:${reloadNonce}`}
+                  key={`${note.id}:${reloadNonce}:${mermaidEnabled ? 'mermaid' : 'plain'}`}
                   initialMarkdown={markdown}
+                  mermaidEnabled={mermaidEnabled}
                   onChange={handleBodyChange}
                   onEditorReady={setEditor}
                 />
@@ -978,11 +1220,29 @@ export function EditorPane({
             onRefine={handleRefine}
           />
         )}
+
+        {fixOpen && (
+          <AiFixPanel
+            state={fixState}
+            noteTitle={fixNoteTitle}
+            applyingId={fixApplyingId}
+            batchApplying={fixBatchApplying}
+            onClose={handleCloseFix}
+            onCancel={handleCloseFix}
+            onRetry={handleTidy}
+            onSelect={selectFixSuggestion}
+            onApply={handleApplyFix}
+            onReject={markFixRejected}
+            onApplyBatch={handleApplyFixBatch}
+            onUndo={preTidyBody !== undefined ? handleUndoTidy : undefined}
+            undoing={undoing}
+          />
+        )}
       </Box>
 
       <DeleteNoteDialog
         open={confirmDelete}
-        title={note.title || 'Untitled'}
+        title={draftTitle}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={handleConfirmDelete}
       />

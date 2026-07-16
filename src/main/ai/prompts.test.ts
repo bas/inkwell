@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildReviewPrompt, buildSummarizePrompt } from './prompts';
+import { buildReviewPrompt, buildSummarizePrompt, buildFixPrompt } from './prompts';
 
 describe('buildSummarizePrompt', () => {
   it('embeds the trimmed note body between explicit delimiters', () => {
@@ -31,5 +31,44 @@ describe('buildReviewPrompt', () => {
   it('embeds scoped line-range instruction when provided', () => {
     const prompt = buildReviewPrompt('Line 1\nLine 2', { scope: { startLine: 1, endLine: 1 } });
     expect(prompt).toContain('Focus only on lines 1-1.');
+  });
+});
+
+describe('buildFixPrompt', () => {
+  it('includes strict JSON schema instructions and note delimiters', () => {
+    const prompt = buildFixPrompt('Body text', []);
+    expect(prompt).toContain('Return strict JSON');
+    expect(prompt).toContain('"suggestions"');
+    expect(prompt).toContain('--- BEGIN NOTE ---\nBody text\n--- END NOTE ---');
+  });
+
+  it('constrains auto-apply to low-risk spelling/capitalization fixes', () => {
+    const prompt = buildFixPrompt('Body', []);
+    expect(prompt).toMatch(/autoApplyable.*true ONLY/i);
+    expect(prompt).toContain(
+      'Categories allowed: spelling, capitalization, formatting, label, other.',
+    );
+  });
+
+  it('nudges the model to promote an obvious title to a heading', () => {
+    const prompt = buildFixPrompt('Body', []);
+    expect(prompt).toMatch(/level-1 heading/i);
+    expect(prompt).toMatch(/level-2\/3 headings/i);
+  });
+
+  it('lists existing labels to reuse when present', () => {
+    const prompt = buildFixPrompt('Body', ['work', 'ideas']);
+    expect(prompt).toContain('Existing labels you should prefer to reuse: work, ideas.');
+  });
+
+  it('notes when there are no existing labels', () => {
+    const prompt = buildFixPrompt('Body', []);
+    expect(prompt).toContain('There are no existing labels yet.');
+  });
+
+  it('does not leak note content into the instruction lines', () => {
+    const prompt = buildFixPrompt('SECRET', []);
+    const [firstLine] = prompt.split('\n');
+    expect(firstLine).not.toContain('SECRET');
   });
 });

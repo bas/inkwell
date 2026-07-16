@@ -185,11 +185,15 @@ test.describe('Editor formatting', () => {
     await source.fill(['- one', '  - two', '    - three'].join('\n'));
     await waitSaved(page);
 
-    // Re-rendered in the WYSIWYG view without flattening…
+    // Re-rendered in the WYSIWYG view without flattening: the deepest item must
+    // still sit inside three nested lists (switching views no longer re-saves,
+    // so assert the rendered structure directly rather than waiting on a save).
     await switchView(page, 'wysiwyg');
+    const content = page.getByTestId('editor-content');
+    await expect(content.locator('ul ul ul')).toContainText('three');
     await switchView(page, 'source');
-    await waitSaved(page);
 
+    // The nested list persisted to disk from the source edit, unflattened.
     const md = readSingleNote(vaultDir);
     expect(md).toContain('- one');
     expect(md).toContain('  - two');

@@ -6,12 +6,14 @@ import {
   CopyIcon,
   CopilotIcon,
   CommentDiscussionIcon,
+  SparkleIcon,
 } from '@primer/octicons-react';
 
 interface NoteActionsMenuProps {
   pinned: boolean;
   onSummarize: () => void;
   onReview: () => void;
+  onTidy: () => void;
   onTogglePin: () => void;
   onCopyMarkdown: () => void;
   onDelete: () => void;
@@ -22,6 +24,7 @@ export function NoteActionsMenu({
   pinned,
   onSummarize,
   onReview,
+  onTidy,
   onTogglePin,
   onCopyMarkdown,
   onDelete,
@@ -38,6 +41,12 @@ export function NoteActionsMenu({
       </ActionMenu.Anchor>
       <ActionMenu.Overlay width="small">
         <ActionList>
+          <ActionList.Item onSelect={onTidy} data-testid="action-tidy">
+            <ActionList.LeadingVisual>
+              <SparkleIcon />
+            </ActionList.LeadingVisual>
+            Tidy up with Copilot
+          </ActionList.Item>
           <ActionList.Item onSelect={onSummarize} data-testid="action-summarize">
             <ActionList.LeadingVisual>
               <CopilotIcon />
