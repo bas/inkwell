@@ -204,9 +204,21 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   quitting = true;
   const done = (): void => {
-    void notesService?.dispose();
-    void disposeAi();
-    app.quit();
+    // will-quit is skipped once `quitting` is set, so this is the only teardown
+    // path. Await the watcher/db and Copilot client disposal before exiting, but
+    // bound it so a stuck disposal can't hang shutdown indefinitely.
+    const teardown = Promise.allSettled([
+      notesService?.dispose() ?? Promise.resolve(),
+      disposeAi(),
+    ]);
+    let teardownTimer: NodeJS.Timeout | undefined;
+    const teardownTimeout = new Promise<void>((resolve) => {
+      teardownTimer = setTimeout(resolve, 2000);
+    });
+    void Promise.race([teardown, teardownTimeout]).finally(() => {
+      if (teardownTimer) clearTimeout(teardownTimer);
+      app.quit();
+    });
   };
   const barrier = gitBackup.flushForQuit();
   // Never let a stuck network push block shutdown indefinitely. Clear the timer
