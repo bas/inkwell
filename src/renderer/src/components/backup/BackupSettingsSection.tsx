@@ -7,6 +7,7 @@ import {
   Flash,
   FormControl,
   Heading,
+  IconButton,
   Label,
   Radio,
   RadioGroup,
@@ -14,6 +15,7 @@ import {
   TextInput,
   Token,
 } from '@primer/react';
+import { XIcon } from '@primer/octicons-react';
 import type { GitAutoCommitMode } from '@shared/git';
 import { useGitBackup } from '../../hooks/useGitBackup';
 import { describeSyncState, type GitStatusTone } from './gitStatusView';
@@ -62,8 +64,25 @@ export function BackupSettingsSection(): JSX.Element {
       </Box>
 
       {git.error && (
-        <Flash variant="danger" data-testid="backup-error" onClick={git.clearError}>
-          {git.error}
+        <Flash variant="danger" data-testid="backup-error">
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Text sx={{ flex: 'auto' }}>{git.error}</Text>
+            <IconButton
+              icon={XIcon}
+              aria-label="Dismiss error"
+              variant="invisible"
+              size="small"
+              onClick={git.clearError}
+              data-testid="backup-error-dismiss"
+            />
+          </Box>
         </Flash>
       )}
 
