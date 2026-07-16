@@ -12,10 +12,19 @@ vi.mock('../../editor/MarkdownEditor', () => ({
 }));
 
 vi.mock('./EditorToolbar', () => ({
-  EditorToolbar: ({ onReview }: { onReview: () => void }): JSX.Element => (
+  EditorToolbar: ({
+    onReview,
+    onSelectSource,
+  }: {
+    onReview: () => void;
+    onSelectSource: () => void;
+  }): JSX.Element => (
     <div data-testid="editor-toolbar">
       <button type="button" data-testid="action-review" onClick={onReview}>
         Review with Copilot
+      </button>
+      <button type="button" data-testid="action-source" onClick={onSelectSource}>
+        Source
       </button>
     </div>
   ),
@@ -267,5 +276,59 @@ describe('EditorPane AI review apply errors', () => {
     expect(
       saveState.compareDocumentPosition(editorBody) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+describe('EditorPane stale-write retry', () => {
+  async function editSource(): Promise<void> {
+    renderEditor();
+    await screen.findByTestId('editor-toolbar');
+    fireEvent.click(screen.getByTestId('action-source'));
+    const textarea = await screen.findByTestId('source-editor');
+    fireEvent.change(textarea, { target: { value: 'Edited body text.' } });
+  }
+
+  it('refreshes baseUpdatedAt and retries once when the first write is stale', async () => {
+    const original = note({ updatedAt: '2026-06-15T12:00:00.000Z' });
+    const latest = note({ updatedAt: '2026-06-15T13:00:00.000Z' });
+    // First getNote is the initial load (original base); the second is the
+    // stale-write refresh that hands back the newer on-disk version.
+    const getNote = vi.fn().mockResolvedValueOnce(original).mockResolvedValue(latest);
+    const updateNote = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        throw Object.assign(new Error('Note changed on disk'), { name: 'StaleNoteError' });
+      })
+      .mockImplementationOnce(async () => latest);
+    installApi({ getNote, updateNote });
+
+    await editSource();
+    // Wait past the 700ms save debounce for the write + single retry to run.
+    await waitFor(() => expect(updateNote).toHaveBeenCalledTimes(2), { timeout: 2000 });
+
+    // First write used the originally-loaded base; the retry forwards the
+    // refreshed on-disk updatedAt so the active editor wins.
+    expect(updateNote.mock.calls[0]?.[0]).toMatchObject({
+      id: 'n1',
+      baseUpdatedAt: '2026-06-15T12:00:00.000Z',
+    });
+    expect(getNote).toHaveBeenCalledWith('n1');
+    expect(updateNote.mock.calls[1]?.[0]).toMatchObject({
+      id: 'n1',
+      baseUpdatedAt: '2026-06-15T13:00:00.000Z',
+    });
+    await waitFor(() => expect(screen.getByTestId('save-state').textContent).toBe('Saved'));
+  });
+
+  it('surfaces the error without retrying a second time when the retry is also stale', async () => {
+    const updateNote = vi.fn(async () => {
+      throw Object.assign(new Error('Note changed on disk'), { name: 'StaleNoteError' });
+    });
+    installApi({ updateNote });
+
+    await editSource();
+    // One original attempt plus a single retry — never an unbounded loop.
+    await waitFor(() => expect(updateNote).toHaveBeenCalledTimes(2), { timeout: 2000 });
+    await waitFor(() => expect(screen.getByTestId('save-state').textContent).toBe('Save failed'));
   });
 });

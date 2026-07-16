@@ -28,7 +28,7 @@ export interface GitRemoteConfig {
   owner: string;
   /** Repository name. Empty for opaque pasted URLs. */
   repo: string;
-  /** Last known/verified visibility. `unknown` for un-verifiable Mode C remotes. */
+  /** Last known/verified visibility. `unknown` for opaque pasted-URL remotes whose visibility can't be verified. */
   visibility: GitVisibility | 'unknown';
   /** The ssh/https URL actually used by git as `origin`. */
   remoteUrl: string;
@@ -36,7 +36,11 @@ export interface GitRemoteConfig {
   autoPush: boolean;
 }
 
-/** The persisted `git` block on {@link AppSettings}. Absent = never configured. */
+/**
+ * The persisted `git` block on {@link AppSettings}. Required on `AppSettings`;
+ * normalization always fills it with defaults, so an older settings.json that
+ * omits it still ends up with `enabled=false` and no `remote` (never configured).
+ */
 export interface GitSettings {
   /** Local version history is on (a git repo is initialised in the vault). */
   enabled: boolean;

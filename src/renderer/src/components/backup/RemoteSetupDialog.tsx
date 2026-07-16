@@ -132,6 +132,11 @@ export function RemoteSetupDialog({
     // in flight, otherwise the nameConflict/existingMissing guards below can be
     // bypassed and we could wire up an unintended repo.
     if (checkingName) return false;
+    // Require a *completed* availability check for the create/existing flows. If
+    // checkRepoName failed transiently, nameCheck stays undefined and the
+    // conflict guards below can't protect us, so block submit until we have a
+    // real result rather than risk attaching to an unintended existing repo.
+    if (nameCheck === undefined) return false;
     if (visibility === 'public' && !acknowledgePublic) return false;
     if (mode === 'create' && nameConflict) return false;
     if (mode === 'existing' && existingMissing) return false;
