@@ -194,6 +194,26 @@ export function isValidRemoteUrl(url: string): boolean {
   return false;
 }
 
+/**
+ * Whether a GitHub owner (user or organization login) is safe to embed in a
+ * `gh` repo argument. Logins are alphanumeric with internal hyphens and must
+ * start with an alphanumeric — critically, never `-`, which `gh` would parse as
+ * an option flag when the value is combined into a positional `owner/repo`
+ * argument from the untrusted renderer.
+ */
+export function isValidGitHubOwner(owner: string): boolean {
+  return /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner);
+}
+
+/**
+ * Whether a git host (e.g. `github.com` or a GHE hostname) is safe to embed in a
+ * `gh` repo argument. Hostnames use alphanumerics, dots and hyphens and must
+ * start with an alphanumeric so the value can never be read as a `gh` option.
+ */
+export function isValidGitHost(host: string): boolean {
+  return host.length <= 253 && /^[A-Za-z0-9](?:[A-Za-z0-9.-]*)$/.test(host);
+}
+
 /** Whether an owner is eligible to create `internal` repositories (orgs only). */
 export interface GitDestinations {
   /** Hosts discovered from `gh auth status`, healthiest first. */

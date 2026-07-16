@@ -11,7 +11,13 @@ import type {
   GitSettings,
   GitVisibility,
 } from '../../shared/git';
-import { clampIntervalMinutes, isValidRemoteUrl, validateRepoName } from '../../shared/git';
+import {
+  clampIntervalMinutes,
+  isValidGitHost,
+  isValidGitHubOwner,
+  isValidRemoteUrl,
+  validateRepoName,
+} from '../../shared/git';
 import { readSettings, setGitSettings } from '../settings';
 import type { NotesService } from '../storage/notesService';
 import { GitService } from './service';
@@ -53,8 +59,13 @@ function validateSetupInput(value: unknown): GitRemoteSetupInput {
   const ghAction = v['ghAction'];
   if (ghAction !== 'create' && ghAction !== 'existing') throw new Error('Invalid gh action');
   input.ghAction = ghAction;
-  if (typeof v['host'] === 'string' && v['host'].length > 0) input.host = v['host'];
-  input.owner = assertString(v['owner'], 'owner');
+  if (typeof v['host'] === 'string' && v['host'].length > 0) {
+    if (!isValidGitHost(v['host'])) throw new Error('Enter a valid host name.');
+    input.host = v['host'];
+  }
+  const owner = assertString(v['owner'], 'owner');
+  if (!isValidGitHubOwner(owner)) throw new Error('Enter a valid GitHub owner or organization.');
+  input.owner = owner;
   const repo = validateRepoName(assertString(v['repo'], 'repo'));
   if (!repo.valid) throw new Error(repo.error ?? 'Invalid repository name.');
   input.repo = repo.normalized;
@@ -218,11 +229,14 @@ export class GitBackup {
       IpcChannels.gitCheckRepoName,
       async (_e, host: unknown, owner: unknown, name: unknown): Promise<GitRepoNameCheck> => {
         const hostArg = typeof host === 'string' && host.length > 0 ? host : undefined;
-        return this.service.checkRepoName(
-          hostArg,
-          assertString(owner, 'owner'),
-          assertString(name, 'name'),
-        );
+        if (hostArg !== undefined && !isValidGitHost(hostArg)) {
+          throw new Error('Enter a valid host name.');
+        }
+        const ownerArg = assertString(owner, 'owner');
+        if (!isValidGitHubOwner(ownerArg)) {
+          throw new Error('Enter a valid GitHub owner or organization.');
+        }
+        return this.service.checkRepoName(hostArg, ownerArg, assertString(name, 'name'));
       },
     );
 
@@ -258,6 +272,22 @@ export class GitBackup {
     });
 
     ipcMain.handle(IpcChannels.gitPushNow, async (): Promise<GitPushResult> => {
+      // "Back up now" must record the latest edits before pushing: flush any
+      // pending debounced commit and commit outstanding changes first, otherwise
+      // in `manual` mode (or `onSave` with a debounce still pending) we would push
+      // stale history and contradict the UI copy.
+      if (this.commitTimer) {
+        clearTimeout(this.commitTimer);
+        this.commitTimer = undefined;
+      }
+      if (this.gitSettings().enabled) {
+        try {
+          await this.service.commit(this.takeTitles());
+        } catch {
+          // A failed commit is surfaced via status; still attempt the push so an
+          // already-committed backlog can go out.
+        }
+      }
       const push = await this.service.pushNow();
       if (push.state === 'clean') this.persistLastPush();
       const status = await this.broadcastStatus();

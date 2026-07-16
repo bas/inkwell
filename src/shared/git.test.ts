@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   clampIntervalMinutes,
+  isValidGitHost,
+  isValidGitHubOwner,
   isValidRemoteUrl,
   MAX_INTERVAL_MINUTES,
   MIN_INTERVAL_MINUTES,
@@ -69,6 +71,36 @@ describe('isValidRemoteUrl', () => {
     expect(isValidRemoteUrl('ssh://-oProxyCommand=calc/repo.git')).toBe(false);
     expect(isValidRemoteUrl('-oProxyCommand=calc@github.com:owner/repo.git')).toBe(false);
     expect(isValidRemoteUrl('git@-oProxyCommand=calc:owner/repo.git')).toBe(false);
+  });
+});
+
+describe('isValidGitHubOwner', () => {
+  it('accepts normal user and org logins', () => {
+    expect(isValidGitHubOwner('octocat')).toBe(true);
+    expect(isValidGitHubOwner('my-org')).toBe(true);
+    expect(isValidGitHubOwner('a1')).toBe(true);
+  });
+
+  it('rejects logins that could be parsed as gh options or are malformed', () => {
+    expect(isValidGitHubOwner('-flag')).toBe(false);
+    expect(isValidGitHubOwner('')).toBe(false);
+    expect(isValidGitHubOwner('bad/owner')).toBe(false);
+    expect(isValidGitHubOwner('has space')).toBe(false);
+    expect(isValidGitHubOwner('a'.repeat(40))).toBe(false);
+  });
+});
+
+describe('isValidGitHost', () => {
+  it('accepts github.com and GHE hostnames', () => {
+    expect(isValidGitHost('github.com')).toBe(true);
+    expect(isValidGitHost('ghe.example.org')).toBe(true);
+  });
+
+  it('rejects hosts that could be parsed as gh options or are malformed', () => {
+    expect(isValidGitHost('-flag')).toBe(false);
+    expect(isValidGitHost('.leading-dot')).toBe(false);
+    expect(isValidGitHost('')).toBe(false);
+    expect(isValidGitHost('has space')).toBe(false);
   });
 });
 
