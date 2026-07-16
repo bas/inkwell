@@ -183,6 +183,12 @@ export function isValidRemoteUrl(url: string): boolean {
     try {
       const parsed = new URL(trimmed);
       if (parsed.protocol !== 'https:' && parsed.protocol !== 'ssh:') return false;
+      // Reject HTTPS URLs carrying userinfo (https://token@host/…): we would
+      // otherwise persist the secret in settings and echo it back in the UI. An
+      // ssh:// user (ssh://git@host) is the login name, not a secret, so it's ok.
+      if (parsed.protocol === 'https:' && (parsed.username !== '' || parsed.password !== '')) {
+        return false;
+      }
       const host = parsed.hostname;
       return host.length > 0 && !host.startsWith('-');
     } catch {

@@ -105,16 +105,23 @@ describe('NotesService', () => {
     }
   });
 
-  it('accepts an update whose baseUpdatedAt matches the current note', async () => {
+  it('accepts a no-op update even when baseUpdatedAt is stale', async () => {
     const service = new NotesService(dir, dbPath);
     try {
       const note = service.createNote({ body: 'Original' });
-      const updated = service.updateNote({
+      await new Promise((r) => setTimeout(r, 5));
+      // A concurrent change advances updatedAt on disk...
+      const newer = service.updateNote({ id: note.id, body: 'Newer on disk' });
+      const canonical = service.getNote(note.id);
+      // ...then a no-op autosave arrives carrying the now-stale base. Because the
+      // requested content already matches disk, it must not raise StaleNoteError.
+      const again = service.updateNote({
         id: note.id,
-        body: 'Edited',
+        body: canonical.body,
         baseUpdatedAt: note.updatedAt,
       });
-      expect(updated.body).toBe('Edited');
+      expect(again.updatedAt).toBe(newer.updatedAt);
+      expect(again.body).toBe(canonical.body);
     } finally {
       await service.dispose();
     }

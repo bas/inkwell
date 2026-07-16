@@ -198,19 +198,22 @@ export class NotesService {
     const current = this.getNote(input.id);
     const path = this.idToPath.get(input.id);
     if (!path) throw new NoteNotFoundError(input.id);
-    // Optimistic concurrency: reject writes based on a stale read so an external
-    // or watcher-driven change is never silently clobbered.
-    if (input.baseUpdatedAt !== undefined && input.baseUpdatedAt !== current.updatedAt) {
-      throw new StaleNoteError(input.id);
-    }
     const body = input.body ?? current.body;
     const labels = input.labels ?? current.labels;
     const pinned = input.pinned ?? current.pinned;
     // No-op suppression: identical content must not rewrite the file or bump
     // updatedAt, so autosave keystrokes that change nothing produce no churn
-    // (and no backup commits).
+    // (and no backup commits). Run this before the optimistic-concurrency check
+    // so a no-op write against a stale base is accepted rather than raising a
+    // spurious StaleNoteError — the desired content already matches disk, so
+    // there is nothing to clobber.
     if (body === current.body && pinned === current.pinned && sameLabels(labels, current.labels)) {
       return current;
+    }
+    // Optimistic concurrency: reject a content-changing write based on a stale
+    // read so an external or watcher-driven change is never silently clobbered.
+    if (input.baseUpdatedAt !== undefined && input.baseUpdatedAt !== current.updatedAt) {
+      throw new StaleNoteError(input.id);
     }
     const next: Note = {
       ...current,

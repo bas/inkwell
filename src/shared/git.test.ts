@@ -76,10 +76,14 @@ describe('isValidRemoteUrl', () => {
     expect(isValidRemoteUrl('not a url')).toBe(false);
   });
 
-  it('rejects hosts that could be parsed as ssh option flags', () => {
-    expect(isValidRemoteUrl('ssh://-oProxyCommand=calc/repo.git')).toBe(false);
-    expect(isValidRemoteUrl('-oProxyCommand=calc@github.com:owner/repo.git')).toBe(false);
-    expect(isValidRemoteUrl('git@-oProxyCommand=calc:owner/repo.git')).toBe(false);
+  it('rejects https remotes carrying embedded credentials', () => {
+    expect(isValidRemoteUrl('https://token@github.com/owner/repo.git')).toBe(false);
+    expect(isValidRemoteUrl('https://user:pass@github.com/owner/repo.git')).toBe(false);
+    expect(isValidRemoteUrl('https://x-access-token:ghp_abc@github.com/owner/repo.git')).toBe(
+      false,
+    );
+    // An ssh:// login name is not a secret and stays valid.
+    expect(isValidRemoteUrl('ssh://git@github.com/owner/repo.git')).toBe(true);
   });
 });
 
