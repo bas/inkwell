@@ -1,5 +1,5 @@
 import { existsSync, realpathSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { runGit } from './runner';
 
 /**
@@ -30,6 +30,21 @@ async function currentBranch(gitBin: string, vaultDir: string): Promise<string |
   return branch.length > 0 ? branch : undefined;
 }
 
+/**
+ * Resolve the repository's actual git directory. In plain repos this is
+ * `${vaultDir}/.git`, but with worktrees/submodules `.git` is a *file* pointing
+ * elsewhere, so we ask git rather than assuming the path. Falls back to the
+ * conventional location if the command fails.
+ */
+async function resolveGitDir(gitBin: string, vaultDir: string): Promise<string> {
+  const result = await runGit(gitBin, vaultDir, ['rev-parse', '--git-dir'], {
+    allowNonZero: true,
+  });
+  const raw = result.code === 0 ? result.stdout.trim() : '';
+  if (raw.length === 0) return join(vaultDir, '.git');
+  return isAbsolute(raw) ? raw : join(vaultDir, raw);
+}
+
 /** Inspect the vault's git state without mutating anything. */
 export async function preflight(gitBin: string, vaultDir: string): Promise<RepoPreflight> {
   const inside = await runGit(gitBin, vaultDir, ['rev-parse', '--is-inside-work-tree'], {
@@ -47,7 +62,7 @@ export async function preflight(gitBin: string, vaultDir: string): Promise<RepoP
     return { kind: 'foreign-repo', root };
   }
 
-  const gitDir = join(vaultDir, '.git');
+  const gitDir = await resolveGitDir(gitBin, vaultDir);
   if (existsSync(join(gitDir, 'index.lock'))) {
     return {
       kind: 'blocked',

@@ -70,9 +70,9 @@ export function deleteNoteFile(path: string): void {
  * List absolute paths of every `.md` file directly in the vault directory.
  *
  * Symlinks are deliberately skipped: a symlink placed in the vault could
- * otherwise point outside it and cause content from an arbitrary location to be
- * read, indexed, and (with backup enabled) committed and pushed upstream. Only
- * regular files that live directly in the vault are treated as notes (RD-7).
+ * otherwise point outside it, letting Inkwell read (and, with backup enabled,
+ * index and record) content from an arbitrary filesystem location. Only regular
+ * files that live directly in the vault are treated as notes (RD-7).
  */
 export function listMarkdownFiles(dir: string): string[] {
   let entries: import('node:fs').Dirent[];

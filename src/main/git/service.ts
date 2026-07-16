@@ -133,9 +133,11 @@ export class GitService {
     // (research R3 §3.2, RD-11).
     const specs = this.stagePathspecs();
     if (specs.length > 0) {
-      await runGit(gitBin, this.vaultDir, ['add', '--all', '--', ...specs], {
-        allowNonZero: true,
-      });
+      // stagePathspecs() only emits pathspecs that currently match something, so
+      // the "pathspec matches nothing" fatal cannot fire here. Any other non-zero
+      // exit (permission error, unsupported :(icase) magic on old git) is a real
+      // failure we want to surface rather than silently swallow into a no-op.
+      await runGit(gitBin, this.vaultDir, ['add', '--all', '--', ...specs]);
     }
     const message = opts.message ?? autoCommitMessage(opts.titles ?? []);
     const result = await runGit(gitBin, this.vaultDir, ['commit', '-m', message], {
