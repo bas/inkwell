@@ -59,7 +59,7 @@ export class GitCommandError extends Error {
 
 function safePath(): string {
   const fromEnv = (process.env.PATH ?? '').split(':').filter(Boolean);
-  const merged = [...FALLBACK_BIN_DIRS, ...fromEnv];
+  const merged = [...fromEnv, ...FALLBACK_BIN_DIRS];
   return Array.from(new Set(merged)).join(':');
 }
 
