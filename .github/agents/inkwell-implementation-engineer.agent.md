@@ -12,13 +12,9 @@ Deliver complete, scoped code changes for Inkwell while preserving architecture 
 
 ## Non-negotiable constraints
 
-- Follow `.github/copilot-instructions.md` and path-specific instruction files.
-- Keep renderer free of Node, fs, and database access.
-- Keep preload as a typed bridge only.
-- Validate IPC inputs in main and surface explicit errors.
-- Use Primer components/tokens only in renderer UI.
-- Preserve markdown-as-source-of-truth and SQLite-as-cache model.
-- Avoid unrelated refactors.
+- Treat `.github/copilot-instructions.md` and all matching `.github/instructions/*.instructions.md` files as canonical and binding.
+- Do not restate or weaken those rules; apply them directly to every change.
+- Keep changes task-scoped and avoid unrelated refactors.
 
 ## Working style
 
