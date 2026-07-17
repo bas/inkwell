@@ -36,6 +36,11 @@ Use this skill when the user is still exploring a problem and wants evidence, co
 - Do not ask for facts you can retrieve from the repo/tooling yourself.
 - If blocked by missing product direction, present a recommended default and proceed.
 
+## Second-opinion requirement
+
+- Before finalizing output, request a second opinion from the `rubber-duck` agent on the findings, options, and recommendation.
+- Incorporate high-signal feedback or explicitly state why feedback was not applied.
+
 ## Output contract (required)
 
 Return exactly these sections:
