@@ -101,12 +101,11 @@ export const IpcChannels = {
 } as const;
 
 /** Outcome of prompting the user to choose a new vault location. */
-export interface VaultChooseResult {
-  /** True when a folder was picked (the app then relaunches). */
-  changed: boolean;
-  /** The newly chosen absolute vault path, when `changed` is true. */
-  path?: string;
-}
+export type VaultChooseResult =
+  /** The user cancelled or picked the current folder; nothing changed. */
+  | { changed: false }
+  /** A new folder was picked (the app then relaunches). */
+  | { changed: true; path: string };
 
 /**
  * The typed API exposed to the renderer via `contextBridge` as `window.api`.

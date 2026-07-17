@@ -55,7 +55,7 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
       features: { ...loadedSettings.features, [feature]: enabled },
     })),
     getVaultPath: vi.fn(async () => '/Users/test/Inkwell'),
-    chooseVaultLocation: vi.fn(async () => ({ changed: false })),
+    chooseVaultLocation: vi.fn(async () => ({ changed: false }) as const),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
     searchNotes: vi.fn(async () => []),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, Flash, Heading, Text } from '@primer/react';
+import { cleanIpcError } from '../../hooks/cleanIpcError';
 
 /**
  * The Settings → Notes vault section. Shows the folder Inkwell reads and writes
@@ -35,7 +36,7 @@ export function VaultSettingsSection(): JSX.Element {
       // change (cancelled), just drop the busy state.
       if (!result.changed) setBusy(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(cleanIpcError(err instanceof Error ? err.message : String(err)));
       setBusy(false);
     }
   }
