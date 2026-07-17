@@ -59,9 +59,11 @@ function parseJsonObject(raw: string): Record<string, unknown> {
   if (wholeFence?.[1]) candidates.add(wholeFence[1].trim());
 
   const fencePattern = /```json\s*([\s\S]*?)\s*```/gi;
-  for (const match of trimmed.matchAll(fencePattern)) {
-    const candidate = match[1]?.trim();
-    if (candidate) candidates.add(candidate);
+  const embeddedJsonCandidates = Array.from(trimmed.matchAll(fencePattern))
+    .map((match) => match[1]?.trim())
+    .filter((candidate): candidate is string => Boolean(candidate));
+  for (const candidate of embeddedJsonCandidates.reverse()) {
+    candidates.add(candidate);
   }
 
   const firstBrace = trimmed.indexOf('{');
