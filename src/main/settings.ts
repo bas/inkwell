@@ -16,6 +16,7 @@ import {
   type FeatureKey,
   type WindowBounds,
   normalizeSettings,
+  normalizeVaultPath,
 } from '../shared/types';
 import type { GitSettings } from '../shared/git';
 import { randomUUID } from 'node:crypto';
@@ -76,7 +77,11 @@ function writeSettings(settings: AppSettings): void {
 
 /** Persist the chosen notes vault path. */
 export function setVaultPath(path: string): AppSettings {
-  const next: AppSettings = { ...readSettings(), vaultPath: path };
+  const normalized = normalizeVaultPath(path);
+  if (!normalized) {
+    throw new Error('Vault path must be a non-empty absolute path.');
+  }
+  const next: AppSettings = { ...readSettings(), vaultPath: normalized };
   writeSettings(next);
   return next;
 }

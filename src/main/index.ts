@@ -15,7 +15,7 @@ import { buildAppMenu } from './menu';
 import { GitBackup } from './git';
 import { resolveVaultDir } from './vault';
 import { IpcChannels, type VaultChooseResult } from '../shared/ipc';
-import { isFeatureKey, type ColorModePreference } from '../shared/types';
+import { isFeatureKey, normalizeVaultPath, type ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
@@ -128,7 +128,7 @@ function registerVaultHandlers(window: BrowserWindow, vaultDir: string): void {
       defaultPath: vaultDir,
       properties: ['openDirectory', 'createDirectory'],
     });
-    const chosen = result.filePaths[0];
+    const chosen = normalizeVaultPath(result.filePaths[0]);
     if (result.canceled || !chosen || chosen === vaultDir) return { changed: false };
     setVaultPath(chosen);
     // Relaunch via app.quit() (not app.exit) so the before-quit barrier flushes

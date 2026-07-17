@@ -98,7 +98,13 @@ function normalizeFeatures(value: unknown): FeatureSettings {
  * (Inkwell is macOS-only). A relative or blank value is dropped so the main
  * process falls back to resolving a safe default instead of trusting junk.
  */
-function normalizeVaultPath(value: unknown): string | undefined {
+/**
+ * Coerce an arbitrary value into a valid vault path: a trimmed, absolute POSIX
+ * path. Returns `undefined` for anything blank or relative so callers never
+ * persist a malformed location. Shared by settings normalization and the
+ * main-process vault handlers.
+ */
+export function normalizeVaultPath(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.startsWith('/') ? trimmed : undefined;

@@ -45,7 +45,10 @@ export function VaultSettingsSection(): JSX.Element {
       // change (cancelled), just drop the busy state.
       if (!result.changed) setBusy(false);
     } catch (err) {
-      setError(cleanIpcError(err instanceof Error ? err.message : String(err)));
+      setError(
+        cleanIpcError(err instanceof Error ? err.message : String(err)) ||
+          'Could not change the vault location.',
+      );
       setBusy(false);
     }
   }
