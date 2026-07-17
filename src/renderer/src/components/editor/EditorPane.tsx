@@ -799,7 +799,7 @@ export function EditorPane({
     void (async () => {
       // Block edits while tidy generates and auto-applies so background
       // mutations can't race with or clobber the user's keystrokes.
-      editor?.setEditable(false);
+      editor?.setEditable(false, false); // false = don't emit an update event, avoids re-syncing stale content during tidy
       try {
         await save();
         if (dirtyRef.current) {
@@ -858,7 +858,7 @@ export function EditorPane({
         }
         presentFix(requestId, result.summary, reviewSet, appliedCount);
       } finally {
-        editor?.setEditable(true);
+        editor?.setEditable(true, false); // false = don't emit an update event, re-enables editing without triggering a content sync
       }
     })();
   }, [
