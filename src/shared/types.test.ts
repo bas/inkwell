@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSettings } from './types';
+import { normalizeSettings, normalizeVaultPath } from './types';
 
 describe('normalizeSettings', () => {
   it('adds default feature settings for older settings files', () => {
@@ -94,5 +94,32 @@ describe('normalizeSettings', () => {
       },
     });
     expect(invalidShape.git.remote).toBeUndefined();
+  });
+
+  it('keeps a valid absolute vaultPath and drops invalid ones', () => {
+    expect(normalizeSettings({ vaultPath: '/Users/test/Inkwell' }).vaultPath).toBe(
+      '/Users/test/Inkwell',
+    );
+    expect(normalizeSettings({ vaultPath: '  /Users/test/Notes  ' }).vaultPath).toBe(
+      '/Users/test/Notes',
+    );
+    expect(normalizeSettings({ vaultPath: 'relative/path' }).vaultPath).toBeUndefined();
+    expect(normalizeSettings({ vaultPath: '' }).vaultPath).toBeUndefined();
+    expect(normalizeSettings({ vaultPath: 42 }).vaultPath).toBeUndefined();
+  });
+});
+
+describe('normalizeVaultPath', () => {
+  it('trims and keeps absolute POSIX paths', () => {
+    expect(normalizeVaultPath('/Users/test/Inkwell')).toBe('/Users/test/Inkwell');
+    expect(normalizeVaultPath('  /Users/test/Notes  ')).toBe('/Users/test/Notes');
+  });
+
+  it('rejects blank, relative, and non-string values', () => {
+    expect(normalizeVaultPath('')).toBeUndefined();
+    expect(normalizeVaultPath('   ')).toBeUndefined();
+    expect(normalizeVaultPath('relative/path')).toBeUndefined();
+    expect(normalizeVaultPath(42)).toBeUndefined();
+    expect(normalizeVaultPath(undefined)).toBeUndefined();
   });
 });

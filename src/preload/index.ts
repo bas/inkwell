@@ -15,6 +15,8 @@ const api: InkwellApi = {
   setColorMode: (mode: ColorModePreference) => ipcRenderer.invoke(IpcChannels.setColorMode, mode),
   setFeatureEnabled: (feature: FeatureKey, enabled: boolean) =>
     ipcRenderer.invoke(IpcChannels.setFeatureEnabled, feature, enabled),
+  getVaultPath: () => ipcRenderer.invoke(IpcChannels.getVaultPath),
+  chooseVaultLocation: () => ipcRenderer.invoke(IpcChannels.chooseVaultLocation),
   onSystemColorSchemeChanged: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, isDark: boolean): void => listener(isDark);
     ipcRenderer.on(IpcChannels.systemColorSchemeChanged, handler);

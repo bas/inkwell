@@ -3,6 +3,7 @@ import type { AppSettings, FeatureKey } from '@shared/types';
 import type { Label } from '@shared/note-labels';
 import { LabelManagerPanel } from '../labels/LabelManagerPanel';
 import { BackupSettingsSection } from '../backup/BackupSettingsSection';
+import { VaultSettingsSection } from './VaultSettingsSection';
 
 interface SettingsDialogProps {
   settings: AppSettings;
@@ -86,6 +87,8 @@ export function SettingsDialog({
             onChanged={onLabelsChanged}
           />
         </Box>
+
+        <VaultSettingsSection />
 
         <BackupSettingsSection />
       </Box>

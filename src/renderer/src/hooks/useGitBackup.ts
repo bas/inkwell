@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { mergePushOutcome } from '@shared/git';
+import { cleanIpcError } from './cleanIpcError';
 import type {
   GitAutoCommitMode,
   GitBackupStatus,
@@ -31,7 +32,11 @@ interface UseGitBackupResult {
 }
 
 function describeError(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
+  if (err instanceof Error) {
+    const cleaned = cleanIpcError(err.message);
+    return cleaned.length > 0 ? cleaned : fallback;
+  }
+  return fallback;
 }
 
 /**

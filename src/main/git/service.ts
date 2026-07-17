@@ -10,7 +10,7 @@ import type {
   GitVisibility,
 } from '../../shared/git';
 import { isValidRemoteUrl, validateRepoName } from '../../shared/git';
-import { classifyPushFailure } from './classify';
+import { classifyPushFailure, describeVaultAccessError, isVaultAccessError } from './classify';
 import { autoCommitMessage } from './message';
 import { countAhead, isDirty, preflight } from './preflight';
 import {
@@ -21,7 +21,7 @@ import {
   resolveRemoteUrl,
 } from './provision';
 import { GitOpQueue } from './queue';
-import { resolveBinary, runGit } from './runner';
+import { GitCommandError, resolveBinary, runGit } from './runner';
 
 const GITIGNORE = ['.DS_Store', 'index.sqlite', '*.tmp-*', ''].join('\n');
 const GITATTRIBUTES = ['*.md text eol=lf', ''].join('\n');
@@ -81,28 +81,47 @@ export class GitService {
     await runGit(gitBin, this.vaultDir, ['config', 'user.name', IDENTITY_NAME]);
   }
 
+  /**
+   * Rethrow a git failure caused by an inaccessible vault folder as a clear,
+   * actionable message (never the raw command line). Other errors pass through.
+   */
+  private guardVaultAccess(err: unknown): never {
+    if (err instanceof GitCommandError && isVaultAccessError(err.result.stderr)) {
+      throw new Error(describeVaultAccessError(this.vaultDir));
+    }
+    throw err;
+  }
+
   /** Initialize a git repo in the vault (idempotent) and make the first commit. */
   async initialize(): Promise<void> {
     return this.queue.runExclusive(async () => {
-      const gitBin = await this.git();
-      const state = await preflight(gitBin, this.vaultDir);
-      if (state.kind === 'foreign-repo') {
-        throw new Error(
-          `The vault is inside another git repository (${state.root}). Move it to its own folder to enable backup.`,
-        );
+      try {
+        return await this.initializeInternal();
+      } catch (err) {
+        this.guardVaultAccess(err);
       }
-      if (state.kind === 'not-a-repo') {
-        await runGit(gitBin, this.vaultDir, ['init', '-b', 'main']);
-      }
-      await this.ensureIdentity(gitBin);
-
-      const gitignore = join(this.vaultDir, '.gitignore');
-      if (!existsSync(gitignore)) await writeFile(gitignore, GITIGNORE, 'utf8');
-      const gitattributes = join(this.vaultDir, '.gitattributes');
-      if (!existsSync(gitattributes)) await writeFile(gitattributes, GITATTRIBUTES, 'utf8');
-
-      await this.commitInternal(gitBin, { message: 'Initialize Inkwell vault backup' });
     });
+  }
+
+  private async initializeInternal(): Promise<void> {
+    const gitBin = await this.git();
+    const state = await preflight(gitBin, this.vaultDir);
+    if (state.kind === 'foreign-repo') {
+      throw new Error(
+        `The vault is inside another git repository (${state.root}). Move it to its own folder to enable backup.`,
+      );
+    }
+    if (state.kind === 'not-a-repo') {
+      await runGit(gitBin, this.vaultDir, ['init', '-b', 'main']);
+    }
+    await this.ensureIdentity(gitBin);
+
+    const gitignore = join(this.vaultDir, '.gitignore');
+    if (!existsSync(gitignore)) await writeFile(gitignore, GITIGNORE, 'utf8');
+    const gitattributes = join(this.vaultDir, '.gitattributes');
+    if (!existsSync(gitattributes)) await writeFile(gitattributes, GITATTRIBUTES, 'utf8');
+
+    await this.commitInternal(gitBin, { message: 'Initialize Inkwell vault backup' });
   }
 
   private async stagePathspecs(gitBin: string): Promise<string[]> {

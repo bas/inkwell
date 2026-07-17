@@ -1,14 +1,21 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { readSettings, setColorMode, setFeatureEnabled, setWindowBounds } from './settings';
+import {
+  readSettings,
+  setColorMode,
+  setFeatureEnabled,
+  setVaultPath,
+  setWindowBounds,
+} from './settings';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { GitBackup } from './git';
-import { IpcChannels } from '../shared/ipc';
-import { isFeatureKey, type ColorModePreference } from '../shared/types';
+import { resolveVaultDir } from './vault';
+import { IpcChannels, type VaultChooseResult } from '../shared/ipc';
+import { isFeatureKey, normalizeVaultPath, type ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
@@ -102,6 +109,37 @@ function registerIpcHandlers(): void {
   });
 }
 
+/**
+ * Vault-location handlers. Registered once the window and resolved vault path are
+ * available: the picker is anchored to the window, and `getVaultPath` reports the
+ * path actually in use (which may be an `INKWELL_VAULT_DIR` override that is never
+ * persisted). Choosing a new folder persists it and relaunches so the notes
+ * service, SQLite index, and git backup re-initialise cleanly.
+ */
+function registerVaultHandlers(window: BrowserWindow, vaultDir: string): void {
+  ipcMain.handle(IpcChannels.getVaultPath, () => vaultDir);
+
+  ipcMain.handle(IpcChannels.chooseVaultLocation, async (): Promise<VaultChooseResult> => {
+    const result = await dialog.showOpenDialog(window, {
+      title: 'Choose notes vault folder',
+      message:
+        'Inkwell will restart to use this folder as your notes vault. Existing notes are NOT moved - copy them into the new folder first if you want them here.',
+      buttonLabel: 'Use this folder',
+      defaultPath: vaultDir,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    const chosen = normalizeVaultPath(result.filePaths[0]);
+    if (result.canceled || !chosen || chosen === vaultDir) return { changed: false };
+    setVaultPath(chosen);
+    // Relaunch via app.quit() (not app.exit) so the before-quit barrier flushes
+    // pending autosave commits/pushes and disposes the DB/watcher cleanly before
+    // the process exits and the relaunched instance re-initialises.
+    app.relaunch();
+    app.quit();
+    return { changed: true, path: chosen };
+  });
+}
+
 function isBetterSqliteAbiMismatch(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   return (
@@ -141,7 +179,28 @@ async function createNotesService(vaultDir: string, dbPath: string): Promise<Not
 app.whenReady().then(async () => {
   registerIpcHandlers();
 
-  const vaultDir = process.env['INKWELL_VAULT_DIR'] ?? join(app.getPath('documents'), 'Inkwell');
+  let vaultDir: string;
+  try {
+    vaultDir = resolveVaultDir({
+      envVaultDir: process.env['INKWELL_VAULT_DIR'],
+      homeDir: app.getPath('home'),
+      documentsDir: app.getPath('documents'),
+      persistedVaultPath: readSettings().vaultPath,
+      persist: (path) => setVaultPath(path),
+    });
+  } catch (err) {
+    // Resolution creates and persists the default vault; if that fails (e.g.
+    // mkdir/permission/disk error) there is no usable vault, so surface it and
+    // quit rather than letting the unhandled rejection crash the app silently.
+    dialog.showErrorBox(
+      'Inkwell could not open your notes',
+      `The notes vault location could not be prepared.\n\n${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    app.quit();
+    return;
+  }
   const dbPath = join(app.getPath('userData'), 'index.sqlite');
   try {
     notesService = await createNotesService(vaultDir, dbPath);
@@ -160,6 +219,7 @@ app.whenReady().then(async () => {
 
   const window = createWindow();
   gitBackup?.setWindow(window);
+  registerVaultHandlers(window, vaultDir);
 
   buildAppMenu(window, {
     onRevealVault: () => {

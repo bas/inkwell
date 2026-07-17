@@ -57,3 +57,45 @@ export function isAlreadyExistsError(stderr: string): boolean {
     (text.includes('422') && text.includes('already exists'))
   );
 }
+
+/**
+ * Whether a git failure stems from the vault folder being inaccessible to the
+ * spawned git process — typically because it lives in a macOS TCC-protected
+ * location (e.g. `~/Documents`) where the child process cannot `getcwd()` or
+ * write. Distinct from {@link classifyPushFailure}'s remote "permission denied",
+ * which is about credentials.
+ */
+export function isVaultAccessError(stderr: string): boolean {
+  const text = stderr.toLowerCase();
+  // Remote/credential failures also read "permission denied" (e.g. "Permission
+  // denied (publickey)") or "authentication failed". Those are auth problems,
+  // not local working-directory access, so never treat them as vault errors -
+  // otherwise we'd wrongly tell the user to move their notes folder.
+  if (
+    text.includes('publickey') ||
+    text.includes('authentication failed') ||
+    text.includes('could not read username') ||
+    text.includes('could not read password')
+  ) {
+    return false;
+  }
+  return (
+    text.includes('operation not permitted') ||
+    text.includes('unable to get current working directory') ||
+    text.includes('permission denied') ||
+    text.includes('could not open') ||
+    text.includes('read-only file system')
+  );
+}
+
+/** A clear, actionable message for a vault-access failure (see {@link isVaultAccessError}). */
+export function describeVaultAccessError(vaultDir: string): string {
+  // Rendered as plain text in a Primer Flash banner, so keep it a single flowing
+  // string; embedded newlines would collapse to spaces and read awkwardly.
+  return (
+    `Inkwell can't set up version history because it doesn't have permission to ` +
+    `use your notes folder (${vaultDir}). This usually happens when the folder is ` +
+    `in a protected location such as Documents or Desktop. Open Settings then Notes ` +
+    `vault and choose a folder in your home directory (for example ~/Inkwell), then try again.`
+  );
+}
