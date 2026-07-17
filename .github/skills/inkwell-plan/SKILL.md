@@ -35,7 +35,7 @@ Use this skill after research has produced a preferred direction and the user wa
 
 ## Second-opinion requirement
 
-- Before finalizing output, request a second opinion from the `rubber-duck` agent on scope, slices, validation, and risk coverage.
+- Before finalizing output, request a second opinion from the built-in `rubber-duck` sub-agent on scope, slices, validation, and risk coverage.
 - Incorporate high-signal feedback or explicitly state why feedback was not applied.
 
 ## Output contract (required)
