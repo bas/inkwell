@@ -122,7 +122,8 @@ function registerVaultHandlers(window: BrowserWindow, vaultDir: string): void {
   ipcMain.handle(IpcChannels.chooseVaultLocation, async (): Promise<VaultChooseResult> => {
     const result = await dialog.showOpenDialog(window, {
       title: 'Choose notes vault folder',
-      message: 'Inkwell will use this folder as your notes vault.',
+      message:
+        'Inkwell will restart to use this folder as your notes vault. Existing notes are NOT moved - copy them into the new folder first if you want them here.',
       buttonLabel: 'Use this folder',
       defaultPath: vaultDir,
       properties: ['openDirectory', 'createDirectory'],
@@ -130,8 +131,11 @@ function registerVaultHandlers(window: BrowserWindow, vaultDir: string): void {
     const chosen = result.filePaths[0];
     if (result.canceled || !chosen || chosen === vaultDir) return { changed: false };
     setVaultPath(chosen);
+    // Relaunch via app.quit() (not app.exit) so the before-quit barrier flushes
+    // pending autosave commits/pushes and disposes the DB/watcher cleanly before
+    // the process exits and the relaunched instance re-initialises.
     app.relaunch();
-    app.exit(0);
+    app.quit();
     return { changed: true, path: chosen };
   });
 }
