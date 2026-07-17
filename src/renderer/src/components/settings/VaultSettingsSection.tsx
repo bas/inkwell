@@ -9,6 +9,7 @@ import { cleanIpcError } from '../../hooks/cleanIpcError';
  */
 export function VaultSettingsSection(): JSX.Element {
   const [vaultPath, setVaultPath] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,8 +20,16 @@ export function VaultSettingsSection(): JSX.Element {
       .then((path) => {
         if (!cancelled) setVaultPath(path);
       })
-      .catch(() => {
-        if (!cancelled) setVaultPath(null);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setVaultPath(null);
+        setError(
+          cleanIpcError(err instanceof Error ? err.message : String(err)) ||
+            'Could not read the current vault location.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -79,14 +88,14 @@ export function VaultSettingsSection(): JSX.Element {
             wordBreak: 'break-all',
           }}
         >
-          {vaultPath ?? 'Loading…'}
+          {vaultPath ?? (loading ? 'Loading…' : 'Vault location unavailable')}
         </Text>
       </Box>
 
       <Box>
         <Button
           onClick={() => void handleChange()}
-          disabled={busy || vaultPath === null}
+          disabled={busy || loading}
           data-testid="vault-change-location"
         >
           Change vault location…
