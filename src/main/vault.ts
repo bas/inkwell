@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { normalizeVaultPath } from '../shared/types';
 
 /**
  * Inputs for {@link resolveVaultDir}. Everything the OS/settings provide is
@@ -7,7 +8,11 @@ import { join } from 'node:path';
  * filesystem.
  */
 export interface VaultResolutionDeps {
-  /** `process.env.INKWELL_VAULT_DIR` — a dev/E2E override, trimmed of surrounding whitespace. */
+  /**
+   * `process.env.INKWELL_VAULT_DIR` — a dev/E2E override. Used only when it is a
+   * valid absolute POSIX path (trimmed); a blank or relative value is ignored so
+   * it can't create a vault relative to the app's CWD.
+   */
   envVaultDir?: string;
   /** The user's home directory (`app.getPath('home')`). */
   homeDir: string;
@@ -26,8 +31,8 @@ export interface VaultResolutionDeps {
 /**
  * Resolve the notes vault directory for this launch, in priority order:
  *
- * 1. An explicit `INKWELL_VAULT_DIR` env override (dev/E2E) — trimmed of
- *    surrounding whitespace and never persisted.
+ * 1. An explicit `INKWELL_VAULT_DIR` env override (dev/E2E) — used only when it
+ *    is a valid absolute POSIX path (trimmed), and never persisted.
  * 2. A previously chosen, persisted `vaultPath`.
  * 3. First run: adopt the legacy `~/Documents/Inkwell` vault when it already
  *    exists (so existing users are never stranded), otherwise default to
@@ -39,7 +44,7 @@ export function resolveVaultDir(deps: VaultResolutionDeps): string {
   const exists = deps.exists ?? existsSync;
   const ensureDir = deps.ensureDir ?? ((path: string) => void mkdirSync(path, { recursive: true }));
 
-  const env = deps.envVaultDir?.trim();
+  const env = normalizeVaultPath(deps.envVaultDir);
   if (env) return env;
 
   if (deps.persistedVaultPath) return deps.persistedVaultPath;

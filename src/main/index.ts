@@ -179,13 +179,28 @@ async function createNotesService(vaultDir: string, dbPath: string): Promise<Not
 app.whenReady().then(async () => {
   registerIpcHandlers();
 
-  const vaultDir = resolveVaultDir({
-    envVaultDir: process.env['INKWELL_VAULT_DIR'],
-    homeDir: app.getPath('home'),
-    documentsDir: app.getPath('documents'),
-    persistedVaultPath: readSettings().vaultPath,
-    persist: (path) => setVaultPath(path),
-  });
+  let vaultDir: string;
+  try {
+    vaultDir = resolveVaultDir({
+      envVaultDir: process.env['INKWELL_VAULT_DIR'],
+      homeDir: app.getPath('home'),
+      documentsDir: app.getPath('documents'),
+      persistedVaultPath: readSettings().vaultPath,
+      persist: (path) => setVaultPath(path),
+    });
+  } catch (err) {
+    // Resolution creates and persists the default vault; if that fails (e.g.
+    // mkdir/permission/disk error) there is no usable vault, so surface it and
+    // quit rather than letting the unhandled rejection crash the app silently.
+    dialog.showErrorBox(
+      'Inkwell could not open your notes',
+      `The notes vault location could not be prepared.\n\n${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    app.quit();
+    return;
+  }
   const dbPath = join(app.getPath('userData'), 'index.sqlite');
   try {
     notesService = await createNotesService(vaultDir, dbPath);

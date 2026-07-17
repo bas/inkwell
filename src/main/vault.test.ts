@@ -13,7 +13,7 @@ function baseDeps(overrides: Partial<VaultResolutionDeps> = {}): VaultResolution
 }
 
 describe('resolveVaultDir', () => {
-  it('uses the env override verbatim and never persists it', () => {
+  it('uses an absolute env override (trimmed) and never persists it', () => {
     const persist = vi.fn();
     const ensureDir = vi.fn();
     const dir = resolveVaultDir(
@@ -22,6 +22,17 @@ describe('resolveVaultDir', () => {
     expect(dir).toBe('/tmp/e2e-vault');
     expect(persist).not.toHaveBeenCalled();
     expect(ensureDir).not.toHaveBeenCalled();
+  });
+
+  it('ignores a non-absolute env override and falls through to the default', () => {
+    const persist = vi.fn();
+    const ensureDir = vi.fn();
+    const dir = resolveVaultDir(
+      baseDeps({ envVaultDir: 'relative/vault', persist, ensureDir, exists: () => false }),
+    );
+    expect(dir).toBe('/Users/test/Inkwell');
+    expect(ensureDir).toHaveBeenCalledWith('/Users/test/Inkwell');
+    expect(persist).toHaveBeenCalledWith('/Users/test/Inkwell');
   });
 
   it('prefers a previously persisted vault path', () => {
