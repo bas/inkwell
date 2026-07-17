@@ -51,4 +51,19 @@ test.describe('Backup settings', () => {
 
     await expect.poll(() => existsSync(join(vaultDir, '.git'))).toBe(true);
   });
+
+  test('shows a prominent Connect a GitHub repository CTA before history is on', async () => {
+    const { page } = ctx;
+
+    await openSettings(page);
+
+    // With version history still off, the prominent connect CTA is the discoverable
+    // path to setting up a GitHub upstream.
+    await expect(page.getByTestId('backup-enabled-toggle')).not.toBeChecked();
+    await expect(page.getByTestId('backup-connect-remote')).toBeVisible();
+
+    // The Notes vault section exposes the current vault and a way to change it.
+    await expect(page.getByRole('heading', { name: 'Notes vault' })).toBeVisible();
+    await expect(page.getByTestId('vault-change-location')).toBeVisible();
+  });
 });

@@ -108,6 +108,44 @@ export function BackupSettingsSection(): JSX.Element {
         </FormControl.Caption>
       </FormControl>
 
+      {!enabled && !gitUnavailable && (
+        <Box
+          sx={{
+            borderColor: 'border.default',
+            borderStyle: 'solid',
+            borderWidth: 1,
+            borderRadius: 2,
+            bg: 'canvas.subtle',
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>Back up to GitHub</Text>
+          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+            Connect a GitHub repository to keep an off-Mac copy of your notes. This turns on version
+            history and walks you through creating or linking a repository. Backup is one-way —
+            Inkwell never overwrites your notes with remote changes.
+          </Text>
+          <Box>
+            <Button
+              variant="primary"
+              disabled={git.busy}
+              onClick={() =>
+                void git
+                  .setEnabled(true)
+                  .then(() => setSetupOpen(true))
+                  .catch(() => {})
+              }
+              data-testid="backup-connect-remote"
+            >
+              Connect a GitHub repository…
+            </Button>
+          </Box>
+        </Box>
+      )}
+
       {enabled && settings && (
         <>
           <RadioGroup
@@ -240,7 +278,7 @@ export function BackupSettingsSection(): JSX.Element {
                     disabled={git.busy}
                     data-testid="backup-setup-open"
                   >
-                    Set up backup…
+                    Connect a GitHub repository…
                   </Button>
                 </Box>
               </>
