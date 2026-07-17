@@ -128,6 +128,8 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
       },
       git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
+    getVaultPath: vi.fn(async () => '/Users/test/Inkwell'),
+    chooseVaultLocation: vi.fn(async () => ({ changed: false })),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
     searchNotes: vi.fn(async () => []),

@@ -38,6 +38,11 @@ export interface AppSettings {
   features: FeatureSettings;
   git: GitSettings;
   windowBounds?: WindowBounds;
+  /**
+   * Absolute path to the notes vault chosen for this install. Absent until it has
+   * been resolved and persisted on first launch (see `resolveVaultDir` in main).
+   */
+  vaultPath?: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -86,6 +91,17 @@ function normalizeFeatures(value: unknown): FeatureSettings {
     labels: typeof value['labels'] === 'boolean' ? value['labels'] : defaults.labels,
     mermaid: typeof value['mermaid'] === 'boolean' ? value['mermaid'] : defaults.mermaid,
   };
+}
+
+/**
+ * Accept a persisted vault path only when it is a non-empty, absolute POSIX path
+ * (Inkwell is macOS-only). A relative or blank value is dropped so the main
+ * process falls back to resolving a safe default instead of trusting junk.
+ */
+function normalizeVaultPath(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.startsWith('/') ? trimmed : undefined;
 }
 
 function normalizeAutoCommit(value: unknown): GitAutoCommitMode {
@@ -160,5 +176,7 @@ export function normalizeSettings(value: unknown): AppSettings {
   };
   const windowBounds = normalizeWindowBounds(value['windowBounds']);
   if (windowBounds) settings.windowBounds = windowBounds;
+  const vaultPath = normalizeVaultPath(value['vaultPath']);
+  if (vaultPath) settings.vaultPath = vaultPath;
   return settings;
 }

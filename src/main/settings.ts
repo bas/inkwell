@@ -74,6 +74,13 @@ function writeSettings(settings: AppSettings): void {
   cachedSettings = cloneSettings(settings);
 }
 
+/** Persist the chosen notes vault path. */
+export function setVaultPath(path: string): AppSettings {
+  const next: AppSettings = { ...readSettings(), vaultPath: path };
+  writeSettings(next);
+  return next;
+}
+
 export function setColorMode(mode: ColorModePreference): AppSettings {
   const next: AppSettings = { ...readSettings(), colorMode: mode };
   writeSettings(next);

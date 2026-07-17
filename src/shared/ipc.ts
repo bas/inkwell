@@ -91,9 +91,22 @@ export const IpcChannels = {
   /** Main → renderer: the backup status changed. */
   gitStatusChanged: 'git:statusChanged',
 
+  /** Vault: the current notes vault directory path. */
+  getVaultPath: 'vault:getPath',
+  /** Vault: prompt for a new vault folder, persist it, and relaunch. */
+  chooseVaultLocation: 'vault:chooseLocation',
+
   /** Main → renderer: the user picked File → New Note from the menu. */
   menuNewNote: 'menu:newNote',
 } as const;
+
+/** Outcome of prompting the user to choose a new vault location. */
+export interface VaultChooseResult {
+  /** True when a folder was picked (the app then relaunches). */
+  changed: boolean;
+  /** The newly chosen absolute vault path, when `changed` is true. */
+  path?: string;
+}
 
 /**
  * The typed API exposed to the renderer via `contextBridge` as `window.api`.
@@ -105,6 +118,15 @@ export interface InkwellApi {
   setFeatureEnabled(feature: FeatureKey, enabled: boolean): Promise<AppSettings>;
   /** Subscribe to system color-scheme changes. Returns an unsubscribe function. */
   onSystemColorSchemeChanged(listener: (isDark: boolean) => void): () => void;
+
+  /** The absolute path to the notes vault currently in use. */
+  getVaultPath(): Promise<string>;
+  /**
+   * Prompt the user to choose a new vault folder. When they pick one it is
+   * persisted and the app relaunches, so a resolved `{ changed: true }` is not
+   * observed by the renderer in practice; a cancel resolves `{ changed: false }`.
+   */
+  chooseVaultLocation(): Promise<VaultChooseResult>;
 
   listNotes(labelName?: string): Promise<NoteSummary[]>;
   searchNotes(query: string): Promise<NoteSummary[]>;

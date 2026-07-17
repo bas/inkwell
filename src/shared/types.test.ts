@@ -95,4 +95,16 @@ describe('normalizeSettings', () => {
     });
     expect(invalidShape.git.remote).toBeUndefined();
   });
+
+  it('keeps a valid absolute vaultPath and drops invalid ones', () => {
+    expect(normalizeSettings({ vaultPath: '/Users/test/Inkwell' }).vaultPath).toBe(
+      '/Users/test/Inkwell',
+    );
+    expect(normalizeSettings({ vaultPath: '  /Users/test/Notes  ' }).vaultPath).toBe(
+      '/Users/test/Notes',
+    );
+    expect(normalizeSettings({ vaultPath: 'relative/path' }).vaultPath).toBeUndefined();
+    expect(normalizeSettings({ vaultPath: '' }).vaultPath).toBeUndefined();
+    expect(normalizeSettings({ vaultPath: 42 }).vaultPath).toBeUndefined();
+  });
 });

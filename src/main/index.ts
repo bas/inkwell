@@ -1,13 +1,20 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { readSettings, setColorMode, setFeatureEnabled, setWindowBounds } from './settings';
+import {
+  readSettings,
+  setColorMode,
+  setFeatureEnabled,
+  setVaultPath,
+  setWindowBounds,
+} from './settings';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
 import { GitBackup } from './git';
-import { IpcChannels } from '../shared/ipc';
+import { resolveVaultDir } from './vault';
+import { IpcChannels, type VaultChooseResult } from '../shared/ipc';
 import { isFeatureKey, type ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
@@ -102,6 +109,33 @@ function registerIpcHandlers(): void {
   });
 }
 
+/**
+ * Vault-location handlers. Registered once the window and resolved vault path are
+ * available: the picker is anchored to the window, and `getVaultPath` reports the
+ * path actually in use (which may be an `INKWELL_VAULT_DIR` override that is never
+ * persisted). Choosing a new folder persists it and relaunches so the notes
+ * service, SQLite index, and git backup re-initialise cleanly.
+ */
+function registerVaultHandlers(window: BrowserWindow, vaultDir: string): void {
+  ipcMain.handle(IpcChannels.getVaultPath, () => vaultDir);
+
+  ipcMain.handle(IpcChannels.chooseVaultLocation, async (): Promise<VaultChooseResult> => {
+    const result = await dialog.showOpenDialog(window, {
+      title: 'Choose notes vault folder',
+      message: 'Inkwell will use this folder as your notes vault.',
+      buttonLabel: 'Use this folder',
+      defaultPath: vaultDir,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    const chosen = result.filePaths[0];
+    if (result.canceled || !chosen || chosen === vaultDir) return { changed: false };
+    setVaultPath(chosen);
+    app.relaunch();
+    app.exit(0);
+    return { changed: true, path: chosen };
+  });
+}
+
 function isBetterSqliteAbiMismatch(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   return (
@@ -141,7 +175,13 @@ async function createNotesService(vaultDir: string, dbPath: string): Promise<Not
 app.whenReady().then(async () => {
   registerIpcHandlers();
 
-  const vaultDir = process.env['INKWELL_VAULT_DIR'] ?? join(app.getPath('documents'), 'Inkwell');
+  const vaultDir = resolveVaultDir({
+    envVaultDir: process.env['INKWELL_VAULT_DIR'],
+    homeDir: app.getPath('home'),
+    documentsDir: app.getPath('documents'),
+    persistedVaultPath: readSettings().vaultPath,
+    persist: (path) => setVaultPath(path),
+  });
   const dbPath = join(app.getPath('userData'), 'index.sqlite');
   try {
     notesService = await createNotesService(vaultDir, dbPath);
@@ -160,6 +200,7 @@ app.whenReady().then(async () => {
 
   const window = createWindow();
   gitBackup?.setWindow(window);
+  registerVaultHandlers(window, vaultDir);
 
   buildAppMenu(window, {
     onRevealVault: () => {
