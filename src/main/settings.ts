@@ -17,6 +17,7 @@ import {
   type WindowBounds,
   normalizeSettings,
 } from '../shared/types';
+import type { GitSettings } from '../shared/git';
 import { randomUUID } from 'node:crypto';
 
 function settingsPath(): string {
@@ -25,11 +26,19 @@ function settingsPath(): string {
 
 let cachedSettings: AppSettings | undefined;
 
+function cloneGit(git: GitSettings): GitSettings {
+  return {
+    ...git,
+    remote: git.remote ? { ...git.remote } : undefined,
+  };
+}
+
 function cloneSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
     features: { ...settings.features },
     windowBounds: settings.windowBounds ? { ...settings.windowBounds } : undefined,
+    git: cloneGit(settings.git),
   };
 }
 
@@ -86,4 +95,11 @@ export function setFeatureEnabled(feature: FeatureKey, enabled: boolean): AppSet
 
 export function setWindowBounds(bounds: WindowBounds): void {
   writeSettings({ ...readSettings(), windowBounds: bounds });
+}
+
+/** Replace the persisted `git` backup settings block. */
+export function setGitSettings(git: GitSettings): AppSettings {
+  const next: AppSettings = { ...readSettings(), git: cloneGit(git) };
+  writeSettings(next);
+  return next;
 }

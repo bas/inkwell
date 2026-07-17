@@ -8,6 +8,14 @@ import type { AppSettings } from '@shared/types';
 const settings: AppSettings = {
   colorMode: 'auto',
   features: { labels: true, mermaid: true },
+  git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
+};
+
+const gitStatus = {
+  available: { git: true, gh: true },
+  settings: { enabled: false, autoCommit: 'onSave' as const, intervalMinutes: 5 },
+  syncState: 'disabled' as const,
+  dirty: false,
 };
 
 beforeAll(() => {
@@ -31,6 +39,15 @@ beforeAll(() => {
       removeEventListener: () => {},
       dispatchEvent: () => false,
     }),
+    configurable: true,
+  });
+
+  // BackupSettingsSection reads backup status via the preload bridge on mount.
+  Object.defineProperty(window, 'api', {
+    value: {
+      getGitStatus: () => Promise.resolve(gitStatus),
+      onGitStatusChanged: () => () => {},
+    },
     configurable: true,
   });
 });

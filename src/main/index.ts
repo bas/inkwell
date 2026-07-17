@@ -6,6 +6,7 @@ import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
+import { GitBackup } from './git';
 import { IpcChannels } from '../shared/ipc';
 import { isFeatureKey, type ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
@@ -19,6 +20,7 @@ const isE2EHeadless =
   process.env['INKWELL_E2E_HEADLESS'] === '1' || process.env['INKWELL_E2E_HEADLESS'] === 'true';
 
 let notesService: NotesService | undefined;
+let gitBackup: GitBackup | undefined;
 
 function createWindow(): BrowserWindow {
   const { windowBounds } = readSettings();
@@ -145,6 +147,8 @@ app.whenReady().then(async () => {
     notesService = await createNotesService(vaultDir, dbPath);
     registerNoteHandlers(notesService);
     registerAiHandlers(notesService);
+    gitBackup = new GitBackup(vaultDir, notesService);
+    gitBackup.registerHandlers();
   } catch (err) {
     dialog.showErrorBox(
       'Inkwell could not open your notes',
@@ -155,6 +159,7 @@ app.whenReady().then(async () => {
   }
 
   const window = createWindow();
+  gitBackup?.setWindow(window);
 
   buildAppMenu(window, {
     onRevealVault: () => {
@@ -190,7 +195,47 @@ app.whenReady().then(async () => {
   });
 });
 
+let quitting = false;
+
+app.on('before-quit', (event) => {
+  if (quitting) return;
+  if (!gitBackup) return;
+  // Hold quit until pending autosave commits/pushes have flushed, then tear down.
+  event.preventDefault();
+  quitting = true;
+  const done = (): void => {
+    // will-quit is skipped once `quitting` is set, so this is the only teardown
+    // path. Await the watcher/db and Copilot client disposal before exiting, but
+    // bound it so a stuck disposal can't hang shutdown indefinitely.
+    const teardown = Promise.allSettled([
+      notesService?.dispose() ?? Promise.resolve(),
+      disposeAi(),
+    ]);
+    let teardownTimer: NodeJS.Timeout | undefined;
+    const teardownTimeout = new Promise<void>((resolve) => {
+      teardownTimer = setTimeout(resolve, 2000);
+    });
+    void Promise.race([teardown, teardownTimeout]).finally(() => {
+      if (teardownTimer) clearTimeout(teardownTimer);
+      app.quit();
+    });
+  };
+  const barrier = gitBackup.flushForQuit();
+  // Never let a stuck network push block shutdown indefinitely. Clear the timer
+  // once the race settles so it can't keep the event loop alive after a fast
+  // flush and needlessly delay quit.
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, 8000);
+  });
+  void Promise.race([barrier, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+    done();
+  });
+});
+
 app.on('will-quit', () => {
+  if (quitting) return;
   void notesService?.dispose();
   void disposeAi();
 });
