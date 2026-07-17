@@ -94,15 +94,10 @@ function normalizeFeatures(value: unknown): FeatureSettings {
 }
 
 /**
- * Accept a persisted vault path only when it is a non-empty, absolute POSIX path
- * (Inkwell is macOS-only). A relative or blank value is dropped so the main
- * process falls back to resolving a safe default instead of trusting junk.
- */
-/**
  * Coerce an arbitrary value into a valid vault path: a trimmed, absolute POSIX
- * path. Returns `undefined` for anything blank or relative so callers never
- * persist a malformed location. Shared by settings normalization and the
- * main-process vault handlers.
+ * path (Inkwell is macOS-only). Returns `undefined` for anything blank, relative,
+ * or non-string so the main process falls back to a safe default instead of
+ * trusting junk. Shared by settings normalization and the vault handlers.
  */
 export function normalizeVaultPath(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;

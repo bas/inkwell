@@ -16,6 +16,14 @@ describe('isVaultAccessError', () => {
     expect(isVaultAccessError('Updates were rejected because the tip is behind')).toBe(false);
     expect(isVaultAccessError('')).toBe(false);
   });
+
+  it('does not misclassify remote/credential failures as vault access', () => {
+    expect(isVaultAccessError('git@github.com: Permission denied (publickey).')).toBe(false);
+    expect(isVaultAccessError('fatal: Authentication failed for https://github.com/o/r')).toBe(
+      false,
+    );
+    expect(isVaultAccessError('fatal: could not read Username for https://github.com')).toBe(false);
+  });
 });
 
 describe('describeVaultAccessError', () => {
