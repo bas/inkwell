@@ -57,3 +57,32 @@ export function isAlreadyExistsError(stderr: string): boolean {
     (text.includes('422') && text.includes('already exists'))
   );
 }
+
+/**
+ * Whether a git failure stems from the vault folder being inaccessible to the
+ * spawned git process — typically because it lives in a macOS TCC-protected
+ * location (e.g. `~/Documents`) where the child process cannot `getcwd()` or
+ * write. Distinct from {@link classifyPushFailure}'s remote "permission denied",
+ * which is about credentials.
+ */
+export function isVaultAccessError(stderr: string): boolean {
+  const text = stderr.toLowerCase();
+  return (
+    text.includes('operation not permitted') ||
+    text.includes('unable to get current working directory') ||
+    text.includes('permission denied') ||
+    text.includes('could not open') ||
+    text.includes('read-only file system')
+  );
+}
+
+/** A clear, actionable message for a vault-access failure (see {@link isVaultAccessError}). */
+export function describeVaultAccessError(vaultDir: string): string {
+  return (
+    `Inkwell can't set up version history because it doesn't have permission to ` +
+    `use your notes folder:\n\n${vaultDir}\n\n` +
+    `This usually happens when the folder is in a protected location such as ` +
+    `Documents or Desktop. Open Settings → Notes vault and choose a folder in your ` +
+    `home directory (for example ~/Inkwell), then try again.`
+  );
+}
