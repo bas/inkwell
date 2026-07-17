@@ -75,4 +75,17 @@ describe('parseReviewResponse', () => {
     expect(result.summary).toBe('Review complete.');
     expect(result.suggestions).toEqual([]);
   });
+
+  it('prefers explicitly json-labeled embedded fences over earlier unlabeled fences', () => {
+    const payload = {
+      summary: 'Review complete.',
+      suggestions: [],
+    };
+
+    const result = parseReviewResponse(
+      ['```', '{"foo": 1}', '```', '```json', JSON.stringify(payload), '```'].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
 });

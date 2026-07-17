@@ -58,7 +58,7 @@ function parseJsonObject(raw: string): Record<string, unknown> {
   const wholeFence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
   if (wholeFence?.[1]) candidates.add(wholeFence[1].trim());
 
-  const fencePattern = /```(?:json)?\s*([\s\S]*?)\s*```/gi;
+  const fencePattern = /```json\s*([\s\S]*?)\s*```/gi;
   for (const match of trimmed.matchAll(fencePattern)) {
     const candidate = match[1]?.trim();
     if (candidate) candidates.add(candidate);
