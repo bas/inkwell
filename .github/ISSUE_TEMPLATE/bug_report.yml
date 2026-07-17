@@ -1,0 +1,64 @@
+name: Bug report
+description: Report something that is broken or behaving incorrectly in Inkwell.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please fill out the sections below so it can be reproduced quickly.
+        Inkwell is macOS (Apple Silicon, arm64) only for now.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear, one or two sentence description of the problem.
+      placeholder: Enabling "Keep version history" crashes because the notes vault is in a protected folder.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps that trigger the bug.
+      placeholder: |
+        1. Open Settings
+        2. Enable "Keep version history"
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened. Include any error text, and console/log output if available.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Inkwell version
+      description: The app version (or the commit / branch if running from source).
+      placeholder: 0.1.0
+    validations:
+      required: false
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 15.5 (Apple Silicon)
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Screenshots, vault location, or anything else that helps.
+    validations:
+      required: false
