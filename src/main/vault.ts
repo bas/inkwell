@@ -7,7 +7,7 @@ import { join } from 'node:path';
  * filesystem.
  */
 export interface VaultResolutionDeps {
-  /** `process.env.INKWELL_VAULT_DIR` — a dev/E2E override, used verbatim. */
+  /** `process.env.INKWELL_VAULT_DIR` — a dev/E2E override, trimmed of surrounding whitespace. */
   envVaultDir?: string;
   /** The user's home directory (`app.getPath('home')`). */
   homeDir: string;
@@ -26,8 +26,8 @@ export interface VaultResolutionDeps {
 /**
  * Resolve the notes vault directory for this launch, in priority order:
  *
- * 1. An explicit `INKWELL_VAULT_DIR` env override (dev/E2E) — used as-is and
- *    never persisted.
+ * 1. An explicit `INKWELL_VAULT_DIR` env override (dev/E2E) — trimmed of
+ *    surrounding whitespace and never persisted.
  * 2. A previously chosen, persisted `vaultPath`.
  * 3. First run: adopt the legacy `~/Documents/Inkwell` vault when it already
  *    exists (so existing users are never stranded), otherwise default to
