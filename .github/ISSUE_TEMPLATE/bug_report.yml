@@ -11,7 +11,7 @@ body:
     id: summary
     attributes:
       label: Summary
-      description: A clear, one or two sentence description of the problem.
+      description: A clear, one- or two-sentence description of the problem.
       placeholder: Enabling "Keep version history" crashes because the notes vault is in a protected folder.
     validations:
       required: true
