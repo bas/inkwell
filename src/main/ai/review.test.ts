@@ -103,4 +103,21 @@ describe('parseReviewResponse', () => {
     expect(result.summary).toBe('Review complete.');
     expect(result.suggestions).toEqual([]);
   });
+
+  it('prefers the last bare embedded fence when no json-labeled fences are present', () => {
+    const result = parseReviewResponse(
+      [
+        'Some preface text',
+        '```',
+        '{"summary":"Example format","suggestions":[]}',
+        '```',
+        'More text',
+        '```',
+        '{"summary":"Review complete.","suggestions":[]}',
+        '```',
+      ].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
 });
