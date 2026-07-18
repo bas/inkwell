@@ -21,10 +21,10 @@ Use this skill after research has produced a preferred direction and the user wa
 
 ## Planning workflow
 
-1. Ingest research handoff and restate assumptions.
+1. Ingest research handoff and restate assumptions. Expect the handoff to follow the `inkwell-research` output contract: Requirements Lock, Evidence Traceability, Options & Tradeoffs, Recommendation, Open Decisions & Owners, and Plan-Ready Backlog.
 2. Identify the minimal set of unblocked decisions (the frontier).
-3. Resolve decisions in dependency order.
-4. Define implementation slices that can be executed and verified incrementally.
+3. Resolve open decisions in dependency order or carry them forward with an explicit owner and default.
+4. Convert the Plan-Ready Backlog into implementation slices that can be executed and verified incrementally.
 5. Produce deterministic validation steps tied to changed behavior.
 
 ## Clarification discipline
