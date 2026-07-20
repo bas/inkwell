@@ -132,8 +132,17 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
 }
 
 function SettingsHarness(): JSX.Element {
-  const { loaded, settings, error, setPreference, setFeatureEnabled, setAiModelPreference } =
-    useAppSettings();
+  const {
+    loaded,
+    settings,
+    aiModels,
+    aiModelsLoading,
+    aiModelsError,
+    error,
+    setPreference,
+    setFeatureEnabled,
+    setAiModelPreference,
+  } = useAppSettings();
   return (
     <div>
       <span data-testid="loaded">{loaded ? 'loaded' : 'loading'}</span>
@@ -141,6 +150,9 @@ function SettingsHarness(): JSX.Element {
       <span data-testid="labels">{settings.features.labels ? 'on' : 'off'}</span>
       <span data-testid="mermaid">{settings.features.mermaid ? 'on' : 'off'}</span>
       <span data-testid="ai-model">{settings.aiModel}</span>
+      <span data-testid="ai-models-loading">{aiModelsLoading ? 'loading' : 'ready'}</span>
+      <span data-testid="ai-models-error">{aiModelsError ?? 'none'}</span>
+      <span data-testid="ai-models-count">{String(aiModels.length)}</span>
       <span data-testid="error">{error ?? 'none'}</span>
       <button type="button" onClick={() => setPreference('dark')}>
         Dark
@@ -262,5 +274,47 @@ describe('useAppSettings', () => {
 
     await waitFor(() => expect(screen.getByTestId('ai-model').textContent).toBe('gpt-5.4'));
     expect(api.setAiModelPreference).toHaveBeenCalledWith('gpt-5.4');
+  });
+
+  it('sets listAiModels loading and then returns models with API error text', async () => {
+    const modelsLoad = deferred<{ models: { id: string; label: string }[]; error?: string }>();
+    installApi({
+      listAiModels: vi.fn(() => modelsLoad.promise),
+    });
+
+    render(<SettingsHarness />);
+
+    expect(screen.getByTestId('ai-models-loading').textContent).toBe('loading');
+    expect(screen.getByTestId('ai-models-error').textContent).toBe('none');
+
+    await act(async () => {
+      modelsLoad.resolve({
+        models: [{ id: 'gpt-5.4', label: 'GPT-5.4' }],
+        error: 'Some models are currently unavailable',
+      });
+      await modelsLoad.promise;
+    });
+
+    await waitFor(() => expect(screen.getByTestId('ai-models-loading').textContent).toBe('ready'));
+    expect(screen.getByTestId('ai-models-count').textContent).toBe('1');
+    expect(screen.getByTestId('ai-models-error').textContent).toBe(
+      'Some models are currently unavailable',
+    );
+  });
+
+  it('clears models and reports error when listAiModels rejects', async () => {
+    installApi({
+      listAiModels: vi.fn(async () => {
+        throw new Error('AI service unavailable');
+      }),
+    });
+
+    render(<SettingsHarness />);
+
+    expect(screen.getByTestId('ai-models-loading').textContent).toBe('loading');
+
+    await waitFor(() => expect(screen.getByTestId('ai-models-loading').textContent).toBe('ready'));
+    expect(screen.getByTestId('ai-models-count').textContent).toBe('0');
+    expect(screen.getByTestId('ai-models-error').textContent).toBe('AI service unavailable');
   });
 });

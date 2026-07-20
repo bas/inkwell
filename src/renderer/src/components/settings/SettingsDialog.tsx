@@ -16,7 +16,7 @@ interface SettingsDialogProps {
   onClose: () => void;
   onFeatureChange: (feature: FeatureKey, enabled: boolean) => void;
   onLabelsChanged: () => void;
-  onAiModelChange: (model: string) => void;
+  onAiModelChange: (model: AppSettings['aiModel']) => void;
 }
 
 export function SettingsDialog({
