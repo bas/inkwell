@@ -16,6 +16,7 @@ import { useAiSummary } from '../../state/useAiSummary';
 import { useAiReview, type UiReviewSuggestion } from '../../state/useAiReview';
 import { useAiFix, type UiFixSuggestion, describeFixError } from '../../state/useAiFix';
 import { partitionFixSuggestions, isBodyFixSuggestion } from '@shared/aiFix';
+import { classifyNoteSize } from '@shared/aiTelemetry';
 import { deriveNoteTitle } from '@shared/noteTitle';
 
 interface EditorPaneProps {
@@ -32,6 +33,36 @@ interface EditorPaneProps {
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 const SAVE_DEBOUNCE_MS = 700;
+
+interface TidyRendererMetrics {
+  requestId: string;
+  noteChars: number;
+  noteSizeBucket: ReturnType<typeof classifyNoteSize>;
+  preSaveMs?: number;
+  autoApplyCandidates?: number;
+  autoApplyMs?: number;
+  autoAppliedCount?: number;
+  reviewSuggestionsCount?: number;
+  totalMs?: number;
+  outcome: string;
+}
+
+function isEnabled(value: string | undefined): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+const tidyRendererMetricsEnabled = isEnabled(
+  (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>;
+    }
+  ).env?.VITE_INKWELL_LOG_TIDY_RENDERER_METRICS,
+);
+
+function logTidyRendererMetrics(metrics: TidyRendererMetrics): void {
+  if (!tidyRendererMetricsEnabled) return;
+  console.info(`[inkwell:ai:tidy:renderer] ${JSON.stringify(metrics)}`);
+}
 
 function describeError(err: unknown): string {
   return err instanceof Error ? err.message : 'Could not open note';
@@ -796,13 +827,23 @@ export function EditorPane({
     // an explicit resetFix() here would only clear the request id and prevent
     // that cancellation.
     const requestId = beginFix();
+    const tidyStartedAt = performance.now();
+    const metrics: TidyRendererMetrics = {
+      requestId,
+      noteChars: body.length,
+      noteSizeBucket: classifyNoteSize(body.length),
+      outcome: 'started',
+    };
     void (async () => {
       // Block edits while tidy generates and auto-applies so background
       // mutations can't race with or clobber the user's keystrokes.
       editor?.setEditable(false, false); // false = don't emit an update event, avoids re-syncing stale content during tidy
       try {
+        const preSaveStartedAt = performance.now();
         await save();
+        metrics.preSaveMs = performance.now() - preSaveStartedAt;
         if (dirtyRef.current) {
+          metrics.outcome = 'save-failed';
           setFixOpen(false);
           resetFix();
           setError('Could not save the note before tidying. Please try again.');
@@ -810,29 +851,40 @@ export function EditorPane({
         }
         // The pre-tidy save is async; if the user cancelled/closed the panel while
         // it was in flight, don't start a generation that main can't yet cancel.
-        if (activeFixRequestId() !== requestId) return;
+        if (activeFixRequestId() !== requestId) {
+          metrics.outcome = 'aborted-before-generation';
+          return;
+        }
         let result: Awaited<ReturnType<typeof window.api.fixNote>>;
         try {
           result = await window.api.fixNote(id, requestId);
         } catch (err) {
+          metrics.outcome = 'fix-ipc-failed';
           failFix(describeError(err));
           return;
         }
-        if (activeFixRequestId() !== requestId) return;
+        if (activeFixRequestId() !== requestId) {
+          metrics.outcome = 'aborted-after-generation';
+          return;
+        }
         if (!result.ok) {
+          metrics.outcome = `fix-error-${result.error.code}`;
           failFix(describeFixError(result.error));
           return;
         }
         // If the user edited while Copilot was generating, the suggestions are
         // stale and auto-applying them would clobber the in-progress edits.
         if (dirtyRef.current) {
+          metrics.outcome = 'edited-during-generation';
           failFix(
             'You edited the note while Copilot was tidying. Save your changes and run Tidy again.',
           );
           return;
         }
         const { autoApply, review } = partitionFixSuggestions(result.suggestions);
+        metrics.autoApplyCandidates = autoApply.length;
         const reviewSet = labelsEnabled ? review : review.filter((s) => s.category !== 'label');
+        metrics.reviewSuggestionsCount = reviewSet.length;
         const snapshot = dataRef.current.markdown;
         let appliedCount = 0;
         // Auto-apply only ever contains body edits; narrow the type and apply
@@ -840,6 +892,7 @@ export function EditorPane({
         const ordered = autoApply
           .filter(isBodyFixSuggestion)
           .sort((a, b) => b.target.startLine - a.target.startLine);
+        const autoApplyStartedAt = performance.now();
         for (const suggestion of ordered) {
           try {
             const applied = await window.api.applyFixSuggestion(id, suggestion);
@@ -851,13 +904,21 @@ export function EditorPane({
             // Skip an individual auto-fix that no longer matches; others still apply.
           }
         }
-        if (activeFixRequestId() !== requestId) return;
+        metrics.autoApplyMs = performance.now() - autoApplyStartedAt;
+        metrics.autoAppliedCount = appliedCount;
+        if (activeFixRequestId() !== requestId) {
+          metrics.outcome = 'aborted-during-apply';
+          return;
+        }
         if (appliedCount > 0) {
           setPreTidyBody(snapshot);
           onAfterChange();
         }
+        metrics.outcome = 'success';
         presentFix(requestId, result.summary, reviewSet, appliedCount);
       } finally {
+        metrics.totalMs = performance.now() - tidyStartedAt;
+        logTidyRendererMetrics(metrics);
         editor?.setEditable(true, false); // false = don't emit an update event, re-enables editing without triggering a content sync
       }
     })();

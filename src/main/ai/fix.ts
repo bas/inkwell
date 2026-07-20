@@ -1,4 +1,5 @@
 import { ipcMain, type WebContents } from 'electron';
+import { performance } from 'node:perf_hooks';
 import type {
   AiError,
   AiErrorCode,
@@ -8,10 +9,11 @@ import type {
   AiFixResult,
   AiReviewSuggestion,
 } from '../../shared/ai';
+import { classifyNoteSize } from '../../shared/aiTelemetry';
 import { IpcChannels } from '../../shared/ipc';
 import { isBodyFixSuggestion } from '../../shared/aiFix';
 import type { NotesService } from '../storage/notesService';
-import { getAiAvailability } from './availability';
+import { getAiAvailability, invalidateAiAvailabilityCache } from './availability';
 import { buildFixPrompt } from './prompts';
 import { runGeneration } from './runner';
 import { applyReviewSuggestionToBody } from './reviewApply';
@@ -19,6 +21,34 @@ import { applyReviewSuggestionToBody } from './reviewApply';
 interface ParsedFixPayload {
   summary: string;
   suggestions: AiFixSuggestion[];
+}
+
+interface TidyMainMetrics {
+  requestId: string;
+  noteChars?: number;
+  noteSizeBucket?: ReturnType<typeof classifyNoteSize>;
+  labelsCount?: number;
+  availabilityMs?: number;
+  sessionCreateMs?: number;
+  firstDeltaMs?: number;
+  generationMs?: number;
+  disconnectMs?: number;
+  aiTotalMs?: number;
+  parseMs?: number;
+  totalMs?: number;
+  outcome: 'success' | 'error';
+  errorCode?: string;
+}
+
+function isEnabled(value: string | undefined): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+const tidyMainMetricsEnabled = isEnabled(process.env.INKWELL_LOG_TIDY_MAIN_METRICS);
+
+function logTidyMainMetrics(metrics: TidyMainMetrics): void {
+  if (!tidyMainMetricsEnabled) return;
+  console.info(`[inkwell:ai:tidy:main] ${JSON.stringify(metrics)}`);
 }
 
 function classifyErrorType(errorType: string | undefined): AiErrorCode {
@@ -176,34 +206,51 @@ async function fixNote(
   noteId: string,
   requestId: string,
 ): Promise<AiFixResult> {
+  const startedAt = performance.now();
+  const metrics: TidyMainMetrics = { requestId, outcome: 'error' };
+  const finalize = (result: AiFixResult): AiFixResult => {
+    metrics.totalMs = performance.now() - startedAt;
+    if (result.ok) metrics.outcome = 'success';
+    else {
+      metrics.outcome = 'error';
+      metrics.errorCode = result.error.code;
+    }
+    logTidyMainMetrics(metrics);
+    return result;
+  };
+
+  const availabilityStartedAt = performance.now();
   const availability = await getAiAvailability();
+  metrics.availabilityMs = performance.now() - availabilityStartedAt;
   if (!availability.ready) {
     const error: AiError = {
       code: availability.reason,
       message: availability.message ?? 'Copilot is unavailable.',
     };
-    return { ok: false, requestId, error };
+    return finalize({ ok: false, requestId, error });
   }
 
   let note: ReturnType<NotesService['getNote']>;
   try {
     note = service.getNote(noteId);
   } catch (err) {
-    return {
+    return finalize({
       ok: false,
       requestId,
       error: {
         code: 'generation-failed',
         message: err instanceof Error ? err.message : 'Could not load note.',
       },
-    };
+    });
   }
+  metrics.noteChars = note.body.length;
+  metrics.noteSizeBucket = classifyNoteSize(note.body.length);
   if (!note.body.trim()) {
-    return {
+    return finalize({
       ok: false,
       requestId,
       error: { code: 'empty-note', message: 'This note has no content to tidy.' },
-    };
+    });
   }
 
   let existingLabels: string[] = [];
@@ -214,6 +261,7 @@ async function fixNote(
     // proceed with none rather than failing the whole tidy request.
     existingLabels = [];
   }
+  metrics.labelsCount = existingLabels.length;
 
   let cancelFn: (() => void) | undefined;
   let canceled = false;
@@ -236,25 +284,46 @@ async function fixNote(
   });
 
   if (!outcome.ok) {
-    return {
+    const code = classifyErrorType(outcome.errorType);
+    if (code === 'not-authenticated' || code === 'no-entitlement') {
+      invalidateAiAvailabilityCache();
+    }
+    metrics.sessionCreateMs = outcome.telemetry.sessionCreateMs;
+    metrics.firstDeltaMs = outcome.telemetry.firstDeltaMs;
+    metrics.generationMs = outcome.telemetry.generationMs;
+    metrics.disconnectMs = outcome.telemetry.disconnectMs;
+    metrics.aiTotalMs = outcome.telemetry.totalMs;
+    return finalize({
       ok: false,
       requestId,
-      error: { code: classifyErrorType(outcome.errorType), message: outcome.message },
-    };
+      error: { code, message: outcome.message },
+    });
   }
 
   try {
+    metrics.sessionCreateMs = outcome.telemetry.sessionCreateMs;
+    metrics.firstDeltaMs = outcome.telemetry.firstDeltaMs;
+    metrics.generationMs = outcome.telemetry.generationMs;
+    metrics.disconnectMs = outcome.telemetry.disconnectMs;
+    metrics.aiTotalMs = outcome.telemetry.totalMs;
+    const parseStartedAt = performance.now();
     const parsed = parseFixResponse(outcome.content);
-    return { ok: true, requestId, summary: parsed.summary, suggestions: parsed.suggestions };
+    metrics.parseMs = performance.now() - parseStartedAt;
+    return finalize({
+      ok: true,
+      requestId,
+      summary: parsed.summary,
+      suggestions: parsed.suggestions,
+    });
   } catch (err) {
-    return {
+    return finalize({
       ok: false,
       requestId,
       error: {
         code: 'generation-failed',
         message: err instanceof Error ? err.message : 'Could not parse tidy response.',
       },
-    };
+    });
   }
 }
 

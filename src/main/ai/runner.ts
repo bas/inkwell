@@ -1,4 +1,5 @@
 import type { PermissionHandler } from '@github/copilot-sdk';
+import { performance } from 'node:perf_hooks';
 import type { AiUsage } from '../../shared/ai';
 import { getCopilotClient } from './copilotClient';
 
@@ -27,10 +28,25 @@ export interface GenerationRequest {
   onStart?: (cancel: () => void) => void;
 }
 
+export interface GenerationTelemetry {
+  sessionCreateMs?: number;
+  firstDeltaMs?: number;
+  generationMs?: number;
+  disconnectMs?: number;
+  totalMs: number;
+}
+
 /** Outcome of a generation turn. Model/runtime errors are returned, not thrown. */
 export type GenerationOutcome =
-  | { ok: true; content: string; usage?: AiUsage }
-  | { ok: false; canceled?: boolean; errorType?: string; message: string; usage?: AiUsage };
+  | { ok: true; content: string; usage?: AiUsage; telemetry: GenerationTelemetry }
+  | {
+      ok: false;
+      canceled?: boolean;
+      errorType?: string;
+      message: string;
+      usage?: AiUsage;
+      telemetry: GenerationTelemetry;
+    };
 type GenerationOutcomeBase =
   | { ok: true; content: string }
   | { ok: false; canceled?: boolean; errorType?: string; message: string };
@@ -64,6 +80,7 @@ export async function runGeneration({
   onDelta,
   onStart,
 }: GenerationRequest): Promise<GenerationOutcome> {
+  const startedAt = performance.now();
   // E2E test seam: when INKWELL_FAKE_AI is set, stream its value back as the
   // generated text instead of contacting the Copilot runtime. Lets Playwright
   // exercise the full summarize/insert flow deterministically and offline.
@@ -71,11 +88,18 @@ export async function runGeneration({
   if (faked) {
     onStart?.(() => {});
     for (const chunk of faked.match(/.{1,8}/g) ?? [faked]) onDelta?.(chunk);
-    return { ok: true, content: faked, usage: { creditsSource: 'unavailable' } };
+    return {
+      ok: true,
+      content: faked,
+      usage: { creditsSource: 'unavailable' },
+      telemetry: { totalMs: performance.now() - startedAt },
+    };
   }
 
+  let sessionCreateMs: number | undefined;
   let session: Awaited<ReturnType<Awaited<ReturnType<typeof getCopilotClient>>['createSession']>>;
   try {
+    const createStartedAt = performance.now();
     const client = await getCopilotClient();
     session = await client.createSession({
       model: 'auto',
@@ -83,8 +107,17 @@ export async function runGeneration({
       availableTools: [],
       onPermissionRequest: denyAllTools,
     });
+    sessionCreateMs = performance.now() - createStartedAt;
   } catch (err) {
-    return { ok: false, errorType: 'runtime', message: errorText(err) };
+    return {
+      ok: false,
+      errorType: 'runtime',
+      message: errorText(err),
+      telemetry: {
+        sessionCreateMs,
+        totalMs: performance.now() - startedAt,
+      },
+    };
   }
 
   let streamed = '';
@@ -94,6 +127,10 @@ export async function runGeneration({
   let disconnected = false;
   let sawUsageSignal = false;
   let shutdownNanoAiu: number | undefined;
+  let sendStartedAt: number | undefined;
+  let firstDeltaMs: number | undefined;
+  let generationMs: number | undefined;
+  let disconnectMs: number | undefined;
   const usage: AiUsage = { creditsSource: 'unavailable' };
 
   const finalizeUsage = (): AiUsage | undefined => {
@@ -108,14 +145,20 @@ export async function runGeneration({
   const disconnect = async (): Promise<void> => {
     if (disconnected) return;
     disconnected = true;
+    const disconnectStartedAt = performance.now();
     try {
       await session.disconnect();
     } catch {
       // Ignore disconnect errors; teardown should not override the generation outcome.
+    } finally {
+      disconnectMs = performance.now() - disconnectStartedAt;
     }
   };
 
   const offDelta = session.on('assistant.message_delta', (event) => {
+    if (sendStartedAt !== undefined && firstDeltaMs === undefined) {
+      firstDeltaMs = performance.now() - sendStartedAt;
+    }
     streamed += event.data.deltaContent;
     onDelta?.(event.data.deltaContent);
   });
@@ -178,13 +221,16 @@ export async function runGeneration({
     let final: { data?: { content?: string } } | typeof TIMED_OUT | undefined = TIMED_OUT;
     let sendError: unknown;
     try {
+      sendStartedAt = performance.now();
       final = await Promise.race([
         session.sendAndWait({ prompt }),
         new Promise<typeof TIMED_OUT>((resolve) => {
           timer = setTimeout(() => resolve(TIMED_OUT), GENERATION_TIMEOUT_MS);
         }),
       ]);
+      generationMs = performance.now() - sendStartedAt;
     } catch (err) {
+      if (sendStartedAt !== undefined) generationMs = performance.now() - sendStartedAt;
       sendError = err;
     }
 
@@ -220,6 +266,13 @@ export async function runGeneration({
   }
 
   const finalizedUsage = finalizeUsage();
-  if (finalizedUsage) return { ...outcome, usage: finalizedUsage };
-  return outcome;
+  const telemetry: GenerationTelemetry = {
+    sessionCreateMs,
+    firstDeltaMs,
+    generationMs,
+    disconnectMs,
+    totalMs: performance.now() - startedAt,
+  };
+  if (finalizedUsage) return { ...outcome, usage: finalizedUsage, telemetry };
+  return { ...outcome, telemetry };
 }
