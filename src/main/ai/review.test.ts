@@ -51,4 +51,88 @@ describe('parseReviewResponse', () => {
     expect(result.suggestions).toHaveLength(1);
     expect(result.suggestions[0]?.id).toBe('valid-range');
   });
+
+  it('parses a response wrapped in a json code fence', () => {
+    const payload = {
+      summary: 'Review complete.',
+      suggestions: [],
+    };
+
+    const result = parseReviewResponse(`\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``);
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('parses json when additional prose surrounds the fenced payload', () => {
+    const payload = {
+      summary: 'Review complete.',
+      suggestions: [],
+    };
+
+    const result = parseReviewResponse(
+      ['Here is the result:', '```json', JSON.stringify(payload), '```', 'Done.'].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('prefers explicitly json-labeled embedded fences over earlier unlabeled fences', () => {
+    const payload = {
+      summary: 'Review complete.',
+      suggestions: [],
+    };
+
+    const result = parseReviewResponse(
+      ['```', '{"foo": 1}', '```', '```json', JSON.stringify(payload), '```'].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('prefers the last json-labeled embedded fence when multiple are present', () => {
+    const result = parseReviewResponse(
+      [
+        '```json',
+        JSON.stringify({ summary: 'Example format', suggestions: [] }),
+        '```',
+        '```json',
+        JSON.stringify({ summary: 'Review complete.', suggestions: [] }),
+        '```',
+      ].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('prefers the last bare embedded fence when no json-labeled fences are present', () => {
+    const result = parseReviewResponse(
+      [
+        'Some preface text',
+        '```',
+        '{"summary":"Example format","suggestions":[]}',
+        '```',
+        'More text',
+        '```',
+        '{"summary":"Review complete.","suggestions":[]}',
+        '```',
+      ].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it('falls back to the last bare fence when json-labeled fences are not parseable', () => {
+    const result = parseReviewResponse(
+      [
+        '```json',
+        '{ ... }',
+        '```',
+        '```',
+        '{"summary":"Review complete.","suggestions":[]}',
+        '```',
+      ].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
 });
