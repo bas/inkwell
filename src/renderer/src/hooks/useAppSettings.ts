@@ -16,7 +16,7 @@ interface UseAppSettingsResult {
   error: string | undefined;
   setPreference: (mode: ColorModePreference) => void;
   setFeatureEnabled: (feature: FeatureKey, enabled: boolean) => void;
-  setAiModelPreference: (model: string) => void;
+  setAiModelPreference: (model: AppSettings['aiModel']) => void;
 }
 
 function describeError(err: unknown, fallback: string): string {
@@ -167,7 +167,7 @@ export function useAppSettings(): UseAppSettingsResult {
   );
 
   const setAiModelPreference = useCallback(
-    (model: string) => {
+    (model: AppSettings['aiModel']) => {
       const requestId = ++aiModelRequestId.current;
       setSettings((current) => ({ ...current, aiModel: model }));
       void window.api

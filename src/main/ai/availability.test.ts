@@ -41,6 +41,17 @@ describe('listAvailableAiModels', () => {
     expect(result.error).toContain('network down');
   });
 
+  it('caches failed discovery responses for the cache TTL', async () => {
+    listModels.mockRejectedValue(new Error('network down'));
+
+    const first = await listAvailableAiModels();
+    const second = await listAvailableAiModels();
+
+    expect(first).toEqual({ models: [], error: 'network down' });
+    expect(second).toEqual({ models: [], error: 'network down' });
+    expect(listModels).toHaveBeenCalledTimes(1);
+  });
+
   it('serves fake models in INKWELL_FAKE_AI mode', async () => {
     process.env.INKWELL_FAKE_AI = '1';
 

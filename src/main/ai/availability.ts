@@ -10,6 +10,7 @@ let modelListCache:
   | {
       expiresAt: number;
       models: AiModelInfo[];
+      error?: string;
     }
   | undefined;
 
@@ -29,7 +30,9 @@ function parseModelInfo(value: unknown): AiModelInfo | undefined {
 
 export async function listAvailableAiModels(): Promise<AiModelListResult> {
   const now = Date.now();
-  if (modelListCache && modelListCache.expiresAt > now) return { models: modelListCache.models };
+  if (modelListCache && modelListCache.expiresAt > now) {
+    return { models: modelListCache.models, error: modelListCache.error };
+  }
   if (process.env.INKWELL_FAKE_AI) {
     return { models: [{ id: 'gpt-5.4', label: 'GPT-5.4 (fake)' }] };
   }
@@ -44,7 +47,9 @@ export async function listAvailableAiModels(): Promise<AiModelListResult> {
     modelListCache = { models, expiresAt: now + MODEL_LIST_TTL_MS };
     return { models };
   } catch (err) {
-    return { models: [], error: errorMessage(err) };
+    const error = errorMessage(err);
+    modelListCache = { models: [], error, expiresAt: now + MODEL_LIST_TTL_MS };
+    return { models: [], error };
   }
 }
 
