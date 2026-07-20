@@ -68,6 +68,7 @@ function parseJsonObject(raw: string): Record<string, unknown> {
 
   const bareFencePattern = /```\s*([\s\S]*?)\s*```/gi;
   const embeddedBareFenceCandidates = Array.from(trimmed.matchAll(bareFencePattern))
+    .filter((match) => !/^```json(?:\s|`)/i.test(match[0] ?? ''))
     .map((match) => match[1]?.trim())
     .filter((candidate): candidate is string => Boolean(candidate));
   for (const candidate of embeddedBareFenceCandidates.reverse()) {
