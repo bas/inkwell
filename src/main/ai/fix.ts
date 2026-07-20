@@ -40,7 +40,14 @@ interface TidyMainMetrics {
   errorCode?: string;
 }
 
+function isEnabled(value: string | undefined): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+const tidyMainMetricsEnabled = isEnabled(process.env.INKWELL_LOG_TIDY_MAIN_METRICS);
+
 function logTidyMainMetrics(metrics: TidyMainMetrics): void {
+  if (!tidyMainMetricsEnabled) return;
   console.info(`[inkwell:ai:tidy:main] ${JSON.stringify(metrics)}`);
 }
 

@@ -36,7 +36,7 @@ describe('getAiAvailability', () => {
     expect(getAuthStatus).toHaveBeenCalledTimes(1);
   });
 
-  it('caches not-authenticated availability within the TTL', async () => {
+  it('does not cache not-authenticated availability', async () => {
     getAuthStatus.mockResolvedValue({
       isAuthenticated: false,
       statusMessage: 'Please sign in.',
@@ -45,7 +45,7 @@ describe('getAiAvailability', () => {
     await getAiAvailability();
     await getAiAvailability();
 
-    expect(getAuthStatus).toHaveBeenCalledTimes(1);
+    expect(getAuthStatus).toHaveBeenCalledTimes(2);
   });
 
   it('expires the cache after the TTL', async () => {

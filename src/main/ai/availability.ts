@@ -24,8 +24,8 @@ function readCachedAvailability(nowMs: number): AiAvailability | undefined {
 }
 
 function cacheAvailability(value: AiAvailability, nowMs: number): void {
-  // Cache only definitive auth states; runtime errors are often transient.
-  if (value.ready || value.reason === 'not-authenticated') {
+  // Cache only positive readiness; auth/login state can change immediately.
+  if (value.ready) {
     cachedAvailability = value;
     cachedAtMs = nowMs;
   }

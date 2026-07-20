@@ -47,7 +47,20 @@ interface TidyRendererMetrics {
   outcome: string;
 }
 
+function isEnabled(value: string | undefined): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+const tidyRendererMetricsEnabled = isEnabled(
+  (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>;
+    }
+  ).env?.VITE_INKWELL_LOG_TIDY_RENDERER_METRICS,
+);
+
 function logTidyRendererMetrics(metrics: TidyRendererMetrics): void {
+  if (!tidyRendererMetricsEnabled) return;
   console.info(`[inkwell:ai:tidy:renderer] ${JSON.stringify(metrics)}`);
 }
 
