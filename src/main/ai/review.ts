@@ -9,7 +9,7 @@ import type {
 } from '../../shared/ai';
 import { IpcChannels } from '../../shared/ipc';
 import type { NotesService } from '../storage/notesService';
-import { getAiAvailability } from './availability';
+import { getAiAvailability, invalidateAiAvailabilityCache } from './availability';
 import { buildReviewPrompt } from './prompts';
 import { runGeneration } from './runner';
 import { applyReviewSuggestionToBody } from './reviewApply';
@@ -282,10 +282,14 @@ async function reviewNote(
   });
 
   if (!outcome.ok) {
+    const code = classifyErrorType(outcome.errorType);
+    if (code === 'not-authenticated' || code === 'no-entitlement') {
+      invalidateAiAvailabilityCache();
+    }
     return {
       ok: false,
       requestId,
-      error: { code: classifyErrorType(outcome.errorType), message: outcome.message },
+      error: { code, message: outcome.message },
     };
   }
 
