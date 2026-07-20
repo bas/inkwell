@@ -79,7 +79,8 @@ describe('runGeneration', () => {
       onDelta: (d) => deltas.push(d),
     });
 
-    expect(outcome).toEqual({ ok: true, content: 'Hello world' });
+    expect(outcome).toMatchObject({ ok: true, content: 'Hello world' });
+    expect(outcome.telemetry.totalMs).toBeGreaterThanOrEqual(0);
     expect(deltas).toEqual(['Hello ', 'world']);
     expect(createSession).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -133,7 +134,8 @@ describe('runGeneration', () => {
 
     const outcome = await runGeneration({ prompt: 'p' });
 
-    expect(outcome).toEqual({ ok: true, content: 'Streamed only' });
+    expect(outcome).toMatchObject({ ok: true, content: 'Streamed only' });
+    expect(outcome.telemetry.totalMs).toBeGreaterThanOrEqual(0);
   });
 
   it('captures request usage and maps shutdown nano-AIU to AI Credits', async () => {
@@ -168,7 +170,7 @@ describe('runGeneration', () => {
 
     const outcome = await runGeneration({ prompt: 'p' });
 
-    expect(outcome).toEqual({
+    expect(outcome).toMatchObject({
       ok: true,
       content: 'Usage-aware response',
       usage: {
@@ -185,6 +187,7 @@ describe('runGeneration', () => {
         contextMessageCount: 7,
       },
     });
+    expect(outcome.telemetry.totalMs).toBeGreaterThanOrEqual(0);
   });
 
   it('reports the session error type and message on failure', async () => {
@@ -197,7 +200,8 @@ describe('runGeneration', () => {
 
     const outcome = await runGeneration({ prompt: 'p' });
 
-    expect(outcome).toEqual({ ok: false, errorType: 'quota', message: 'No license' });
+    expect(outcome).toMatchObject({ ok: false, errorType: 'quota', message: 'No license' });
+    expect(outcome.telemetry.totalMs).toBeGreaterThanOrEqual(0);
     expect(session.disconnect).toHaveBeenCalledTimes(1);
   });
 
@@ -222,7 +226,7 @@ describe('runGeneration', () => {
     expect(cancel).toBeTypeOf('function');
     cancel?.();
 
-    await expect(promise).resolves.toEqual({
+    await expect(promise).resolves.toMatchObject({
       ok: false,
       canceled: true,
       message: 'Summary canceled.',

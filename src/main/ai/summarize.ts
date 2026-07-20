@@ -2,7 +2,7 @@ import { ipcMain, type WebContents } from 'electron';
 import type { AiError, AiErrorCode, AiResult } from '../../shared/ai';
 import { IpcChannels } from '../../shared/ipc';
 import type { NotesService } from '../storage/notesService';
-import { getAiAvailability } from './availability';
+import { getAiAvailability, invalidateAiAvailabilityCache } from './availability';
 import { buildSummarizePrompt } from './prompts';
 import { runGeneration } from './runner';
 import { upsertTldrBlock } from './tldr';
@@ -92,10 +92,14 @@ async function summarizeNote(
   });
 
   if (!outcome.ok) {
+    const code = classifyErrorType(outcome.errorType);
+    if (code === 'not-authenticated' || code === 'no-entitlement') {
+      invalidateAiAvailabilityCache();
+    }
     return {
       ok: false,
       requestId,
-      error: { code: classifyErrorType(outcome.errorType), message: outcome.message },
+      error: { code, message: outcome.message },
       usage: outcome.usage,
     };
   }

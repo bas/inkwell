@@ -7,6 +7,11 @@ description: Convert research into a tight, credit-conscious implementation cont
 
 Use this skill after research has produced a preferred direction and the user wants a concrete implementation plan before coding.
 
+## Required execution mode
+
+- This skill must run in **plan mode**.
+- If invoked from another mode, immediately switch to plan mode behavior and produce only the planning contract.
+
 ## Goals
 
 1. Translate research into an execution-ready contract.
