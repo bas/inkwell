@@ -1,9 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const createSession = vi.fn();
+const { createSession, readSettings, listAvailableAiModels } = vi.hoisted(() => ({
+  createSession: vi.fn(),
+  readSettings: vi.fn(() => ({ aiModel: 'auto' })),
+  listAvailableAiModels: vi.fn(
+    async () =>
+      ({ models: [] as Array<{ id: string; label: string }> }) satisfies {
+        models: Array<{ id: string; label: string }>;
+      },
+  ),
+}));
 
 vi.mock('./copilotClient', () => ({
   getCopilotClient: async () => ({ createSession }),
+}));
+vi.mock('../settings', () => ({
+  readSettings,
+}));
+vi.mock('./availability', () => ({
+  listAvailableAiModels,
 }));
 
 import { runGeneration } from './runner';
@@ -44,6 +59,8 @@ const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0
 afterEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
+  readSettings.mockReturnValue({ aiModel: 'auto' });
+  listAvailableAiModels.mockResolvedValue({ models: [] as Array<{ id: string; label: string }> });
 });
 
 describe('runGeneration', () => {
@@ -64,7 +81,46 @@ describe('runGeneration', () => {
 
     expect(outcome).toEqual({ ok: true, content: 'Hello world' });
     expect(deltas).toEqual(['Hello ', 'world']);
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'auto',
+      }),
+    );
     expect(session.disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a configured explicit model when it is currently available', async () => {
+    readSettings.mockReturnValue({ aiModel: 'gpt-5.4' });
+    listAvailableAiModels.mockResolvedValue({ models: [{ id: 'gpt-5.4', label: 'GPT-5.4' }] });
+    const session = makeSession();
+    createSession.mockResolvedValue(session);
+    session.sendAndWait.mockResolvedValue({ data: { content: 'ok' } });
+
+    await runGeneration({ prompt: 'p' });
+
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'gpt-5.4',
+      }),
+    );
+  });
+
+  it('falls back to auto when configured model is unavailable', async () => {
+    readSettings.mockReturnValue({ aiModel: 'gpt-5.4' });
+    listAvailableAiModels.mockResolvedValue({
+      models: [{ id: 'claude-sonnet-5', label: 'Claude' }],
+    });
+    const session = makeSession();
+    createSession.mockResolvedValue(session);
+    session.sendAndWait.mockResolvedValue({ data: { content: 'ok' } });
+
+    await runGeneration({ prompt: 'p' });
+
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'auto',
+      }),
+    );
   });
 
   it('falls back to streamed text when the final message has no content', async () => {

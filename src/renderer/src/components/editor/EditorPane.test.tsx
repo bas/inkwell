@@ -112,20 +112,30 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
   const api: InkwellApi = {
     getSettings: vi.fn(async () => ({
       colorMode: 'auto' as const,
+      aiModel: 'auto',
       features: { labels: true, mermaid: true },
       git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
     setColorMode: vi.fn(async (mode) => ({
       colorMode: mode,
+      aiModel: 'auto',
       features: { labels: true, mermaid: true },
       git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
     setFeatureEnabled: vi.fn(async (feature, enabled) => ({
       colorMode: 'auto' as const,
+      aiModel: 'auto',
       features: {
         labels: feature === 'labels' ? enabled : true,
         mermaid: feature === 'mermaid' ? enabled : true,
       },
+      git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
+    })),
+    getAiModelPreference: vi.fn(async () => 'auto'),
+    setAiModelPreference: vi.fn(async () => ({
+      colorMode: 'auto' as const,
+      aiModel: 'auto',
+      features: { labels: true, mermaid: true },
       git: { enabled: false as const, autoCommit: 'onSave' as const, intervalMinutes: 5 },
     })),
     getVaultPath: vi.fn(async () => '/Users/test/Inkwell'),
@@ -144,6 +154,7 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
     deleteLabel: vi.fn(async () => undefined),
     writeClipboard: vi.fn(async () => undefined),
     getAiAvailability: vi.fn(async () => ({ ready: true as const })),
+    listAiModels: vi.fn(async () => ({ models: [] })),
     summarizeNote: vi.fn(async () => ({
       ok: true as const,
       requestId: 'request-1',

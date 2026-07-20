@@ -15,6 +15,9 @@ import {
 
 /** The persisted color-mode preference. `auto` follows the macOS system appearance. */
 export type ColorModePreference = 'light' | 'dark' | 'auto';
+/** Persisted AI model preference. `auto` delegates model selection to Copilot. */
+export const AUTO_AI_MODEL = 'auto';
+export type AiModelPreference = string;
 
 /** Feature toggles persisted as application-level user preferences. */
 export interface FeatureSettings {
@@ -35,6 +38,7 @@ export interface WindowBounds {
 /** Application-level settings persisted by the main process. */
 export interface AppSettings {
   colorMode: ColorModePreference;
+  aiModel: AiModelPreference;
   features: FeatureSettings;
   git: GitSettings;
   windowBounds?: WindowBounds;
@@ -47,6 +51,7 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   colorMode: 'auto',
+  aiModel: AUTO_AI_MODEL,
   features: {
     labels: true,
     mermaid: true,
@@ -68,6 +73,19 @@ function normalizeColorMode(value: unknown): ColorModePreference {
   return value === 'light' || value === 'dark' || value === 'auto'
     ? value
     : DEFAULT_SETTINGS.colorMode;
+}
+
+/**
+ * Normalize persisted AI model preferences. Only `auto` and non-empty model ids
+ * without whitespace are accepted; everything else falls back to `auto`.
+ */
+export function normalizeAiModelPreference(value: unknown): AiModelPreference {
+  if (typeof value !== 'string') return AUTO_AI_MODEL;
+  const trimmed = value.trim();
+  if (!trimmed) return AUTO_AI_MODEL;
+  if (trimmed === AUTO_AI_MODEL) return AUTO_AI_MODEL;
+  if (/\s/.test(trimmed)) return AUTO_AI_MODEL;
+  return trimmed;
 }
 
 function normalizeWindowBounds(value: unknown): WindowBounds | undefined {
@@ -172,6 +190,7 @@ export function normalizeSettings(value: unknown): AppSettings {
   }
   const settings: AppSettings = {
     colorMode: normalizeColorMode(value['colorMode']),
+    aiModel: normalizeAiModelPreference(value['aiModel']),
     features: normalizeFeatures(value['features']),
     git: normalizeGit(value['git']),
   };

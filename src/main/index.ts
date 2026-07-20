@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import {
   readSettings,
+  setAiModelPreference,
   setColorMode,
   setFeatureEnabled,
   setVaultPath,
@@ -15,7 +16,12 @@ import { buildAppMenu } from './menu';
 import { GitBackup } from './git';
 import { resolveVaultDir } from './vault';
 import { IpcChannels, type VaultChooseResult } from '../shared/ipc';
-import { isFeatureKey, normalizeVaultPath, type ColorModePreference } from '../shared/types';
+import {
+  normalizeAiModelPreference,
+  isFeatureKey,
+  normalizeVaultPath,
+  type ColorModePreference,
+} from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
@@ -101,6 +107,16 @@ function registerIpcHandlers(): void {
     if (!isFeatureKey(feature)) throw new Error('Invalid feature key');
     if (typeof enabled !== 'boolean') throw new Error('Feature enabled must be a boolean');
     return setFeatureEnabled(feature, enabled);
+  });
+
+  ipcMain.handle(IpcChannels.getAiModelPreference, () => readSettings().aiModel);
+
+  ipcMain.handle(IpcChannels.setAiModelPreference, (_event, model: unknown) => {
+    if (typeof model !== 'string') throw new Error('AI model preference must be a string');
+    if (normalizeAiModelPreference(model) !== model.trim()) {
+      throw new Error('Invalid AI model preference');
+    }
+    return setAiModelPreference(model);
   });
 
   ipcMain.handle(IpcChannels.writeClipboard, (_event, text: unknown) => {

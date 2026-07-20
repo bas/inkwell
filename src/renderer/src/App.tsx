@@ -15,12 +15,16 @@ const NARROW_LAYOUT_BREAKPOINT = 768;
 export function App(): JSX.Element {
   const {
     settings,
+    aiModels,
+    aiModelsLoading,
+    aiModelsError,
     preference,
     resolvedMode,
     loaded,
     error: settingsError,
     setPreference,
     setFeatureEnabled,
+    setAiModelPreference,
   } = useAppSettings();
   const labelsEnabled = loaded && settings.features.labels;
   const mermaidEnabled = settings.features.mermaid;
@@ -239,6 +243,9 @@ export function App(): JSX.Element {
         {settingsOpen && (
           <SettingsDialog
             settings={settings}
+            aiModels={aiModels}
+            aiModelsLoading={aiModelsLoading}
+            aiModelsError={aiModelsError}
             labels={notes.labels}
             error={settingsError}
             onClose={() => setSettingsOpen(false)}
@@ -250,6 +257,7 @@ export function App(): JSX.Element {
               void notes.refreshLabels();
               void notes.refresh();
             }}
+            onAiModelChange={(model) => setAiModelPreference(model)}
           />
         )}
       </BaseStyles>

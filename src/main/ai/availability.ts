@@ -1,8 +1,55 @@
-import type { AiAvailability } from '../../shared/ai';
+import type { AiAvailability, AiModelInfo, AiModelListResult } from '../../shared/ai';
 import { getCopilotClient } from './copilotClient';
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+const MODEL_LIST_TTL_MS = 5 * 60_000;
+let modelListCache:
+  | {
+      expiresAt: number;
+      models: AiModelInfo[];
+    }
+  | undefined;
+
+function parseModelInfo(value: unknown): AiModelInfo | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const row = value as Record<string, unknown>;
+  const id = typeof row['id'] === 'string' ? row['id'].trim() : '';
+  if (!id || /\s/.test(id)) return undefined;
+  const name =
+    typeof row['name'] === 'string' && row['name'].trim()
+      ? row['name'].trim()
+      : typeof row['displayName'] === 'string' && row['displayName'].trim()
+        ? row['displayName'].trim()
+        : id;
+  return { id, label: name };
+}
+
+export async function listAvailableAiModels(): Promise<AiModelListResult> {
+  const now = Date.now();
+  if (modelListCache && modelListCache.expiresAt > now) return { models: modelListCache.models };
+  if (process.env.INKWELL_FAKE_AI) {
+    return { models: [{ id: 'gpt-5.4', label: 'GPT-5.4 (fake)' }] };
+  }
+  try {
+    const client = await getCopilotClient();
+    const listed = await client.listModels();
+    const models = Array.isArray(listed)
+      ? listed
+          .map((value) => parseModelInfo(value))
+          .filter((value): value is AiModelInfo => Boolean(value))
+      : [];
+    modelListCache = { models, expiresAt: now + MODEL_LIST_TTL_MS };
+    return { models };
+  } catch (err) {
+    return { models: [], error: errorMessage(err) };
+  }
+}
+
+export function clearAiModelListCache(): void {
+  modelListCache = undefined;
 }
 
 /**

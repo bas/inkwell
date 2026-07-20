@@ -1,4 +1,4 @@
-import type { AppSettings, ColorModePreference, FeatureKey } from './types';
+import type { AiModelPreference, AppSettings, ColorModePreference, FeatureKey } from './types';
 import type { CreateNoteInput, Note, NoteSummary, UpdateNoteInput } from './note';
 import type { Label } from './note-labels';
 import type {
@@ -20,6 +20,7 @@ import type {
   AiReviewOptions,
   AiReviewResult,
   AiReviewSuggestion,
+  AiModelListResult,
   AiStreamChunk,
 } from './ai';
 
@@ -28,6 +29,8 @@ export const IpcChannels = {
   getSettings: 'settings:get',
   setColorMode: 'settings:setColorMode',
   setFeatureEnabled: 'settings:setFeatureEnabled',
+  getAiModelPreference: 'settings:getAiModelPreference',
+  setAiModelPreference: 'settings:setAiModelPreference',
   /** Main → renderer: the effective system color scheme changed. */
   systemColorSchemeChanged: 'system:colorSchemeChanged',
 
@@ -49,6 +52,8 @@ export const IpcChannels = {
 
   /** AI: report whether the Copilot runtime is reachable and authenticated. */
   aiGetAvailability: 'ai:getAvailability',
+  /** AI: list model ids currently available for explicit selection. */
+  aiListModels: 'ai:listModels',
   /** AI: summarize a note's body. */
   aiSummarize: 'ai:summarize',
   /** AI: cancel an in-flight summarize request by id. */
@@ -115,6 +120,8 @@ export interface InkwellApi {
   getSettings(): Promise<AppSettings>;
   setColorMode(mode: ColorModePreference): Promise<AppSettings>;
   setFeatureEnabled(feature: FeatureKey, enabled: boolean): Promise<AppSettings>;
+  getAiModelPreference(): Promise<AiModelPreference>;
+  setAiModelPreference(model: AiModelPreference): Promise<AppSettings>;
   /** Subscribe to system color-scheme changes. Returns an unsubscribe function. */
   onSystemColorSchemeChanged(listener: (isDark: boolean) => void): () => void;
 
@@ -146,6 +153,8 @@ export interface InkwellApi {
 
   /** Report whether the Copilot AI runtime is reachable and authenticated. */
   getAiAvailability(): Promise<AiAvailability>;
+  /** List models currently available for explicit selection in Settings. */
+  listAiModels(): Promise<AiModelListResult>;
   /** Summarize a note's body with Copilot. Streams via `onAiStreamDelta`. */
   summarizeNote(noteId: string, requestId: string): Promise<AiResult>;
   /** Cancel an in-flight summarize request by id. Safe to call when none is running. */

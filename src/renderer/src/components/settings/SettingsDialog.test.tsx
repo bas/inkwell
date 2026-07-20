@@ -7,6 +7,7 @@ import type { AppSettings } from '@shared/types';
 
 const settings: AppSettings = {
   colorMode: 'auto',
+  aiModel: 'auto',
   features: { labels: true, mermaid: true },
   git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
 };
@@ -61,10 +62,16 @@ function renderSettings(onFeatureChange = vi.fn()): void {
     <ThemeProvider>
       <SettingsDialog
         settings={settings}
+        aiModels={[
+          { id: 'gpt-5.4', label: 'GPT-5.4' },
+          { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+        ]}
+        aiModelsLoading={false}
         labels={[]}
         onClose={() => {}}
         onFeatureChange={onFeatureChange}
         onLabelsChanged={() => {}}
+        onAiModelChange={() => {}}
       />
     </ThemeProvider>,
   );
@@ -90,5 +97,12 @@ describe('SettingsDialog', () => {
     const path = await screen.findByTestId('vault-current-path');
     expect(path.textContent).toBe('/Users/test/Inkwell');
     expect(screen.getByTestId('vault-change-location')).toBeTruthy();
+  });
+
+  it('renders the AI model select with auto and discovered options', () => {
+    renderSettings();
+    const select = screen.getByTestId('ai-model-select') as HTMLSelectElement;
+    const options = Array.from(select.options).map((option) => option.value);
+    expect(options).toEqual(['auto', 'gpt-5.4', 'claude-sonnet-5']);
   });
 });
