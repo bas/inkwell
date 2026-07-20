@@ -58,4 +58,72 @@ describe('NotesService', () => {
     expect(id).toBe('fresh-id');
     expect(path).toBe(join(dir, 'fresh-id.md'));
   });
+
+  it('suppresses no-op updates so unchanged content produces no churn or mutation', async () => {
+    const service = new NotesService(dir, dbPath);
+    const titles: string[][] = [];
+    service.setMutationListener((t) => titles.push(t));
+    try {
+      const note = service.createNote({ body: 'Steady\n\nBody' });
+      const canonical = service.getNote(note.id);
+      titles.length = 0; // ignore the create mutation
+      const again = service.updateNote({ id: note.id, body: canonical.body });
+      expect(again.updatedAt).toBe(canonical.updatedAt);
+      expect(titles).toEqual([]);
+    } finally {
+      await service.dispose();
+    }
+  });
+
+  it('emits a mutation and bumps updatedAt when content actually changes', async () => {
+    const service = new NotesService(dir, dbPath);
+    const titles: string[][] = [];
+    service.setMutationListener((t) => titles.push(t));
+    try {
+      const note = service.createNote({ body: 'First' });
+      titles.length = 0;
+      await new Promise((r) => setTimeout(r, 5));
+      const updated = service.updateNote({ id: note.id, body: 'Second body' });
+      expect(updated.updatedAt).not.toBe(note.updatedAt);
+      expect(titles).toEqual([[updated.title]]);
+    } finally {
+      await service.dispose();
+    }
+  });
+
+  it('rejects a stale update whose baseUpdatedAt no longer matches disk', async () => {
+    const service = new NotesService(dir, dbPath);
+    try {
+      const note = service.createNote({ body: 'Original' });
+      await new Promise((r) => setTimeout(r, 5));
+      service.updateNote({ id: note.id, body: 'Newer on disk' });
+      expect(() =>
+        service.updateNote({ id: note.id, body: 'Racy', baseUpdatedAt: note.updatedAt }),
+      ).toThrow(/changed on disk/i);
+    } finally {
+      await service.dispose();
+    }
+  });
+
+  it('accepts a no-op update even when baseUpdatedAt is stale', async () => {
+    const service = new NotesService(dir, dbPath);
+    try {
+      const note = service.createNote({ body: 'Original' });
+      await new Promise((r) => setTimeout(r, 5));
+      // A concurrent change advances updatedAt on disk...
+      const newer = service.updateNote({ id: note.id, body: 'Newer on disk' });
+      const canonical = service.getNote(note.id);
+      // ...then a no-op autosave arrives carrying the now-stale base. Because the
+      // requested content already matches disk, it must not raise StaleNoteError.
+      const again = service.updateNote({
+        id: note.id,
+        body: canonical.body,
+        baseUpdatedAt: note.updatedAt,
+      });
+      expect(again.updatedAt).toBe(newer.updatedAt);
+      expect(again.body).toBe(canonical.body);
+    } finally {
+      await service.dispose();
+    }
+  });
 });

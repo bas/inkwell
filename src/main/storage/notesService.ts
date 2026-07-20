@@ -29,6 +29,25 @@ export class NoteNotFoundError extends Error {
   }
 }
 
+/**
+ * Thrown when an update is rejected because the note changed on disk since the
+ * caller last read it (optimistic concurrency). Callers should reload and retry.
+ */
+export class StaleNoteError extends Error {
+  constructor(id: string) {
+    super(`Note changed on disk since last read: ${id}`);
+    this.name = 'StaleNoteError';
+  }
+}
+
+function sameLabels(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export function allocateNoteFile(
   vaultDir: string,
   generateId: () => string = randomUUID,
@@ -67,6 +86,8 @@ export class NotesService {
   private rescanTimer: NodeJS.Timeout | undefined;
   /** Paths currently being written by the app; suppresses watcher-triggered rebuilds. */
   private selfWritePaths = new Set<string>();
+  /** Optional hook invoked after any file-changing mutation (for backup scheduling). */
+  private mutationListener: ((titles: string[]) => void) | undefined;
 
   constructor(
     private readonly vaultDir: string,
@@ -75,6 +96,22 @@ export class NotesService {
     ensureVaultDir(vaultDir);
     this.db = openDatabase(dbPath);
     this.rebuild();
+  }
+
+  /**
+   * Register a listener notified after every mutation that changes vault files.
+   * Used to schedule debounced local backup commits without coupling storage to git.
+   */
+  setMutationListener(listener: ((titles: string[]) => void) | undefined): void {
+    this.mutationListener = listener;
+  }
+
+  private emitMutation(titles: string[]): void {
+    try {
+      this.mutationListener?.(titles);
+    } catch {
+      // A backup-scheduling failure must never break a note write.
+    }
   }
 
   /** Rescan the vault and rebuild the index from scratch. */
@@ -153,6 +190,7 @@ export class NotesService {
     writeNoteToPath(path, note);
     this.idToPath.set(id, path);
     upsertNote(this.db, indexInput(note, path));
+    this.emitMutation([note.title]);
     return note;
   }
 
@@ -161,25 +199,51 @@ export class NotesService {
     const path = this.idToPath.get(input.id);
     if (!path) throw new NoteNotFoundError(input.id);
     const body = input.body ?? current.body;
+    const labels = input.labels ?? current.labels;
+    const pinned = input.pinned ?? current.pinned;
+    // No-op suppression: identical content must not rewrite the file or bump
+    // updatedAt, so autosave keystrokes that change nothing produce no churn
+    // (and no backup commits). Run this before the optimistic-concurrency check
+    // so a no-op write against a stale base is accepted rather than raising a
+    // spurious StaleNoteError — the desired content already matches disk, so
+    // there is nothing to clobber.
+    if (body === current.body && pinned === current.pinned && sameLabels(labels, current.labels)) {
+      return current;
+    }
+    // Optimistic concurrency: reject a content-changing write based on a stale
+    // read so an external or watcher-driven change is never silently clobbered.
+    if (input.baseUpdatedAt !== undefined && input.baseUpdatedAt !== current.updatedAt) {
+      throw new StaleNoteError(input.id);
+    }
     const next: Note = {
       ...current,
       title: deriveNoteTitle(body),
       body,
-      labels: input.labels ?? current.labels,
-      pinned: input.pinned ?? current.pinned,
+      labels,
+      pinned,
       updatedAt: new Date().toISOString(),
     };
     this.selfWritePaths.add(path);
     writeNoteToPath(path, next);
     upsertNote(this.db, indexInput(next, path));
+    this.emitMutation([next.title]);
     return next;
   }
 
   deleteNote(id: string): void {
     const path = this.idToPath.get(id);
+    let title = '';
+    if (path && existsSync(path)) {
+      try {
+        title = readNoteFile(path).title;
+      } catch {
+        title = '';
+      }
+    }
     if (path) deleteNoteFile(path);
     dbDeleteNote(this.db, id);
     this.idToPath.delete(id);
+    this.emitMutation(title ? [title] : []);
   }
 
   listLabels(): Label[] {
@@ -198,6 +262,7 @@ export class NotesService {
     // Remove the label from every note that uses it so the files (source of
     // truth) and the index never diverge, then drop the label itself.
     const label = listLabels(this.db).find((l) => l.id === id);
+    const changed: string[] = [];
     if (label) {
       for (const [noteId, path] of this.idToPath) {
         if (!existsSync(path)) continue;
@@ -212,8 +277,10 @@ export class NotesService {
         writeNoteToPath(path, next);
         upsertNote(this.db, indexInput(next, path));
         this.idToPath.set(noteId, path);
+        changed.push(next.title);
       }
     }
     deleteLabel(this.db, id);
+    this.emitMutation(changed);
   }
 }

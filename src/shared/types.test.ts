@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSettings } from './types';
+import { normalizeSettings, normalizeVaultPath } from './types';
 
 describe('normalizeSettings', () => {
   it('adds default feature settings for older settings files', () => {
@@ -9,6 +9,7 @@ describe('normalizeSettings', () => {
         labels: true,
         mermaid: true,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
     });
   });
 
@@ -19,6 +20,7 @@ describe('normalizeSettings', () => {
         labels: false,
         mermaid: true,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
     });
 
     expect(normalizeSettings({ features: { mermaid: false } })).toEqual({
@@ -27,6 +29,7 @@ describe('normalizeSettings', () => {
         labels: true,
         mermaid: false,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
     });
   });
 
@@ -43,7 +46,80 @@ describe('normalizeSettings', () => {
         labels: true,
         mermaid: true,
       },
+      git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
       windowBounds: { width: 900, height: 700, x: 10 },
     });
+  });
+
+  it('trims a persisted remote URL and drops one containing whitespace', () => {
+    const base = {
+      git: {
+        enabled: true,
+        autoCommit: 'onSave',
+        intervalMinutes: 5,
+        remote: {
+          mode: 'url',
+          host: '',
+          owner: '',
+          repo: '',
+          visibility: 'unknown',
+          autoPush: false,
+        },
+      },
+    };
+
+    const trimmed = normalizeSettings({
+      ...base,
+      git: {
+        ...base.git,
+        remote: { ...base.git.remote, remoteUrl: '  https://github.com/o/r.git  ' },
+      },
+    });
+    expect(trimmed.git.remote?.remoteUrl).toBe('https://github.com/o/r.git');
+
+    const dropped = normalizeSettings({
+      ...base,
+      git: {
+        ...base.git,
+        remote: { ...base.git.remote, remoteUrl: 'https://github.com/o r.git' },
+      },
+    });
+    expect(dropped.git.remote).toBeUndefined();
+
+    const invalidShape = normalizeSettings({
+      ...base,
+      git: {
+        ...base.git,
+        remote: { ...base.git.remote, remoteUrl: 'ssh://-oProxyCommand=calc/repo.git' },
+      },
+    });
+    expect(invalidShape.git.remote).toBeUndefined();
+  });
+
+  it('keeps a valid absolute vaultPath and drops invalid ones', () => {
+    expect(normalizeSettings({ vaultPath: '/Users/test/Inkwell' }).vaultPath).toBe(
+      '/Users/test/Inkwell',
+    );
+    expect(normalizeSettings({ vaultPath: '  /Users/test/Notes  ' }).vaultPath).toBe(
+      '/Users/test/Notes',
+    );
+    expect(normalizeSettings({ vaultPath: 'relative/path' }).vaultPath).toBeUndefined();
+    expect(normalizeSettings({ vaultPath: '' }).vaultPath).toBeUndefined();
+    expect(normalizeSettings({ vaultPath: 42 }).vaultPath).toBeUndefined();
+  });
+});
+
+describe('normalizeVaultPath', () => {
+  it('trims and keeps absolute POSIX paths', () => {
+    expect(normalizeVaultPath('/Users/test/Inkwell')).toBe('/Users/test/Inkwell');
+    expect(normalizeVaultPath('  /Users/test/Notes  ')).toBe('/Users/test/Notes');
+  });
+
+  it('rejects blank, relative, and non-string values', () => {
+    expect(normalizeVaultPath('')).toBeUndefined();
+    expect(normalizeVaultPath('   ')).toBeUndefined();
+    expect(normalizeVaultPath('relative/path')).toBeUndefined();
+    expect(normalizeVaultPath(42)).toBeUndefined();
+    expect(normalizeVaultPath(undefined)).toBeUndefined();
   });
 });

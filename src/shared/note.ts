@@ -45,4 +45,12 @@ export interface UpdateNoteInput {
   body?: string;
   labels?: string[];
   pinned?: boolean;
+  /**
+   * Optimistic concurrency guard: the `updatedAt` the caller last observed. When
+   * present and it no longer matches what is on disk, the write is rejected with
+   * a stale-write error so the caller can reload and resolve rather than blindly
+   * overwriting. Reconciliation policy (retry, prompt, discard) is up to the
+   * caller; this field only gates the write.
+   */
+  baseUpdatedAt?: string;
 }

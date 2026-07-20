@@ -16,7 +16,9 @@ import {
   type FeatureKey,
   type WindowBounds,
   normalizeSettings,
+  normalizeVaultPath,
 } from '../shared/types';
+import type { GitSettings } from '../shared/git';
 import { randomUUID } from 'node:crypto';
 
 function settingsPath(): string {
@@ -25,11 +27,19 @@ function settingsPath(): string {
 
 let cachedSettings: AppSettings | undefined;
 
+function cloneGit(git: GitSettings): GitSettings {
+  return {
+    ...git,
+    remote: git.remote ? { ...git.remote } : undefined,
+  };
+}
+
 function cloneSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
     features: { ...settings.features },
     windowBounds: settings.windowBounds ? { ...settings.windowBounds } : undefined,
+    git: cloneGit(settings.git),
   };
 }
 
@@ -65,6 +75,17 @@ function writeSettings(settings: AppSettings): void {
   cachedSettings = cloneSettings(settings);
 }
 
+/** Persist the chosen notes vault path. */
+export function setVaultPath(path: string): AppSettings {
+  const normalized = normalizeVaultPath(path);
+  if (!normalized) {
+    throw new Error('Vault path must be a non-empty absolute path.');
+  }
+  const next: AppSettings = { ...readSettings(), vaultPath: normalized };
+  writeSettings(next);
+  return next;
+}
+
 export function setColorMode(mode: ColorModePreference): AppSettings {
   const next: AppSettings = { ...readSettings(), colorMode: mode };
   writeSettings(next);
@@ -86,4 +107,11 @@ export function setFeatureEnabled(feature: FeatureKey, enabled: boolean): AppSet
 
 export function setWindowBounds(bounds: WindowBounds): void {
   writeSettings({ ...readSettings(), windowBounds: bounds });
+}
+
+/** Replace the persisted `git` backup settings block. */
+export function setGitSettings(git: GitSettings): AppSettings {
+  const next: AppSettings = { ...readSettings(), git: cloneGit(git) };
+  writeSettings(next);
+  return next;
 }

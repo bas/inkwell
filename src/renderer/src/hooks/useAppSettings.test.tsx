@@ -20,9 +20,17 @@ function deferred<T>(): {
   return { promise, resolve, reject };
 }
 
+const gitStatus = {
+  available: { git: true, gh: true },
+  settings: { enabled: false, autoCommit: 'onSave' as const, intervalMinutes: 5 },
+  syncState: 'disabled' as const,
+  dirty: false,
+};
+
 const loadedSettings: AppSettings = {
   colorMode: 'auto',
   features: { labels: true, mermaid: true },
+  git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
 };
 
 function note(): Note {
@@ -46,6 +54,8 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
       ...loadedSettings,
       features: { ...loadedSettings.features, [feature]: enabled },
     })),
+    getVaultPath: vi.fn(async () => '/Users/test/Inkwell'),
+    chooseVaultLocation: vi.fn(async () => ({ changed: false }) as const),
     onSystemColorSchemeChanged: vi.fn(() => () => {}),
     listNotes: vi.fn(async () => []),
     searchNotes: vi.fn(async () => []),
@@ -101,6 +111,16 @@ function installApi(overrides: Partial<InkwellApi> = {}): InkwellApi {
     })),
     onAiStreamDelta: vi.fn(() => () => {}),
     onMenuNewNote: vi.fn(() => () => {}),
+    getGitStatus: vi.fn(async () => gitStatus),
+    setGitEnabled: vi.fn(async () => gitStatus),
+    setGitAutoCommit: vi.fn(async () => gitStatus),
+    setGitAutoPush: vi.fn(async () => gitStatus),
+    getGitDestinations: vi.fn(async () => ({ hosts: ['github.com'], owners: [], orgOwners: [] })),
+    checkGitRepoName: vi.fn(async () => ({ available: true, normalized: 'inkwell-notes' })),
+    setupGitRemote: vi.fn(async () => ({ pushState: 'clean' as const, status: gitStatus })),
+    removeGitRemote: vi.fn(async () => gitStatus),
+    gitPushNow: vi.fn(async () => ({ state: 'clean' as const, status: gitStatus })),
+    onGitStatusChanged: vi.fn(() => () => {}),
     ...overrides,
   };
   Object.defineProperty(window, 'api', { value: api, configurable: true });

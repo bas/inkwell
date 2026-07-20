@@ -37,6 +37,18 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : 'Could not open note';
 }
 
+/**
+ * Detect a rejected write caused by optimistic-concurrency staleness. Prefer the
+ * error name set by the main process (`StaleNoteError`) and fall back to the
+ * message text so small wording changes — or a name lost crossing the IPC
+ * boundary — don't break stale-write handling.
+ */
+function isStaleWriteError(err: unknown): boolean {
+  return (
+    err instanceof Error && (err.name === 'StaleNoteError' || /changed on disk/i.test(err.message))
+  );
+}
+
 interface SourceMatch {
   start: number;
   end: number;
@@ -197,26 +209,46 @@ export function EditorPane({
   const sourceEditorRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Latest editable data, read by the debounced/flush save without re-binding.
-  const dataRef = useRef({ id: '', markdown: '' });
+  const dataRef = useRef({ id: '', markdown: '', baseUpdatedAt: '' });
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const save = useCallback(async () => {
-    if (!dirtyRef.current) return;
-    const { id, markdown: body } = dataRef.current;
-    if (!id) return;
-    dirtyRef.current = false;
-    setSaveState('saving');
-    try {
-      await window.api.updateNote({ id, body });
-      setSaveState('saved');
-      onAfterChange();
-    } catch (err) {
-      dirtyRef.current = true;
-      setError(describeError(err));
-      setSaveState('error');
-    }
-  }, [onAfterChange]);
+  const save = useCallback(
+    async (retryOnStale = true): Promise<void> => {
+      if (!dirtyRef.current) return;
+      const { id, markdown: body, baseUpdatedAt } = dataRef.current;
+      if (!id) return;
+      dirtyRef.current = false;
+      setSaveState('saving');
+      try {
+        const saved = await window.api.updateNote({ id, body, baseUpdatedAt });
+        // Track the latest persisted version for the next optimistic write.
+        if (dataRef.current.id === id) dataRef.current.baseUpdatedAt = saved.updatedAt;
+        setSaveState('saved');
+        onAfterChange();
+      } catch (err) {
+        dirtyRef.current = true;
+        // A stale write means the note changed on disk since we last read it.
+        // Refresh our base to the on-disk version and let the active editor win
+        // by retrying once, rather than silently discarding the user's edits.
+        if (retryOnStale && isStaleWriteError(err)) {
+          try {
+            const latest = await window.api.getNote(id);
+            if (dataRef.current.id === id) {
+              dataRef.current.baseUpdatedAt = latest.updatedAt;
+              await save(false);
+              return;
+            }
+          } catch {
+            // Fall through to surfacing the original error.
+          }
+        }
+        setError(describeError(err));
+        setSaveState('error');
+      }
+    },
+    [onAfterChange],
+  );
 
   const scheduleSave = useCallback(() => {
     dirtyRef.current = true;
@@ -236,7 +268,7 @@ export function EditorPane({
       const loaded = await window.api.getNote(id);
       setNote(loaded);
       setMarkdown(loaded.body);
-      dataRef.current = { id: loaded.id, markdown: loaded.body };
+      dataRef.current = { id: loaded.id, markdown: loaded.body, baseUpdatedAt: loaded.updatedAt };
       dirtyRef.current = false;
       setSaveState('idle');
       setError(undefined);
@@ -527,7 +559,11 @@ export function EditorPane({
       const updated = await window.api.insertTldr(summaryNoteId, summaryState.text);
       setNote(updated);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, markdown: updated.body };
+      dataRef.current = {
+        id: updated.id,
+        markdown: updated.body,
+        baseUpdatedAt: updated.updatedAt,
+      };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -584,7 +620,11 @@ export function EditorPane({
       const updated = result.note;
       setNote(updated);
       setMarkdown(updated.body);
-      dataRef.current = { id: updated.id, markdown: updated.body };
+      dataRef.current = {
+        id: updated.id,
+        markdown: updated.body,
+        baseUpdatedAt: updated.updatedAt,
+      };
       dirtyRef.current = false;
       setSaveState('saved');
       setReloadNonce((nonce) => nonce + 1);
@@ -671,7 +711,7 @@ export function EditorPane({
   const commitUpdatedNote = useCallback((updated: Note) => {
     setNote(updated);
     setMarkdown(updated.body);
-    dataRef.current = { id: updated.id, markdown: updated.body };
+    dataRef.current = { id: updated.id, markdown: updated.body, baseUpdatedAt: updated.updatedAt };
     dirtyRef.current = false;
     setSaveState('saved');
     setReloadNonce((nonce) => nonce + 1);
@@ -759,7 +799,7 @@ export function EditorPane({
     void (async () => {
       // Block edits while tidy generates and auto-applies so background
       // mutations can't race with or clobber the user's keystrokes.
-      editor?.setEditable(false);
+      editor?.setEditable(false, false); // false = don't emit an update event, avoids re-syncing stale content during tidy
       try {
         await save();
         if (dirtyRef.current) {
@@ -818,7 +858,7 @@ export function EditorPane({
         }
         presentFix(requestId, result.summary, reviewSet, appliedCount);
       } finally {
-        editor?.setEditable(true);
+        editor?.setEditable(true, false); // false = don't emit an update event, re-enables editing without triggering a content sync
       }
     })();
   }, [
@@ -880,14 +920,28 @@ export function EditorPane({
     setUndoing(true);
     void (async () => {
       try {
-        const updated = await window.api.updateNote({ id: fixNoteId, body: snapshot });
+        // Enforce optimistic concurrency so undo never clobbers a change made on
+        // disk since the tidy. dataRef holds the base for the loaded note, which
+        // is always the tidy target while the undo affordance is visible.
+        const base = dataRef.current.id === fixNoteId ? dataRef.current.baseUpdatedAt : undefined;
+        const updated = await window.api.updateNote({
+          id: fixNoteId,
+          body: snapshot,
+          ...(base ? { baseUpdatedAt: base } : {}),
+        });
         commitUpdatedNote(updated);
         onAfterChange();
         setPreTidyBody(undefined);
         setFixOpen(false);
         resetFix();
       } catch (err) {
-        setError(describeError(err));
+        if (isStaleWriteError(err)) {
+          setError(
+            'This note changed on disk since it was tidied, so the tidy was not undone. Reload the note and try again.',
+          );
+        } else {
+          setError(describeError(err));
+        }
       } finally {
         setUndoing(false);
       }

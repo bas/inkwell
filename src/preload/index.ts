@@ -8,12 +8,15 @@ import type {
   AiReviewSuggestion,
   AiStreamChunk,
 } from '../shared/ai';
+import type { GitAutoCommitMode, GitBackupStatus, GitRemoteSetupInput } from '../shared/git';
 
 const api: InkwellApi = {
   getSettings: () => ipcRenderer.invoke(IpcChannels.getSettings),
   setColorMode: (mode: ColorModePreference) => ipcRenderer.invoke(IpcChannels.setColorMode, mode),
   setFeatureEnabled: (feature: FeatureKey, enabled: boolean) =>
     ipcRenderer.invoke(IpcChannels.setFeatureEnabled, feature, enabled),
+  getVaultPath: () => ipcRenderer.invoke(IpcChannels.getVaultPath),
+  chooseVaultLocation: () => ipcRenderer.invoke(IpcChannels.chooseVaultLocation),
   onSystemColorSchemeChanged: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, isDark: boolean): void => listener(isDark);
     ipcRenderer.on(IpcChannels.systemColorSchemeChanged, handler);
@@ -78,6 +81,25 @@ const api: InkwellApi = {
     const handler = (): void => listener();
     ipcRenderer.on(IpcChannels.menuNewNote, handler);
     return () => ipcRenderer.removeListener(IpcChannels.menuNewNote, handler);
+  },
+
+  getGitStatus: () => ipcRenderer.invoke(IpcChannels.gitGetStatus),
+  setGitEnabled: (enabled: boolean) => ipcRenderer.invoke(IpcChannels.gitSetEnabled, enabled),
+  setGitAutoCommit: (mode: GitAutoCommitMode, intervalMinutes?: number) =>
+    ipcRenderer.invoke(IpcChannels.gitSetAutoCommit, mode, intervalMinutes),
+  setGitAutoPush: (enabled: boolean) => ipcRenderer.invoke(IpcChannels.gitSetAutoPush, enabled),
+  getGitDestinations: () => ipcRenderer.invoke(IpcChannels.gitGetDestinations),
+  checkGitRepoName: (host: string | undefined, owner: string, name: string) =>
+    ipcRenderer.invoke(IpcChannels.gitCheckRepoName, host, owner, name),
+  setupGitRemote: (input: GitRemoteSetupInput) =>
+    ipcRenderer.invoke(IpcChannels.gitSetupRemote, input),
+  removeGitRemote: () => ipcRenderer.invoke(IpcChannels.gitRemoveRemote),
+  gitPushNow: () => ipcRenderer.invoke(IpcChannels.gitPushNow),
+  onGitStatusChanged: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: GitBackupStatus): void =>
+      listener(status);
+    ipcRenderer.on(IpcChannels.gitStatusChanged, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.gitStatusChanged, handler);
   },
 };
 

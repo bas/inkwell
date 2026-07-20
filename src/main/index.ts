@@ -1,13 +1,21 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { readSettings, setColorMode, setFeatureEnabled, setWindowBounds } from './settings';
+import {
+  readSettings,
+  setColorMode,
+  setFeatureEnabled,
+  setVaultPath,
+  setWindowBounds,
+} from './settings';
 import { registerNoteHandlers } from './ipc';
 import { configureSpellcheck, attachSpellcheckMenu } from './spellcheck';
 import { registerAiHandlers, disposeAi } from './ai';
 import { buildAppMenu } from './menu';
-import { IpcChannels } from '../shared/ipc';
-import { isFeatureKey, type ColorModePreference } from '../shared/types';
+import { GitBackup } from './git';
+import { resolveVaultDir } from './vault';
+import { IpcChannels, type VaultChooseResult } from '../shared/ipc';
+import { isFeatureKey, normalizeVaultPath, type ColorModePreference } from '../shared/types';
 import type { NotesService } from './storage/notesService';
 
 // Name the app so the macOS menu bar and dialogs say "Inkwell" (not "Electron")
@@ -19,6 +27,7 @@ const isE2EHeadless =
   process.env['INKWELL_E2E_HEADLESS'] === '1' || process.env['INKWELL_E2E_HEADLESS'] === 'true';
 
 let notesService: NotesService | undefined;
+let gitBackup: GitBackup | undefined;
 
 function createWindow(): BrowserWindow {
   const { windowBounds } = readSettings();
@@ -100,6 +109,37 @@ function registerIpcHandlers(): void {
   });
 }
 
+/**
+ * Vault-location handlers. Registered once the window and resolved vault path are
+ * available: the picker is anchored to the window, and `getVaultPath` reports the
+ * path actually in use (which may be an `INKWELL_VAULT_DIR` override that is never
+ * persisted). Choosing a new folder persists it and relaunches so the notes
+ * service, SQLite index, and git backup re-initialise cleanly.
+ */
+function registerVaultHandlers(window: BrowserWindow, vaultDir: string): void {
+  ipcMain.handle(IpcChannels.getVaultPath, () => vaultDir);
+
+  ipcMain.handle(IpcChannels.chooseVaultLocation, async (): Promise<VaultChooseResult> => {
+    const result = await dialog.showOpenDialog(window, {
+      title: 'Choose notes vault folder',
+      message:
+        'Inkwell will restart to use this folder as your notes vault. Existing notes are NOT moved - copy them into the new folder first if you want them here.',
+      buttonLabel: 'Use this folder',
+      defaultPath: vaultDir,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    const chosen = normalizeVaultPath(result.filePaths[0]);
+    if (result.canceled || !chosen || chosen === vaultDir) return { changed: false };
+    setVaultPath(chosen);
+    // Relaunch via app.quit() (not app.exit) so the before-quit barrier flushes
+    // pending autosave commits/pushes and disposes the DB/watcher cleanly before
+    // the process exits and the relaunched instance re-initialises.
+    app.relaunch();
+    app.quit();
+    return { changed: true, path: chosen };
+  });
+}
+
 function isBetterSqliteAbiMismatch(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   return (
@@ -139,12 +179,35 @@ async function createNotesService(vaultDir: string, dbPath: string): Promise<Not
 app.whenReady().then(async () => {
   registerIpcHandlers();
 
-  const vaultDir = process.env['INKWELL_VAULT_DIR'] ?? join(app.getPath('documents'), 'Inkwell');
+  let vaultDir: string;
+  try {
+    vaultDir = resolveVaultDir({
+      envVaultDir: process.env['INKWELL_VAULT_DIR'],
+      homeDir: app.getPath('home'),
+      documentsDir: app.getPath('documents'),
+      persistedVaultPath: readSettings().vaultPath,
+      persist: (path) => setVaultPath(path),
+    });
+  } catch (err) {
+    // Resolution creates and persists the default vault; if that fails (e.g.
+    // mkdir/permission/disk error) there is no usable vault, so surface it and
+    // quit rather than letting the unhandled rejection crash the app silently.
+    dialog.showErrorBox(
+      'Inkwell could not open your notes',
+      `The notes vault location could not be prepared.\n\n${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    app.quit();
+    return;
+  }
   const dbPath = join(app.getPath('userData'), 'index.sqlite');
   try {
     notesService = await createNotesService(vaultDir, dbPath);
     registerNoteHandlers(notesService);
     registerAiHandlers(notesService);
+    gitBackup = new GitBackup(vaultDir, notesService);
+    gitBackup.registerHandlers();
   } catch (err) {
     dialog.showErrorBox(
       'Inkwell could not open your notes',
@@ -155,6 +218,8 @@ app.whenReady().then(async () => {
   }
 
   const window = createWindow();
+  gitBackup?.setWindow(window);
+  registerVaultHandlers(window, vaultDir);
 
   buildAppMenu(window, {
     onRevealVault: () => {
@@ -190,7 +255,47 @@ app.whenReady().then(async () => {
   });
 });
 
+let quitting = false;
+
+app.on('before-quit', (event) => {
+  if (quitting) return;
+  if (!gitBackup) return;
+  // Hold quit until pending autosave commits/pushes have flushed, then tear down.
+  event.preventDefault();
+  quitting = true;
+  const done = (): void => {
+    // will-quit is skipped once `quitting` is set, so this is the only teardown
+    // path. Await the watcher/db and Copilot client disposal before exiting, but
+    // bound it so a stuck disposal can't hang shutdown indefinitely.
+    const teardown = Promise.allSettled([
+      notesService?.dispose() ?? Promise.resolve(),
+      disposeAi(),
+    ]);
+    let teardownTimer: NodeJS.Timeout | undefined;
+    const teardownTimeout = new Promise<void>((resolve) => {
+      teardownTimer = setTimeout(resolve, 2000);
+    });
+    void Promise.race([teardown, teardownTimeout]).finally(() => {
+      if (teardownTimer) clearTimeout(teardownTimer);
+      app.quit();
+    });
+  };
+  const barrier = gitBackup.flushForQuit();
+  // Never let a stuck network push block shutdown indefinitely. Clear the timer
+  // once the race settles so it can't keep the event loop alive after a fast
+  // flush and needlessly delay quit.
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, 8000);
+  });
+  void Promise.race([barrier, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+    done();
+  });
+});
+
 app.on('will-quit', () => {
+  if (quitting) return;
   void notesService?.dispose();
   void disposeAi();
 });
