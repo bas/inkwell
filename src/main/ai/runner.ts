@@ -1,6 +1,9 @@
 import type { PermissionHandler } from '@github/copilot-sdk';
 import { performance } from 'node:perf_hooks';
 import type { AiUsage } from '../../shared/ai';
+import { AUTO_AI_MODEL } from '../../shared/types';
+import { readSettings } from '../settings';
+import { listAvailableAiModels } from './availability';
 import { getCopilotClient } from './copilotClient';
 
 /** Hard ceiling for a single generation turn, after which we give up. */
@@ -26,6 +29,14 @@ export interface GenerationRequest {
    * in-flight turn. Lets callers wire up user-initiated cancellation.
    */
   onStart?: (cancel: () => void) => void;
+}
+
+async function resolveSessionModel(): Promise<string> {
+  const preference = readSettings().aiModel;
+  if (preference === AUTO_AI_MODEL) return AUTO_AI_MODEL;
+  const listed = await listAvailableAiModels();
+  if (!listed.models.some((model) => model.id === preference)) return AUTO_AI_MODEL;
+  return preference;
 }
 
 export interface GenerationTelemetry {
@@ -101,8 +112,9 @@ export async function runGeneration({
   try {
     const createStartedAt = performance.now();
     const client = await getCopilotClient();
+    const model = await resolveSessionModel();
     session = await client.createSession({
-      model: 'auto',
+      model,
       streaming: true,
       availableTools: [],
       onPermissionRequest: denyAllTools,

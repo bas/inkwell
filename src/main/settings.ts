@@ -10,11 +10,14 @@ import {
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import {
+  AUTO_AI_MODEL,
   DEFAULT_SETTINGS,
   type AppSettings,
+  type AiModelPreference,
   type ColorModePreference,
   type FeatureKey,
   type WindowBounds,
+  normalizeAiModelPreference,
   normalizeSettings,
   normalizeVaultPath,
 } from '../shared/types';
@@ -101,6 +104,16 @@ export function setFeatureEnabled(feature: FeatureKey, enabled: boolean): AppSet
       [feature]: enabled,
     },
   };
+  writeSettings(next);
+  return next;
+}
+
+export function setAiModelPreference(model: AiModelPreference): AppSettings {
+  const normalized = normalizeAiModelPreference(model);
+  if (normalized === AUTO_AI_MODEL && model.trim() !== AUTO_AI_MODEL) {
+    throw new Error('Invalid AI model preference');
+  }
+  const next: AppSettings = { ...readSettings(), aiModel: normalized };
   writeSettings(next);
   return next;
 }

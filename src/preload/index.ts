@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IpcChannels, type InkwellApi } from '../shared/ipc';
-import type { ColorModePreference, FeatureKey } from '../shared/types';
+import type { AiModelPreference, ColorModePreference, FeatureKey } from '../shared/types';
 import type { CreateNoteInput, UpdateNoteInput } from '../shared/note';
 import type {
   AiFixBodySuggestion,
@@ -15,6 +15,9 @@ const api: InkwellApi = {
   setColorMode: (mode: ColorModePreference) => ipcRenderer.invoke(IpcChannels.setColorMode, mode),
   setFeatureEnabled: (feature: FeatureKey, enabled: boolean) =>
     ipcRenderer.invoke(IpcChannels.setFeatureEnabled, feature, enabled),
+  getAiModelPreference: () => ipcRenderer.invoke(IpcChannels.getAiModelPreference),
+  setAiModelPreference: (model: AiModelPreference) =>
+    ipcRenderer.invoke(IpcChannels.setAiModelPreference, model),
   getVaultPath: () => ipcRenderer.invoke(IpcChannels.getVaultPath),
   chooseVaultLocation: () => ipcRenderer.invoke(IpcChannels.chooseVaultLocation),
   onSystemColorSchemeChanged: (listener) => {
@@ -45,6 +48,7 @@ const api: InkwellApi = {
   writeClipboard: (text: string) => ipcRenderer.invoke(IpcChannels.writeClipboard, text),
 
   getAiAvailability: () => ipcRenderer.invoke(IpcChannels.aiGetAvailability),
+  listAiModels: () => ipcRenderer.invoke(IpcChannels.aiListModels),
 
   summarizeNote: (noteId: string, requestId: string) =>
     ipcRenderer.invoke(IpcChannels.aiSummarize, noteId, requestId),

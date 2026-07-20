@@ -56,6 +56,19 @@ export interface AiStreamChunk {
 
 export type AiCreditsSource = 'exact' | 'estimated' | 'unavailable';
 
+/** One model option available for explicit selection in app settings. */
+export interface AiModelInfo {
+  id: string;
+  label: string;
+}
+
+/** Result shape for model discovery in settings. */
+export interface AiModelListResult {
+  models: AiModelInfo[];
+  /** Present when model discovery failed and the UI should degrade to auto-only. */
+  error?: string;
+}
+
 /** Structured usage details for a single AI request. */
 export interface AiUsage {
   /** How the displayed AI Credits value was derived. */

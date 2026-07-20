@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSettings, normalizeVaultPath } from './types';
+import {
+  AUTO_AI_MODEL,
+  normalizeAiModelPreference,
+  normalizeSettings,
+  normalizeVaultPath,
+} from './types';
 
 describe('normalizeSettings', () => {
   it('adds default feature settings for older settings files', () => {
     expect(normalizeSettings({ colorMode: 'dark' })).toEqual({
       colorMode: 'dark',
+      aiModel: 'auto',
       features: {
         labels: true,
         mermaid: true,
@@ -16,6 +22,7 @@ describe('normalizeSettings', () => {
   it('deep-merges partial feature settings', () => {
     expect(normalizeSettings({ features: { labels: false } })).toEqual({
       colorMode: 'auto',
+      aiModel: 'auto',
       features: {
         labels: false,
         mermaid: true,
@@ -25,6 +32,7 @@ describe('normalizeSettings', () => {
 
     expect(normalizeSettings({ features: { mermaid: false } })).toEqual({
       colorMode: 'auto',
+      aiModel: 'auto',
       features: {
         labels: true,
         mermaid: false,
@@ -42,6 +50,7 @@ describe('normalizeSettings', () => {
       }),
     ).toEqual({
       colorMode: 'auto',
+      aiModel: 'auto',
       features: {
         labels: true,
         mermaid: true,
@@ -49,6 +58,14 @@ describe('normalizeSettings', () => {
       git: { enabled: false, autoCommit: 'onSave', intervalMinutes: 5 },
       windowBounds: { width: 900, height: 700, x: 10 },
     });
+  });
+
+  it('keeps a valid persisted AI model and drops invalid ones to auto', () => {
+    expect(normalizeSettings({ aiModel: 'gpt-5.4' }).aiModel).toBe('gpt-5.4');
+    expect(normalizeSettings({ aiModel: '  claude-sonnet-5 ' }).aiModel).toBe('claude-sonnet-5');
+    expect(normalizeSettings({ aiModel: '' }).aiModel).toBe(AUTO_AI_MODEL);
+    expect(normalizeSettings({ aiModel: 'gpt 5' }).aiModel).toBe(AUTO_AI_MODEL);
+    expect(normalizeSettings({ aiModel: 42 }).aiModel).toBe(AUTO_AI_MODEL);
   });
 
   it('trims a persisted remote URL and drops one containing whitespace', () => {
@@ -121,5 +138,18 @@ describe('normalizeVaultPath', () => {
     expect(normalizeVaultPath('relative/path')).toBeUndefined();
     expect(normalizeVaultPath(42)).toBeUndefined();
     expect(normalizeVaultPath(undefined)).toBeUndefined();
+  });
+});
+
+describe('normalizeAiModelPreference', () => {
+  it('accepts auto and trimmed model ids without spaces', () => {
+    expect(normalizeAiModelPreference('auto')).toBe('auto');
+    expect(normalizeAiModelPreference(' gpt-5.6-sol ')).toBe('gpt-5.6-sol');
+  });
+
+  it('falls back to auto for invalid values', () => {
+    expect(normalizeAiModelPreference('')).toBe('auto');
+    expect(normalizeAiModelPreference('model with spaces')).toBe('auto');
+    expect(normalizeAiModelPreference(undefined)).toBe('auto');
   });
 });
