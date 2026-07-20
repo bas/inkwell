@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@primer/react';
 import { SettingsDialog } from './SettingsDialog';
-import type { AppSettings } from '@shared/types';
+import type { AppSettings, FeatureKey } from '@shared/types';
 
 const settings: AppSettings = {
   colorMode: 'auto',
@@ -57,16 +57,28 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-function renderSettings(onFeatureChange = vi.fn()): void {
+function renderSettings(options?: {
+  onFeatureChange?: (feature: FeatureKey, enabled: boolean) => void;
+  aiModels?: { id: string; label: string }[];
+  aiModelsLoading?: boolean;
+  aiModel?: AppSettings['aiModel'];
+}): void {
+  const {
+    onFeatureChange = vi.fn(),
+    aiModels = [
+      { id: 'gpt-5.4', label: 'GPT-5.4' },
+      { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+    ],
+    aiModelsLoading = false,
+    aiModel = settings.aiModel,
+  } = options ?? {};
+
   render(
     <ThemeProvider>
       <SettingsDialog
-        settings={settings}
-        aiModels={[
-          { id: 'gpt-5.4', label: 'GPT-5.4' },
-          { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
-        ]}
-        aiModelsLoading={false}
+        settings={{ ...settings, aiModel }}
+        aiModels={aiModels}
+        aiModelsLoading={aiModelsLoading}
         labels={[]}
         onClose={() => {}}
         onFeatureChange={onFeatureChange}
@@ -80,7 +92,7 @@ function renderSettings(onFeatureChange = vi.fn()): void {
 describe('SettingsDialog', () => {
   it('renders a Mermaid feature toggle that updates the mermaid feature', () => {
     const onFeatureChange = vi.fn();
-    renderSettings(onFeatureChange);
+    renderSettings({ onFeatureChange });
 
     const toggle = screen.getByTestId('feature-mermaid-toggle');
     expect(toggle.getAttribute('type')).toBe('checkbox');
@@ -104,5 +116,25 @@ describe('SettingsDialog', () => {
     const select = screen.getByTestId('ai-model-select') as HTMLSelectElement;
     const options = Array.from(select.options).map((option) => option.value);
     expect(options).toEqual(['auto', 'gpt-5.4', 'claude-sonnet-5']);
+  });
+
+  it('shows loading status when selected model is not yet in a loading model list', () => {
+    renderSettings({
+      aiModel: 'gpt-5.4',
+      aiModels: [],
+      aiModelsLoading: true,
+    });
+
+    expect(screen.getByRole('option', { name: 'gpt-5.4 (loading…)' })).toBeTruthy();
+  });
+
+  it('shows unavailable status when selected model is missing after loading finishes', () => {
+    renderSettings({
+      aiModel: 'gpt-5.4',
+      aiModels: [],
+      aiModelsLoading: false,
+    });
+
+    expect(screen.getByRole('option', { name: 'gpt-5.4 (currently unavailable)' })).toBeTruthy();
   });
 });

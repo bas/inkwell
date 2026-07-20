@@ -33,9 +33,13 @@ export function SettingsDialog({
 }: SettingsDialogProps): JSX.Element {
   const hasSelectedModel =
     settings.aiModel === 'auto' || aiModels.some((m) => m.id === settings.aiModel);
+  const selectedModelStatus = aiModelsLoading ? 'loading…' : 'currently unavailable';
   const modelOptions = hasSelectedModel
     ? aiModels
-    : [{ id: settings.aiModel, label: `${settings.aiModel} (currently unavailable)` }, ...aiModels];
+    : [
+        { id: settings.aiModel, label: `${settings.aiModel} (${selectedModelStatus})` },
+        ...aiModels,
+      ];
 
   return (
     <Dialog title="Settings" onClose={onClose}>

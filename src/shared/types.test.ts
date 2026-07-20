@@ -132,24 +132,24 @@ describe('normalizeVaultPath', () => {
     expect(normalizeVaultPath('  /Users/test/Notes  ')).toBe('/Users/test/Notes');
   });
 
-  describe('normalizeAiModelPreference', () => {
-    it('accepts auto and trimmed model ids without spaces', () => {
-      expect(normalizeAiModelPreference('auto')).toBe('auto');
-      expect(normalizeAiModelPreference(' gpt-5.6-sol ')).toBe('gpt-5.6-sol');
-    });
-
-    it('falls back to auto for invalid values', () => {
-      expect(normalizeAiModelPreference('')).toBe('auto');
-      expect(normalizeAiModelPreference('model with spaces')).toBe('auto');
-      expect(normalizeAiModelPreference(undefined)).toBe('auto');
-    });
-  });
-
   it('rejects blank, relative, and non-string values', () => {
     expect(normalizeVaultPath('')).toBeUndefined();
     expect(normalizeVaultPath('   ')).toBeUndefined();
     expect(normalizeVaultPath('relative/path')).toBeUndefined();
     expect(normalizeVaultPath(42)).toBeUndefined();
     expect(normalizeVaultPath(undefined)).toBeUndefined();
+  });
+});
+
+describe('normalizeAiModelPreference', () => {
+  it('accepts auto and trimmed model ids without spaces', () => {
+    expect(normalizeAiModelPreference('auto')).toBe('auto');
+    expect(normalizeAiModelPreference(' gpt-5.6-sol ')).toBe('gpt-5.6-sol');
+  });
+
+  it('falls back to auto for invalid values', () => {
+    expect(normalizeAiModelPreference('')).toBe('auto');
+    expect(normalizeAiModelPreference('model with spaces')).toBe('auto');
+    expect(normalizeAiModelPreference(undefined)).toBe('auto');
   });
 });
