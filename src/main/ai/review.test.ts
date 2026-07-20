@@ -120,4 +120,19 @@ describe('parseReviewResponse', () => {
     expect(result.summary).toBe('Review complete.');
     expect(result.suggestions).toEqual([]);
   });
+
+  it('falls back to the last bare fence when json-labeled fences are not parseable', () => {
+    const result = parseReviewResponse(
+      [
+        '```json',
+        '{ ... }',
+        '```',
+        '```',
+        '{"summary":"Review complete.","suggestions":[]}',
+        '```',
+      ].join('\n'),
+    );
+    expect(result.summary).toBe('Review complete.');
+    expect(result.suggestions).toEqual([]);
+  });
 });
