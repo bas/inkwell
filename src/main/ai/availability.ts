@@ -22,7 +22,7 @@ function parseModelInfo(value: unknown): AiModelInfo | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const row = value as Record<string, unknown>;
   const id = typeof row['id'] === 'string' ? row['id'].trim() : '';
-  if (!id || /\s/.test(id)) return undefined;
+  if (!id || /\s/.test(id) || id.toLowerCase() === 'auto') return undefined;
   const name =
     typeof row['name'] === 'string' && row['name'].trim()
       ? row['name'].trim()

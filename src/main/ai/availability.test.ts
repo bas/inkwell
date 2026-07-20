@@ -27,6 +27,8 @@ describe('listAvailableAiModels', () => {
     listModels.mockResolvedValue([
       { id: 'gpt-5.4', name: 'GPT-5.4' },
       { id: 'claude-sonnet-5', displayName: 'Claude Sonnet 5' },
+      { id: 'auto', name: 'Auto' },
+      { id: 'AUTO', name: 'AUTO' },
       { id: 'invalid model id' },
     ]);
 
