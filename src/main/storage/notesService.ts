@@ -131,12 +131,20 @@ export class NotesService {
   }
 
   /** Watch the vault for external edits; `onChange` fires (debounced) after a rebuild. */
-  startWatching(onChange: () => void): void {
-    this.watcher = watch(this.vaultDir, {
+  async startWatching(onChange: () => void, onError?: (error: Error) => void): Promise<void> {
+    const watcher = watch([], {
       depth: 0,
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 150, pollInterval: 50 },
     });
+    this.watcher = watcher;
+    let started = false;
+    const normalizeWatcherError = (error: unknown): Error =>
+      error instanceof Error ? error : new Error(String(error));
+    const scheduleError = (error: unknown): void => {
+      if (!started) return;
+      onError?.(normalizeWatcherError(error));
+    };
     const schedule = (path: string): void => {
       // Ignore events fired by our own writes.
       if (this.selfWritePaths.has(path)) {
@@ -149,7 +157,19 @@ export class NotesService {
         onChange();
       }, 200);
     };
-    this.watcher.on('add', schedule).on('change', schedule).on('unlink', schedule);
+    watcher
+      .on('add', schedule)
+      .on('change', schedule)
+      .on('unlink', schedule)
+      .on('error', scheduleError);
+    try {
+      await watcher.add(this.vaultDir);
+      started = true;
+    } catch (error) {
+      this.watcher = undefined;
+      await watcher.close();
+      throw normalizeWatcherError(error);
+    }
   }
 
   async dispose(): Promise<void> {
