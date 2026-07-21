@@ -21,7 +21,7 @@ vi.mock('./availability', () => ({
   listAvailableAiModels,
 }));
 
-import { runGeneration } from './runner';
+import { clearReusableGenerationSessions, runGeneration } from './runner';
 
 type Handler = (event: { data: unknown }) => void;
 
@@ -56,7 +56,8 @@ function makeSession(): FakeSession {
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-afterEach(() => {
+afterEach(async () => {
+  await clearReusableGenerationSessions();
   vi.clearAllMocks();
   vi.useRealTimers();
   readSettings.mockReturnValue({ aiModel: 'auto' });
@@ -231,6 +232,83 @@ describe('runGeneration', () => {
       canceled: true,
       message: 'Summary canceled.',
     });
+  });
+
+  it('reuses the tidy session across successful calls', async () => {
+    const session = makeSession();
+    createSession.mockResolvedValue(session);
+    session.sendAndWait.mockResolvedValue({ data: { content: 'ok' } });
+
+    const first = await runGeneration({ prompt: 'p1', sessionReuseKey: 'tidy' });
+    const second = await runGeneration({ prompt: 'p2', sessionReuseKey: 'tidy' });
+
+    expect(first).toMatchObject({ ok: true, content: 'ok' });
+    expect(second).toMatchObject({ ok: true, content: 'ok' });
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(session.disconnect).toHaveBeenCalledTimes(0);
+  });
+
+  it('does not keep a warm tidy session after a non-success outcome', async () => {
+    const stale = makeSession();
+    const fresh = makeSession();
+    stale.sendAndWait.mockResolvedValue({ data: { content: '' } });
+    fresh.sendAndWait.mockResolvedValue({ data: { content: 'ok' } });
+    createSession.mockResolvedValueOnce(stale).mockResolvedValueOnce(fresh);
+
+    const first = await runGeneration({ prompt: 'p1', sessionReuseKey: 'tidy' });
+    const second = await runGeneration({ prompt: 'p2', sessionReuseKey: 'tidy' });
+
+    expect(first.ok).toBe(false);
+    expect(second).toMatchObject({ ok: true, content: 'ok' });
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(stale.disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not share one tidy session across overlapping requests', async () => {
+    const firstSession = makeSession();
+    const secondSession = makeSession();
+    let releaseFirst: (() => void) | undefined;
+    firstSession.sendAndWait.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseFirst = () => resolve({ data: { content: 'first' } });
+        }),
+    );
+    secondSession.sendAndWait.mockResolvedValue({ data: { content: 'second' } });
+    createSession.mockResolvedValueOnce(firstSession).mockResolvedValueOnce(secondSession);
+
+    const firstPromise = runGeneration({ prompt: 'p1', sessionReuseKey: 'tidy' });
+    await tick();
+    const secondOutcome = await runGeneration({ prompt: 'p2', sessionReuseKey: 'tidy' });
+    releaseFirst?.();
+    const firstOutcome = await firstPromise;
+
+    expect(firstOutcome).toMatchObject({ ok: true, content: 'first' });
+    expect(secondOutcome).toMatchObject({ ok: true, content: 'second' });
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(firstSession.sendAndWait).toHaveBeenCalledTimes(1);
+    expect(secondSession.sendAndWait).toHaveBeenCalledTimes(1);
+    expect(
+      firstSession.disconnect.mock.calls.length + secondSession.disconnect.mock.calls.length,
+    ).toBe(1);
+  });
+
+  it('retries once with a fresh tidy session after a runtime session failure', async () => {
+    vi.useFakeTimers();
+    const stale = makeSession();
+    const fresh = makeSession();
+    stale.sendAndWait.mockRejectedValue(new Error('session closed'));
+    stale.disconnect.mockImplementation(async () => {});
+    fresh.sendAndWait.mockResolvedValue({ data: { content: 'recovered' } });
+    createSession.mockResolvedValueOnce(stale).mockResolvedValueOnce(fresh);
+
+    const promise = runGeneration({ prompt: 'p', sessionReuseKey: 'tidy' });
+    await vi.advanceTimersByTimeAsync(150);
+    const outcome = await promise;
+
+    expect(outcome).toMatchObject({ ok: true, content: 'recovered' });
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(stale.disconnect).toHaveBeenCalledTimes(1);
   });
 
   it('returns a timeout outcome when the model never responds', async () => {
