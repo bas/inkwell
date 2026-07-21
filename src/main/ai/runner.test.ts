@@ -21,7 +21,7 @@ vi.mock('./availability', () => ({
   listAvailableAiModels,
 }));
 
-import { runGeneration } from './runner';
+import { clearReusableGenerationSessions, runGeneration } from './runner';
 
 type Handler = (event: { data: unknown }) => void;
 
@@ -56,7 +56,8 @@ function makeSession(): FakeSession {
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-afterEach(() => {
+afterEach(async () => {
+  await clearReusableGenerationSessions();
   vi.clearAllMocks();
   vi.useRealTimers();
   readSettings.mockReturnValue({ aiModel: 'auto' });
@@ -231,6 +232,38 @@ describe('runGeneration', () => {
       canceled: true,
       message: 'Summary canceled.',
     });
+  });
+
+  it('reuses the tidy session across successful calls', async () => {
+    const session = makeSession();
+    createSession.mockResolvedValue(session);
+    session.sendAndWait.mockResolvedValue({ data: { content: 'ok' } });
+
+    const first = await runGeneration({ prompt: 'p1', sessionReuseKey: 'tidy' });
+    const second = await runGeneration({ prompt: 'p2', sessionReuseKey: 'tidy' });
+
+    expect(first).toMatchObject({ ok: true, content: 'ok' });
+    expect(second).toMatchObject({ ok: true, content: 'ok' });
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(session.disconnect).toHaveBeenCalledTimes(0);
+  });
+
+  it('retries once with a fresh tidy session after a runtime session failure', async () => {
+    vi.useFakeTimers();
+    const stale = makeSession();
+    const fresh = makeSession();
+    stale.sendAndWait.mockRejectedValue(new Error('session closed'));
+    stale.disconnect.mockImplementation(async () => {});
+    fresh.sendAndWait.mockResolvedValue({ data: { content: 'recovered' } });
+    createSession.mockResolvedValueOnce(stale).mockResolvedValueOnce(fresh);
+
+    const promise = runGeneration({ prompt: 'p', sessionReuseKey: 'tidy' });
+    await vi.advanceTimersByTimeAsync(150);
+    const outcome = await promise;
+
+    expect(outcome).toMatchObject({ ok: true, content: 'recovered' });
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(stale.disconnect).toHaveBeenCalledTimes(1);
   });
 
   it('returns a timeout outcome when the model never responds', async () => {

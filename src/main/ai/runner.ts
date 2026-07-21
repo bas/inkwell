@@ -22,6 +22,8 @@ const denyAllTools: PermissionHandler = () => ({
 
 export interface GenerationRequest {
   prompt: string;
+  /** Optional key to reuse a warm Copilot session across calls. */
+  sessionReuseKey?: 'tidy';
   /** Called for each streamed text chunk as the model responds. */
   onDelta?: (delta: string) => void;
   /**
@@ -37,6 +39,74 @@ async function resolveSessionModel(): Promise<string> {
   const listed = await listAvailableAiModels();
   if (!listed.models.some((model) => model.id === preference)) return AUTO_AI_MODEL;
   return preference;
+}
+
+type CopilotClient = Awaited<ReturnType<typeof getCopilotClient>>;
+type CopilotSession = Awaited<ReturnType<CopilotClient['createSession']>>;
+
+const SESSION_RETRY_BACKOFF_MS = [150];
+const reusableSessions = new Map<GenerationRequest['sessionReuseKey'], CopilotSession>();
+
+interface SessionAcquireResult {
+  session: CopilotSession;
+  created: boolean;
+}
+
+async function createSession(client: CopilotClient, model: string): Promise<CopilotSession> {
+  return client.createSession({
+    model,
+    streaming: true,
+    availableTools: [],
+    onPermissionRequest: denyAllTools,
+  });
+}
+
+async function acquireSession(
+  client: CopilotClient,
+  model: string,
+  reuseKey: GenerationRequest['sessionReuseKey'],
+): Promise<SessionAcquireResult> {
+  if (reuseKey) {
+    const existing = reusableSessions.get(reuseKey);
+    if (existing) return { session: existing, created: false };
+  }
+  const session = await createSession(client, model);
+  if (reuseKey) reusableSessions.set(reuseKey, session);
+  return { session, created: true };
+}
+
+async function dropReusableSession(reuseKey: GenerationRequest['sessionReuseKey']): Promise<void> {
+  if (!reuseKey) return;
+  const existing = reusableSessions.get(reuseKey);
+  if (!existing) return;
+  reusableSessions.delete(reuseKey);
+  try {
+    await existing.disconnect();
+  } catch {
+    // Ignore disconnect errors; this is best-effort cleanup.
+  }
+}
+
+/** Test seam: clear any warm reused generation sessions. */
+export async function clearReusableGenerationSessions(): Promise<void> {
+  const pending = Array.from(reusableSessions.values(), async (session) => {
+    try {
+      await session.disconnect();
+    } catch {
+      // best-effort cleanup
+    }
+  });
+  reusableSessions.clear();
+  await Promise.all(pending);
+}
+
+function isRetryableSessionFailure(errorType: string | undefined, message: string): boolean {
+  if (errorType === 'runtime') return true;
+  return /(session|disconnect|closed|expired|invalid|shutdown)/i.test(message);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export interface GenerationTelemetry {
@@ -88,6 +158,7 @@ function toAiCredits(nanoAiu: number): number {
  */
 export async function runGeneration({
   prompt,
+  sessionReuseKey,
   onDelta,
   onStart,
 }: GenerationRequest): Promise<GenerationOutcome> {
@@ -108,183 +179,218 @@ export async function runGeneration({
   }
 
   let sessionCreateMs: number | undefined;
-  let session: Awaited<ReturnType<Awaited<ReturnType<typeof getCopilotClient>>['createSession']>>;
-  try {
-    const createStartedAt = performance.now();
-    const client = await getCopilotClient();
-    const model = await resolveSessionModel();
-    session = await client.createSession({
-      model,
-      streaming: true,
-      availableTools: [],
-      onPermissionRequest: denyAllTools,
-    });
-    sessionCreateMs = performance.now() - createStartedAt;
-  } catch (err) {
-    return {
-      ok: false,
-      errorType: 'runtime',
-      message: errorText(err),
-      telemetry: {
-        sessionCreateMs,
-        totalMs: performance.now() - startedAt,
-      },
-    };
-  }
-
-  let streamed = '';
-  let errorMessage: string | undefined;
-  let errorType: string | undefined;
-  let canceled = false;
-  let disconnected = false;
-  let sawUsageSignal = false;
-  let shutdownNanoAiu: number | undefined;
-  let sendStartedAt: number | undefined;
   let firstDeltaMs: number | undefined;
   let generationMs: number | undefined;
   let disconnectMs: number | undefined;
-  const usage: AiUsage = { creditsSource: 'unavailable' };
+  const maxAttempts = sessionReuseKey ? SESSION_RETRY_BACKOFF_MS.length + 1 : 1;
 
-  const finalizeUsage = (): AiUsage | undefined => {
-    if (!sawUsageSignal && shutdownNanoAiu === undefined) return undefined;
-    if (shutdownNanoAiu !== undefined) {
-      usage.creditsSource = 'exact';
-      usage.aiCredits = toAiCredits(shutdownNanoAiu);
-    }
-    return usage;
-  };
-
-  const disconnect = async (): Promise<void> => {
-    if (disconnected) return;
-    disconnected = true;
-    const disconnectStartedAt = performance.now();
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    let session: CopilotSession;
     try {
-      await session.disconnect();
-    } catch {
-      // Ignore disconnect errors; teardown should not override the generation outcome.
-    } finally {
-      disconnectMs = performance.now() - disconnectStartedAt;
-    }
-  };
-
-  const offDelta = session.on('assistant.message_delta', (event) => {
-    if (sendStartedAt !== undefined && firstDeltaMs === undefined) {
-      firstDeltaMs = performance.now() - sendStartedAt;
-    }
-    streamed += event.data.deltaContent;
-    onDelta?.(event.data.deltaContent);
-  });
-  const offError = session.on('session.error', (event) => {
-    errorMessage = event.data.message;
-    errorType = event.data.errorType;
-  });
-  const offUsage = session.on('assistant.usage', (event) => {
-    sawUsageSignal = true;
-    usage.model = event.data.model || usage.model;
-    const inputTokens = addMetric(usage.inputTokens, event.data.inputTokens);
-    if (inputTokens !== undefined) usage.inputTokens = inputTokens;
-    const outputTokens = addMetric(usage.outputTokens, event.data.outputTokens);
-    if (outputTokens !== undefined) usage.outputTokens = outputTokens;
-    const cacheReadTokens = addMetric(usage.cacheReadTokens, event.data.cacheReadTokens);
-    if (cacheReadTokens !== undefined) usage.cacheReadTokens = cacheReadTokens;
-    const cacheWriteTokens = addMetric(usage.cacheWriteTokens, event.data.cacheWriteTokens);
-    if (cacheWriteTokens !== undefined) usage.cacheWriteTokens = cacheWriteTokens;
-    const reasoningTokens = addMetric(usage.reasoningTokens, event.data.reasoningTokens);
-    if (reasoningTokens !== undefined) usage.reasoningTokens = reasoningTokens;
-    const durationMs = addMetric(usage.durationMs, event.data.duration);
-    if (durationMs !== undefined) usage.durationMs = durationMs;
-  });
-  const offUsageInfo = session.on('session.usage_info', (event) => {
-    sawUsageSignal = true;
-    usage.contextTokens = event.data.currentTokens;
-    usage.contextTokenLimit = event.data.tokenLimit;
-    usage.contextMessageCount = event.data.messagesLength;
-  });
-  const offShutdown = session.on('session.shutdown', (event) => {
-    sawUsageSignal = true;
-    if (typeof event.data.totalNanoAiu === 'number' && Number.isFinite(event.data.totalNanoAiu)) {
-      shutdownNanoAiu = event.data.totalNanoAiu;
-      return;
-    }
-
-    let sum = 0;
-    let found = false;
-    for (const metrics of Object.values(event.data.modelMetrics)) {
-      const nano = metrics?.totalNanoAiu;
-      if (typeof nano !== 'number' || !Number.isFinite(nano)) continue;
-      found = true;
-      sum += nano;
-    }
-    if (found) shutdownNanoAiu = sum;
-  });
-
-  // Expose cancellation: disconnecting the session aborts the pending turn.
-  onStart?.(() => {
-    canceled = true;
-    void disconnect();
-  });
-
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let outcome: GenerationOutcomeBase = {
-    ok: false,
-    message: 'Copilot could not summarize this note. Please try again.',
-  };
-  try {
-    let final: { data?: { content?: string } } | typeof TIMED_OUT | undefined = TIMED_OUT;
-    let sendError: unknown;
-    try {
-      sendStartedAt = performance.now();
-      final = await Promise.race([
-        session.sendAndWait({ prompt }),
-        new Promise<typeof TIMED_OUT>((resolve) => {
-          timer = setTimeout(() => resolve(TIMED_OUT), GENERATION_TIMEOUT_MS);
-        }),
-      ]);
-      generationMs = performance.now() - sendStartedAt;
+      const createStartedAt = performance.now();
+      const client = await getCopilotClient();
+      const model = await resolveSessionModel();
+      const acquired = await acquireSession(client, model, sessionReuseKey);
+      if (acquired.created) {
+        sessionCreateMs = addMetric(sessionCreateMs, performance.now() - createStartedAt);
+      }
+      session = acquired.session;
     } catch (err) {
-      if (sendStartedAt !== undefined) generationMs = performance.now() - sendStartedAt;
-      sendError = err;
+      return {
+        ok: false,
+        errorType: 'runtime',
+        message: errorText(err),
+        telemetry: {
+          sessionCreateMs,
+          totalMs: performance.now() - startedAt,
+        },
+      };
     }
 
-    if (sendError !== undefined) {
-      outcome = canceled
-        ? { ok: false, canceled: true, message: 'Summary canceled.' }
-        : { ok: false, errorType, message: errorMessage ?? errorText(sendError) };
-    } else if (canceled) outcome = { ok: false, canceled: true, message: 'Summary canceled.' };
-    else if (final === TIMED_OUT) {
-      outcome = {
-        ok: false,
-        errorType: 'timeout',
-        message: `Copilot timed out after ${GENERATION_TIMEOUT_MS / 1000}s.`,
-      };
-    } else {
-      const content = (final?.data?.content || streamed).trim();
-      outcome = content
-        ? { ok: true, content }
-        : {
-            ok: false,
-            errorType,
-            message: errorMessage ?? 'Copilot returned an empty response.',
-          };
+    let streamed = '';
+    let errorMessage: string | undefined;
+    let errorType: string | undefined;
+    let canceled = false;
+    let disconnected = false;
+    let sawUsageSignal = false;
+    let shutdownNanoAiu: number | undefined;
+    let sendStartedAt: number | undefined;
+    let attemptFirstDeltaMs: number | undefined;
+    let attemptGenerationMs: number | undefined;
+    let attemptDisconnectMs: number | undefined;
+    const usage: AiUsage = { creditsSource: 'unavailable' };
+
+    const finalizeUsage = (): AiUsage | undefined => {
+      if (!sawUsageSignal && shutdownNanoAiu === undefined) return undefined;
+      if (shutdownNanoAiu !== undefined) {
+        usage.creditsSource = 'exact';
+        usage.aiCredits = toAiCredits(shutdownNanoAiu);
+      }
+      return usage;
+    };
+
+    const disconnect = async (): Promise<void> => {
+      if (disconnected) return;
+      disconnected = true;
+      const disconnectStartedAt = performance.now();
+      try {
+        await session.disconnect();
+      } catch {
+        // Ignore disconnect errors; teardown should not override the generation outcome.
+      } finally {
+        attemptDisconnectMs = performance.now() - disconnectStartedAt;
+      }
+    };
+
+    const offDelta = session.on('assistant.message_delta', (event) => {
+      if (sendStartedAt !== undefined && attemptFirstDeltaMs === undefined) {
+        attemptFirstDeltaMs = performance.now() - sendStartedAt;
+      }
+      streamed += event.data.deltaContent;
+      onDelta?.(event.data.deltaContent);
+    });
+    const offError = session.on('session.error', (event) => {
+      errorMessage = event.data.message;
+      errorType = event.data.errorType;
+    });
+    const offUsage = session.on('assistant.usage', (event) => {
+      sawUsageSignal = true;
+      usage.model = event.data.model || usage.model;
+      const inputTokens = addMetric(usage.inputTokens, event.data.inputTokens);
+      if (inputTokens !== undefined) usage.inputTokens = inputTokens;
+      const outputTokens = addMetric(usage.outputTokens, event.data.outputTokens);
+      if (outputTokens !== undefined) usage.outputTokens = outputTokens;
+      const cacheReadTokens = addMetric(usage.cacheReadTokens, event.data.cacheReadTokens);
+      if (cacheReadTokens !== undefined) usage.cacheReadTokens = cacheReadTokens;
+      const cacheWriteTokens = addMetric(usage.cacheWriteTokens, event.data.cacheWriteTokens);
+      if (cacheWriteTokens !== undefined) usage.cacheWriteTokens = cacheWriteTokens;
+      const reasoningTokens = addMetric(usage.reasoningTokens, event.data.reasoningTokens);
+      if (reasoningTokens !== undefined) usage.reasoningTokens = reasoningTokens;
+      const durationMs = addMetric(usage.durationMs, event.data.duration);
+      if (durationMs !== undefined) usage.durationMs = durationMs;
+    });
+    const offUsageInfo = session.on('session.usage_info', (event) => {
+      sawUsageSignal = true;
+      usage.contextTokens = event.data.currentTokens;
+      usage.contextTokenLimit = event.data.tokenLimit;
+      usage.contextMessageCount = event.data.messagesLength;
+    });
+    const offShutdown = session.on('session.shutdown', (event) => {
+      sawUsageSignal = true;
+      if (typeof event.data.totalNanoAiu === 'number' && Number.isFinite(event.data.totalNanoAiu)) {
+        shutdownNanoAiu = event.data.totalNanoAiu;
+        return;
+      }
+
+      let sum = 0;
+      let found = false;
+      for (const metrics of Object.values(event.data.modelMetrics)) {
+        const nano = metrics?.totalNanoAiu;
+        if (typeof nano !== 'number' || !Number.isFinite(nano)) continue;
+        found = true;
+        sum += nano;
+      }
+      if (found) shutdownNanoAiu = sum;
+    });
+
+    // Expose cancellation: disconnecting the session aborts the pending turn.
+    onStart?.(() => {
+      canceled = true;
+      if (sessionReuseKey) reusableSessions.delete(sessionReuseKey);
+      void disconnect();
+    });
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let sendError: unknown;
+    let final: { data?: { content?: string } } | typeof TIMED_OUT | undefined = TIMED_OUT;
+    let outcome: GenerationOutcomeBase = {
+      ok: false,
+      message: 'Copilot could not summarize this note. Please try again.',
+    };
+    try {
+      try {
+        sendStartedAt = performance.now();
+        final = await Promise.race([
+          session.sendAndWait({ prompt }),
+          new Promise<typeof TIMED_OUT>((resolve) => {
+            timer = setTimeout(() => resolve(TIMED_OUT), GENERATION_TIMEOUT_MS);
+          }),
+        ]);
+        attemptGenerationMs = performance.now() - sendStartedAt;
+      } catch (err) {
+        if (sendStartedAt !== undefined) attemptGenerationMs = performance.now() - sendStartedAt;
+        sendError = err;
+      }
+
+      if (sendError !== undefined) {
+        outcome = canceled
+          ? { ok: false, canceled: true, message: 'Summary canceled.' }
+          : { ok: false, errorType, message: errorMessage ?? errorText(sendError) };
+      } else if (canceled) outcome = { ok: false, canceled: true, message: 'Summary canceled.' };
+      else if (final === TIMED_OUT) {
+        outcome = {
+          ok: false,
+          errorType: 'timeout',
+          message: `Copilot timed out after ${GENERATION_TIMEOUT_MS / 1000}s.`,
+        };
+      } else {
+        const content = (final?.data?.content || streamed).trim();
+        outcome = content
+          ? { ok: true, content }
+          : {
+              ok: false,
+              errorType,
+              message: errorMessage ?? 'Copilot returned an empty response.',
+            };
+      }
+    } finally {
+      if (timer) clearTimeout(timer);
+      const keepReusableSessionAlive =
+        Boolean(sessionReuseKey) && !canceled && final !== TIMED_OUT && sendError === undefined;
+      if (!keepReusableSessionAlive) {
+        if (sessionReuseKey) reusableSessions.delete(sessionReuseKey);
+        await disconnect();
+      }
+      offDelta();
+      offError();
+      offUsage();
+      offUsageInfo();
+      offShutdown();
     }
-  } finally {
-    if (timer) clearTimeout(timer);
-    await disconnect();
-    offDelta();
-    offError();
-    offUsage();
-    offUsageInfo();
-    offShutdown();
+
+    firstDeltaMs = attemptFirstDeltaMs;
+    generationMs = attemptGenerationMs;
+    disconnectMs = attemptDisconnectMs;
+
+    if (
+      !outcome.ok &&
+      !outcome.canceled &&
+      sessionReuseKey &&
+      attempt < maxAttempts - 1 &&
+      isRetryableSessionFailure(outcome.errorType, outcome.message)
+    ) {
+      await dropReusableSession(sessionReuseKey);
+      const backoffMs = SESSION_RETRY_BACKOFF_MS[attempt] ?? 0;
+      if (backoffMs > 0) await sleep(backoffMs);
+      continue;
+    }
+
+    const finalizedUsage = finalizeUsage();
+    const telemetry: GenerationTelemetry = {
+      sessionCreateMs,
+      firstDeltaMs,
+      generationMs,
+      disconnectMs,
+      totalMs: performance.now() - startedAt,
+    };
+    if (finalizedUsage) return { ...outcome, usage: finalizedUsage, telemetry };
+    return { ...outcome, telemetry };
   }
 
-  const finalizedUsage = finalizeUsage();
-  const telemetry: GenerationTelemetry = {
-    sessionCreateMs,
-    firstDeltaMs,
-    generationMs,
-    disconnectMs,
-    totalMs: performance.now() - startedAt,
+  return {
+    ok: false,
+    errorType: 'runtime',
+    message: 'Copilot generation failed unexpectedly.',
+    telemetry: { totalMs: performance.now() - startedAt },
   };
-  if (finalizedUsage) return { ...outcome, usage: finalizedUsage, telemetry };
-  return { ...outcome, telemetry };
 }

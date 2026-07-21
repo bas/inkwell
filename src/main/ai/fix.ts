@@ -272,6 +272,7 @@ async function fixNote(
 
   const outcome = await runGeneration({
     prompt: buildFixPrompt(note.body, existingLabels),
+    sessionReuseKey: 'tidy',
     onDelta: (delta) => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.aiStreamDelta, { requestId, delta });
     },
