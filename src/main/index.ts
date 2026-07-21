@@ -252,9 +252,28 @@ app.whenReady().then(async () => {
   });
 
   // Reindex and notify the renderer when notes change on disk externally.
-  notesService?.startWatching(() => {
-    if (!window.isDestroyed()) window.webContents.send(IpcChannels.notesChanged);
-  });
+  try {
+    await notesService?.startWatching(
+      () => {
+        if (!window.isDestroyed()) window.webContents.send(IpcChannels.notesChanged);
+      },
+      (error) => {
+        dialog.showErrorBox(
+          'Inkwell could not watch your notes vault',
+          `External note changes will not auto-refresh.\n\n${
+            error instanceof Error ? error.message : String(error)
+          }\n\nVault: ${vaultDir}`,
+        );
+      },
+    );
+  } catch (error) {
+    dialog.showErrorBox(
+      'Inkwell could not watch your notes vault',
+      `External note changes will not auto-refresh.\n\n${
+        error instanceof Error ? error.message : String(error)
+      }\n\nVault: ${vaultDir}`,
+    );
+  }
 
   // Forward system appearance changes so the renderer can react when in `auto`.
   nativeTheme.on('updated', () => {
