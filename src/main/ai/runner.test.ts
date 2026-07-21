@@ -248,6 +248,48 @@ describe('runGeneration', () => {
     expect(session.disconnect).toHaveBeenCalledTimes(0);
   });
 
+  it('does not keep a warm tidy session after a non-success outcome', async () => {
+    const stale = makeSession();
+    const fresh = makeSession();
+    stale.sendAndWait.mockResolvedValue({ data: { content: '' } });
+    fresh.sendAndWait.mockResolvedValue({ data: { content: 'ok' } });
+    createSession.mockResolvedValueOnce(stale).mockResolvedValueOnce(fresh);
+
+    const first = await runGeneration({ prompt: 'p1', sessionReuseKey: 'tidy' });
+    const second = await runGeneration({ prompt: 'p2', sessionReuseKey: 'tidy' });
+
+    expect(first.ok).toBe(false);
+    expect(second).toMatchObject({ ok: true, content: 'ok' });
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(stale.disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not share one tidy session across overlapping requests', async () => {
+    const firstSession = makeSession();
+    const secondSession = makeSession();
+    let releaseFirst: (() => void) | undefined;
+    firstSession.sendAndWait.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseFirst = () => resolve({ data: { content: 'first' } });
+        }),
+    );
+    secondSession.sendAndWait.mockResolvedValue({ data: { content: 'second' } });
+    createSession.mockResolvedValueOnce(firstSession).mockResolvedValueOnce(secondSession);
+
+    const firstPromise = runGeneration({ prompt: 'p1', sessionReuseKey: 'tidy' });
+    await tick();
+    const secondOutcome = await runGeneration({ prompt: 'p2', sessionReuseKey: 'tidy' });
+    releaseFirst?.();
+    const firstOutcome = await firstPromise;
+
+    expect(firstOutcome).toMatchObject({ ok: true, content: 'first' });
+    expect(secondOutcome).toMatchObject({ ok: true, content: 'second' });
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(firstSession.sendAndWait).toHaveBeenCalledTimes(1);
+    expect(secondSession.sendAndWait).toHaveBeenCalledTimes(1);
+  });
+
   it('retries once with a fresh tidy session after a runtime session failure', async () => {
     vi.useFakeTimers();
     const stale = makeSession();

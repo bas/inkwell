@@ -27,7 +27,7 @@ export interface GenerationRequest {
   /** Called for each streamed text chunk as the model responds. */
   onDelta?: (delta: string) => void;
   /**
-   * Called once the session is live with a `cancel` function that aborts the
+   * Called when an attempt is live with a `cancel` function that aborts the
    * in-flight turn. Lets callers wire up user-initiated cancellation.
    */
   onStart?: (cancel: () => void) => void;
@@ -50,6 +50,7 @@ const reusableSessions = new Map<GenerationRequest['sessionReuseKey'], CopilotSe
 interface SessionAcquireResult {
   session: CopilotSession;
   created: boolean;
+  reusable: boolean;
 }
 
 async function createSession(client: CopilotClient, model: string): Promise<CopilotSession> {
@@ -68,11 +69,15 @@ async function acquireSession(
 ): Promise<SessionAcquireResult> {
   if (reuseKey) {
     const existing = reusableSessions.get(reuseKey);
-    if (existing) return { session: existing, created: false };
+    if (existing) {
+      // Idle reusable sessions are removed from the pool while in use so
+      // concurrent calls never share a single streaming session instance.
+      reusableSessions.delete(reuseKey);
+      return { session: existing, created: false, reusable: true };
+    }
   }
   const session = await createSession(client, model);
-  if (reuseKey) reusableSessions.set(reuseKey, session);
-  return { session, created: true };
+  return { session, created: true, reusable: Boolean(reuseKey) };
 }
 
 async function dropReusableSession(reuseKey: GenerationRequest['sessionReuseKey']): Promise<void> {
@@ -186,6 +191,7 @@ export async function runGeneration({
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     let session: CopilotSession;
+    let reusable = false;
     try {
       const createStartedAt = performance.now();
       const client = await getCopilotClient();
@@ -195,6 +201,7 @@ export async function runGeneration({
         sessionCreateMs = addMetric(sessionCreateMs, performance.now() - createStartedAt);
       }
       session = acquired.session;
+      reusable = acquired.reusable;
     } catch (err) {
       return {
         ok: false,
@@ -296,7 +303,6 @@ export async function runGeneration({
     // Expose cancellation: disconnecting the session aborts the pending turn.
     onStart?.(() => {
       canceled = true;
-      if (sessionReuseKey) reusableSessions.delete(sessionReuseKey);
       void disconnect();
     });
 
@@ -346,10 +352,12 @@ export async function runGeneration({
     } finally {
       if (timer) clearTimeout(timer);
       const keepReusableSessionAlive =
-        Boolean(sessionReuseKey) && !canceled && final !== TIMED_OUT && sendError === undefined;
+        Boolean(sessionReuseKey) && reusable && !canceled && outcome.ok;
       if (!keepReusableSessionAlive) {
         if (sessionReuseKey) reusableSessions.delete(sessionReuseKey);
         await disconnect();
+      } else if (sessionReuseKey) {
+        reusableSessions.set(sessionReuseKey, session);
       }
       offDelta();
       offError();
