@@ -288,6 +288,9 @@ describe('runGeneration', () => {
     expect(createSession).toHaveBeenCalledTimes(2);
     expect(firstSession.sendAndWait).toHaveBeenCalledTimes(1);
     expect(secondSession.sendAndWait).toHaveBeenCalledTimes(1);
+    expect(
+      firstSession.disconnect.mock.calls.length + secondSession.disconnect.mock.calls.length,
+    ).toBe(1);
   });
 
   it('retries once with a fresh tidy session after a runtime session failure', async () => {

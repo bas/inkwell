@@ -92,6 +92,22 @@ async function dropReusableSession(reuseKey: GenerationRequest['sessionReuseKey'
   }
 }
 
+async function storeReusableSession(
+  reuseKey: GenerationRequest['sessionReuseKey'],
+  session: CopilotSession,
+): Promise<void> {
+  if (!reuseKey) return;
+  const existing = reusableSessions.get(reuseKey);
+  if (existing && existing !== session) {
+    try {
+      await existing.disconnect();
+    } catch {
+      // best-effort cleanup
+    }
+  }
+  reusableSessions.set(reuseKey, session);
+}
+
 /** Test seam: clear any warm reused generation sessions. */
 export async function clearReusableGenerationSessions(): Promise<void> {
   const pending = Array.from(reusableSessions.values(), async (session) => {
@@ -354,10 +370,9 @@ export async function runGeneration({
       const keepReusableSessionAlive =
         Boolean(sessionReuseKey) && reusable && !canceled && outcome.ok;
       if (!keepReusableSessionAlive) {
-        if (sessionReuseKey) reusableSessions.delete(sessionReuseKey);
         await disconnect();
-      } else if (sessionReuseKey) {
-        reusableSessions.set(sessionReuseKey, session);
+      } else {
+        await storeReusableSession(sessionReuseKey, session);
       }
       offDelta();
       offError();
